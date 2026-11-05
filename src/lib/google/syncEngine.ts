@@ -44,6 +44,22 @@ export interface SyncOptions {
   forceViews?: boolean
   /** the local data is only the starter data: let the sheet's data replace it */
   dropSeed?: boolean
+  /** this device's daily-reminder settings, shared through the sheet */
+  reminder?: { deviceId: string; time: string; timeAt: number; on: boolean }
+}
+
+/** What the devices share about reminders, kept in one cell of the data tab. */
+interface ReminderShare {
+  time?: string
+  timeAt?: number
+  devices?: Record<string, { on: boolean }>
+}
+
+export interface ReminderResult {
+  time: string
+  timeAt: number
+  /** another device has the daily reminder on */
+  onElsewhere: boolean
 }
 
 export interface SyncResult {
@@ -52,6 +68,7 @@ export interface SyncResult {
   url: string
   pulled: number
   pushed: boolean
+  reminder?: ReminderResult
 }
 
 interface Row {
@@ -159,7 +176,9 @@ export async function runSync(opts: SyncOptions): Promise<SyncResult> {
   const dataSheet = info.sheets.find((s) => s.title === DATA_TITLE)!
 
   const remote = parseRows(await readValues(token, id, `'${DATA_TITLE}'!A2:E`))
-  const marker = String((await readValues(token, id, `'${DATA_TITLE}'!G1`))[0]?.[0] ?? '')
+  const cells = await readValues(token, id, `'${DATA_TITLE}'!G1:G2`)
+  const marker = String(cells[0]?.[0] ?? '')
+  const reminder = opts.reminder ? await shareReminder(token, id, String(cells[1]?.[0] ?? ''), opts.reminder) : undefined
 
   if (opts.dropSeed && remote.length) {
     await db.transaction('rw', db.tables, async () => {
@@ -234,7 +253,44 @@ export async function runSync(opts: SyncOptions): Promise<SyncResult> {
   // photos go through Drive in the background; they can be many and must not hold up the sync itself
   void syncImages(token, folderId)
 
-  return { spreadsheetId: id, folderId, url: info.url, pulled: toLocal.length, pushed }
+  return { spreadsheetId: id, folderId, url: info.url, pulled: toLocal.length, pushed, reminder }
+}
+
+/** The reminder time is shared (the newest change wins); each device only ever writes its own on/off. */
+export async function shareReminder(
+  token: string,
+  id: string,
+  raw: string,
+  mine: NonNullable<SyncOptions['reminder']>,
+): Promise<ReminderResult> {
+  let remote: ReminderShare = {}
+  try {
+    remote = raw ? (JSON.parse(raw) as ReminderShare) : {}
+  } catch {
+    remote = {}
+  }
+  const devices = { ...(remote.devices ?? {}) }
+  let changed = false
+
+  let time = mine.time
+  let timeAt = mine.timeAt
+  const remoteAt = remote.timeAt ?? 0
+  if (remote.time && remoteAt > timeAt) {
+    time = remote.time
+    timeAt = remoteAt
+  } else if (timeAt > remoteAt) changed = true
+
+  if (devices[mine.deviceId]?.on !== mine.on) {
+    devices[mine.deviceId] = { on: mine.on }
+    changed = true
+  }
+  if (changed) await writeRange(token, id, `'${DATA_TITLE}'!G2`, [[JSON.stringify({ time, timeAt, devices })]])
+
+  return {
+    time,
+    timeAt,
+    onElsewhere: Object.entries(devices).some(([device, d]) => device !== mine.deviceId && d.on),
+  }
 }
 
 async function writeViews(

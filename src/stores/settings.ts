@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { reactive, watch } from 'vue'
+import { uid } from '@/lib/id'
 import type { ArchivedReminder, SeenReminder } from '@/lib/reminders'
 import { themeById } from '@/lib/themes'
 
@@ -32,6 +33,14 @@ export interface LocalSettings {
   pushEnabled: boolean
   /** HH:mm */
   remindTime: string
+  /** when remindTime was last changed on any device (the newest change wins when devices sync) */
+  remindTimeAt: number
+  /** tells this device apart from the others that share the spreadsheet */
+  deviceId: string
+  /** another device has the daily reminder on (learned at the last sync) */
+  remindOnElsewhere: boolean
+  /** the "turn it on here too" card was closed */
+  remindHintDismissed: boolean
   lastRemindDay: string
   /** reports spread amortized expenses over their months */
   amortize: boolean
@@ -76,6 +85,10 @@ const defaults: LocalSettings = {
   remindEnabled: false,
   pushEnabled: false,
   remindTime: '21:00',
+  remindTimeAt: 0,
+  deviceId: '',
+  remindOnElsewhere: false,
+  remindHintDismissed: false,
   lastRemindDay: '',
   amortize: true,
   ledgerId: '',
@@ -103,6 +116,7 @@ function read(): LocalSettings {
 
 export const useSettings = defineStore('settings', () => {
   const s = reactive<LocalSettings>(read())
+  if (!s.deviceId) s.deviceId = uid()
 
   watch(
     s,

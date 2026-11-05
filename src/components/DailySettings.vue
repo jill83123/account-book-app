@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { markLocalChange } from '@/db'
 import { notify } from '@/lib/reminders'
+import { LoaderCircle } from '@/lib/uiIcons'
 import { usePush } from '@/stores/push'
 import { useSettings } from '@/stores/settings'
 import { useUi } from '@/stores/ui'
@@ -10,6 +12,25 @@ import ToggleSwitch from '@/components/ToggleSwitch.vue'
 const { s } = useSettings()
 const ui = useUi()
 const push = usePush()
+
+// the reminder switch and time are shared through the sheet, so changing them counts as a change to sync
+const remindOn = computed({
+  get: () => s.remindEnabled,
+  set: (on: boolean) => {
+    s.remindEnabled = on
+    // turning it off on purpose: do not offer it again
+    if (!on) s.remindHintDismissed = true
+    markLocalChange()
+  },
+})
+const remindTime = computed({
+  get: () => s.remindTime,
+  set: (t: string) => {
+    s.remindTime = t
+    s.remindTimeAt = Date.now()
+    markLocalChange()
+  },
+})
 
 // background push needs the Worker address, the same one the sheet sync uses
 const pushOn = computed({
@@ -47,16 +68,16 @@ async function allow() {
     <div class="mx-4 h-px bg-line" />
     <div class="flex items-center justify-between gap-3 px-4">
       <span class="text-sm">每日提醒</span>
-      <ToggleSwitch v-model="s.remindEnabled" label="每日提醒" />
+      <ToggleSwitch v-model="remindOn" label="每日提醒" />
     </div>
     <div class="flex items-center justify-between gap-3 px-4">
       <span class="text-sm">提醒時間</span>
-      <TimeField v-model="s.remindTime" class="w-28 disabled:opacity-50" title="提醒時間" :disabled="!s.remindEnabled" />
+      <TimeField v-model="remindTime" class="w-28 disabled:opacity-50" title="提醒時間" :disabled="!s.remindEnabled" />
     </div>
     <div v-if="push.supported" class="flex items-center justify-between gap-3 px-4">
       <div class="min-w-0">
         <p class="text-sm">背景推播</p>
-        <p class="text-xs text-muted">App 關閉時也會收到</p>
+        <p v-if="push.busy" class="text-xs text-muted">處理中…</p>
       </div>
       <ToggleSwitch v-model="pushOn" label="背景推播" :disabled="push.busy || !s.remindEnabled" />
     </div>
@@ -67,7 +88,7 @@ async function allow() {
       <button class="btn btn-soft w-full" :disabled="!s.remindEnabled" @click="allow">允許通知</button>
     </div>
     <div v-if="s.pushEnabled" class="px-4">
-      <button class="btn btn-soft w-full" :disabled="push.busy || !s.remindEnabled" @click="sendTest">傳一則測試通知</button>
+      <button class="btn btn-soft w-full" :disabled="push.busy || !s.remindEnabled" @click="sendTest"><LoaderCircle v-if="push.busy" :size="16" class="animate-spin" />傳一則測試通知</button>
     </div>
     <p v-if="push.error" class="px-4 text-xs text-danger">{{ push.error }}</p>
   </div>

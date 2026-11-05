@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Bell, ChevronDown, Cloud, CloudCheck, CloudOff, ListChecks, Plus, RefreshCw, Search } from '@/lib/uiIcons'
+import { Bell, ChevronDown, Cloud, CloudCheck, CloudOff, ListChecks, Plus, RefreshCw, Search, X } from '@/lib/uiIcons'
+import { markLocalChange } from '@/db'
 import { useData } from '@/stores/data'
 import { useSettings } from '@/stores/settings'
 import type { Rec } from '@/db/types'
@@ -36,6 +37,17 @@ const syncState = computed(() => {
   if (sync.unsynced) return { icon: Cloud, tone: 'text-warn', spin: false, go: false, label: '有尚未同步的變更，點一下立即同步' }
   return { icon: CloudCheck, tone: 'text-muted', spin: false, go: false, label: '已同步，點一下再同步一次' }
 })
+
+/** another device has the daily reminder on and this one does not: offer to turn it on here too */
+const remindHint = computed(() => s.remindOnElsewhere && !s.remindEnabled && !s.remindHintDismissed && sync.signedIn)
+
+async function turnOnRemind() {
+  s.remindEnabled = true
+  s.remindHintDismissed = true
+  markLocalChange()
+  if ('Notification' in window && Notification.permission === 'default') await Notification.requestPermission().catch(() => {})
+  ui.toast('已開啟每日提醒', 'success')
+}
 
 function tapSync() {
   if (syncState.value.go) router.push('/more/sync')
@@ -212,6 +224,17 @@ onMounted(() => {
         <button class="circle-btn" aria-label="搜尋" @click="router.push('/search')"><Search :size="21" /></button>
       </div>
     </header>
+
+    <!-- the reminder is on for another device but not this one -->
+    <div v-if="remindHint" class="card mb-3 flex items-center gap-3 p-3">
+      <span class="grid size-10 shrink-0 place-items-center rounded-full bg-primary-soft text-primary-strong"><Bell :size="20" /></span>
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-semibold">這台裝置也要收到每日提醒嗎？</p>
+        <p class="text-xs text-muted">你在其他裝置開啟了每日提醒。</p>
+      </div>
+      <button class="btn btn-primary btn-sm shrink-0" @click="turnOnRemind">開啟</button>
+      <button class="circle-btn size-8 shrink-0 text-muted" aria-label="關閉" @click="s.remindHintDismissed = true"><X :size="18" /></button>
+    </div>
 
     <MonthNav v-model="period" :year="tab === 'year'" />
 

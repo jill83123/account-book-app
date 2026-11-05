@@ -85,6 +85,12 @@ export const useSync = defineStore('sync', () => {
             amortize: settings.s.amortize,
             forceViews: opts.forceViews,
             dropSeed: settings.s.seeded,
+            reminder: {
+              deviceId: settings.s.deviceId,
+              time: settings.s.remindTime,
+              timeAt: settings.s.remindTimeAt,
+              on: settings.s.remindEnabled,
+            },
           })
         let res
         try {
@@ -97,6 +103,11 @@ export const useSync = defineStore('sync', () => {
         settings.s.spreadsheetId = res.spreadsheetId
         settings.s.folderId = res.folderId
         settings.s.seeded = false
+        if (res.reminder) {
+          settings.s.remindTime = res.reminder.time
+          settings.s.remindTimeAt = res.reminder.timeAt
+          settings.s.remindOnElsewhere = res.reminder.onElsewhere
+        }
         url.value = res.url
         settings.s.lastSyncAt = Math.max(started, lastLocalChange())
         // pulled data may carry recurring rules that came due
