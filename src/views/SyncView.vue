@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { ExternalLink, LoaderCircle, LogIn, LogOut, RefreshCw, TableProperties } from '@/lib/uiIcons'
+import { ExternalLink, LoaderCircle, LogIn, LogOut, RefreshCw } from '@/lib/uiIcons'
 import { setWorkerUrl } from '@/lib/google/gis'
 import { useSettings } from '@/stores/settings'
 import { useSync } from '@/stores/sync'
@@ -36,16 +36,15 @@ async function disconnect() {
   <div>
     <PageHeader title="Google 試算表同步" />
 
-    <section class="card mb-4 space-y-4">
+    <section class="card mb-4 space-y-3">
       <!-- who is connected and when it last synced; the sheet itself opens from the corner -->
       <div class="flex items-center gap-3">
-        <span class="grid size-11 shrink-0 place-items-center rounded-full bg-primary-soft text-primary-strong"><TableProperties :size="22" /></span>
         <div class="min-w-0 flex-1">
-          <p class="flex items-center gap-1.5 font-semibold">
+          <p class="flex items-center gap-2.5 font-semibold">
             <span class="size-2 rounded-full" :class="sync.signedIn && s.workerUrl ? 'bg-success' : 'bg-muted/50'" />
             {{ sync.signedIn && s.workerUrl ? '已連線' : '尚未連線' }}
           </p>
-          <p class="text-xs text-muted">上次同步：{{ lastSync }}{{ sync.unsynced && sync.signedIn ? '（有尚未同步的變更）' : '' }}</p>
+          <p class="pl-[1.125rem] text-xs text-muted">上次同步：{{ lastSync }}{{ sync.unsynced && sync.signedIn ? '（有尚未同步的變更）' : '' }}</p>
         </div>
         <a
           v-if="sync.signedIn && s.workerUrl && sheetUrl"
@@ -70,19 +69,19 @@ async function disconnect() {
       </div>
 
       <!-- rarely needed, so quiet text rather than a button -->
-      <button v-if="sync.signedIn" class="block w-full border-t border-line pt-3 text-center text-sm text-danger disabled:opacity-40" :disabled="sync.syncing" @click="sync.sync({ loud: true, forceViews: true })">
+      <button v-if="sync.signedIn" class="mt-4 block w-full border-t border-line pt-3 -mb-1 text-center text-sm text-danger disabled:opacity-40" :disabled="sync.syncing" @click="sync.sync({ loud: true, forceViews: true })">
         重建試算表分頁
       </button>
     </section>
 
-    <section class="card mb-4 space-y-3">
-      <label class="label" for="worker">同步服務網址（Cloudflare Worker）</label>
+    <section class="card mb-4">
+      <label class="label !mb-2.5" for="worker">同步服務網址（Cloudflare Worker）</label>
       <input id="worker" v-model="s.workerUrl" class="input" placeholder="https://account-book-auth.xxx.workers.dev" inputmode="url" autocapitalize="off" />
     </section>
 
-    <section class="card space-y-3 text-sm leading-relaxed">
+    <section class="card space-y-3 text-[13px] leading-6">
       <h2 class="label">一次性的設定（約 10 分鐘）</h2>
-      <ol class="list-decimal space-y-2 pl-5 text-muted">
+      <ol class="list-decimal space-y-2 pl-5 text-muted marker:text-muted">
         <li>到 Google Cloud Console 建立一個專案（名稱自訂，個人專案即可）。</li>
         <li>在「API 和服務 &gt; 程式庫」啟用 <b class="text-primary-strong">Google Sheets API</b> 與 <b class="text-primary-strong">Google Drive API</b>。</li>
         <li>
@@ -100,7 +99,7 @@ async function disconnect() {
         <li>把 Worker 網址貼到上面，按「登入 Google 並建立試算表」，授權時要勾選「查看、編輯、建立及刪除這個應用程式的 Google 雲端硬碟檔案」。</li>
       </ol>
       <p class="text-muted">
-        App 只能存取它自己建立的那份試算表，看不到你雲端硬碟裡的其他檔案。這個 Worker 也負責推播提醒，請另外部署一個給記帳本用，不要跟「FSRS 記憶卡」共用同一個。
+        （App 只能存取它自己建立的那份試算表，看不到你雲端硬碟裡的其他檔案。）
       </p>
     </section>
   </div>

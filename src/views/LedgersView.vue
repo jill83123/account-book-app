@@ -82,7 +82,7 @@ const count = (id: string) => data.records.filter((r) => r.ledgerId === id).leng
       </template>
     </PageHeader>
     <p class="mb-3 px-1 text-sm text-muted">
-      帳本把記錄分開管理，例如「日常」「旅行」「家用」。帳戶餘額仍然是所有帳本合計。
+      帳本把記錄分開管理，例如日常、旅行、家用。帳戶餘額仍然是所有帳本合計。
     </p>
     <div class="card divide-y divide-line p-0">
       <button v-for="l in data.sortedLedgers" :key="l.id" class="flex w-full items-center gap-3 px-4 py-3.5 text-left" @click="edit(l)">

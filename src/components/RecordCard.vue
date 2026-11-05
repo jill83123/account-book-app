@@ -63,6 +63,10 @@ const pieces = computed<Piece[]>(() => {
   return out
 })
 
+// the category tag always leads the line; everything else follows it
+const catPiece = computed(() => pieces.value.find((p) => p.kind === 'cat'))
+const restPieces = computed(() => pieces.value.filter((p) => p.kind !== 'cat'))
+
 const pending = computed(() => isPending(props.rec))
 const sign = computed(() => (props.rec.type === 'income' ? '+' : props.rec.type === 'expense' ? '' : ''))
 const tone = computed(() =>
@@ -92,23 +96,23 @@ const tone = computed(() =>
         <Repeat v-if="rec.recurringId" :size="13" class="shrink-0 text-muted" />
       </div>
       <div class="mt-0.5 flex h-[18px] items-center gap-1.5 overflow-hidden text-xs whitespace-nowrap text-muted">
+        <span v-if="catPiece" class="shrink-0 rounded bg-surface-2 px-1.5 py-px">{{ catPiece.text }}</span>
         <span v-if="showDate" class="shrink-0">{{ rec.date }}</span>
-        <span v-if="showDate && pieces.length" class="h-3 w-px shrink-0 bg-muted/40" />
-        <template v-for="(p, i) in pieces" :key="i">
-          <span v-if="p.kind === 'cat'" class="shrink-0 rounded bg-surface-2 px-1.5 py-px">{{ p.text }}</span>
-          <span v-else-if="p.kind === 'parts'" class="min-w-0 truncate text-ink/70">{{ p.text }}</span>
-          <!-- the merchant and the people come after a thin vertical bar, unless a category tag already stands in front -->
+        <span v-if="showDate && restPieces.length" class="h-3 w-px shrink-0 bg-muted/40" />
+        <template v-for="(p, i) in restPieces" :key="i">
+          <span v-if="p.kind === 'parts'" class="min-w-0 truncate text-ink/70">{{ p.text }}</span>
+          <!-- the merchant and the people come after a thin vertical bar, unless they open the line -->
           <span v-else-if="p.kind === 'merchant' || p.kind === 'who'" class="inline-flex shrink-0 items-center gap-1.5">
-            <span v-if="pieces[i - 1]?.kind !== 'cat'" class="h-3 w-px shrink-0 bg-muted/40" />
+            <span v-if="i > 0" class="h-3 w-px shrink-0 bg-muted/40" />
             <span class="max-w-28 truncate">{{ p.kind === 'who' ? `和${p.text}` : p.text }}</span>
           </span>
           <span v-else class="min-w-0 truncate">{{ p.text }}</span>
         </template>
       </div>
     </div>
-    <div class="flex shrink-0 flex-col items-end gap-1">
-      <span class="text-lg leading-none font-semibold" :class="tone">{{ sign }}{{ pending ? `${rec.currency} ${fmtFx(foreignTotal(rec))}` : `$${fmt(myTotal(rec))}` }}</span>
-      <span v-if="account && rec.type !== 'transfer'" class="flex max-w-full items-center gap-1">
+    <div class="flex shrink-0 flex-col items-end">
+      <span class="text-base leading-6 font-semibold" :class="tone">{{ sign }}{{ pending ? `${rec.currency} ${fmtFx(foreignTotal(rec))}` : `$${fmt(myTotal(rec))}` }}</span>
+      <span v-if="account && rec.type !== 'transfer'" class="mt-0.5 flex h-[18px] max-w-full items-center gap-1">
         <span v-if="ledger" class="tag truncate" :style="ledgerStyle">{{ ledger }}</span>
         <span class="tag shrink-0" :style="accountStyle">{{ account }}</span>
       </span>

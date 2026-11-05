@@ -27,10 +27,10 @@ const ui = useUi()
 const { s } = useSettings()
 const sync = useSync()
 
-/** where the Google Sheets sync stands; a plain grey cloud until sync has been set up.
+/** where the Google Sheets sync stands; hidden until sync has been set up.
  *  `go`: a tap opens the sync settings, `sync`: a tap syncs right away */
 const syncState = computed(() => {
-  if (!s.workerUrl) return { icon: Cloud, tone: 'text-muted/60', spin: false, go: true, label: '尚未設定 Google 試算表同步' }
+  if (!s.workerUrl) return null
   if (sync.syncing) return { icon: RefreshCw, tone: 'text-muted', spin: true, go: false, label: '同步中' }
   if (!sync.signedIn) return { icon: CloudOff, tone: 'text-danger', spin: false, go: true, label: '尚未登入 Google，無法同步' }
   if (sync.error) return { icon: CloudOff, tone: 'text-danger', spin: false, go: false, label: `同步失敗，點一下重試：${sync.error}` }
@@ -50,7 +50,7 @@ async function turnOnRemind() {
 }
 
 function tapSync() {
-  if (syncState.value.go) router.push('/more/sync')
+  if (syncState.value?.go) router.push('/more/sync')
   else if (!sync.syncing) void sync.sync({ loud: true })
 }
 
@@ -199,20 +199,13 @@ onMounted(() => {
 <template>
   <div>
     <!-- the title sits in the middle column, so it is centred whatever the buttons on either side are -->
-    <header class="mb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-      <div class="flex items-center gap-1">
-        <button v-if="syncState" class="circle-btn" :class="syncState.tone" :aria-label="syncState.label" :title="syncState.label" @click="tapSync">
-          <component :is="syncState.icon" :size="21" :class="syncState.spin && 'animate-spin'" />
+    <header class="sticky top-0 z-20 -mx-4 bg-bg/85 px-4 backdrop-blur mb-3 grid grid-cols-[1fr_auto_1fr] min-h-14 items-center gap-1 py-2 sm:gap-2">
+      <div class="flex items-center gap-0.5 sm:gap-2">
+        <button v-if="syncState" class="circle-btn size-9 sm:size-10" :class="syncState.tone" :aria-label="syncState.label" :title="syncState.label" @click="tapSync">
+          <component :is="syncState.icon" :size="20" :class="syncState.spin && 'animate-spin'" />
         </button>
-      </div>
-      <!-- the title is the ledger being looked at; tap to switch -->
-      <button class="relative justify-self-center text-xl font-bold tracking-tight" aria-label="切換帳本" @click="ledgerSheet = true">
-        <span class="block max-w-40 truncate">{{ ledgerName }}</span>
-        <ChevronDown :size="18" class="absolute top-1/2 left-full ml-2.5 -translate-y-1/2 text-muted" />
-      </button>
-      <div class="flex items-center justify-end gap-2">
-        <button class="circle-btn" aria-label="提醒" @click="router.push('/reminders')">
-          <Bell :size="21" />
+        <button class="circle-btn size-9 sm:size-10" aria-label="提醒" @click="router.push('/reminders')">
+          <Bell :size="20" />
           <span
             v-if="reminders.length"
             class="absolute -top-0.5 -right-0.5 grid min-w-5 place-items-center rounded-full bg-danger px-1 text-[11px] leading-5 font-bold text-white"
@@ -220,8 +213,15 @@ onMounted(() => {
             {{ reminders.length }}
           </span>
         </button>
-        <button class="circle-btn" aria-label="批次編輯" @click="ui.selecting ? ui.stopSelect() : ui.startSelect()"><ListChecks :size="21" /></button>
-        <button class="circle-btn" aria-label="搜尋" @click="router.push('/search')"><Search :size="21" /></button>
+      </div>
+      <!-- the title is the ledger being looked at; tap to switch -->
+      <button class="relative justify-self-center text-xl font-bold tracking-tight" aria-label="切換帳本" @click="ledgerSheet = true">
+        <span class="block max-w-40 truncate">{{ ledgerName }}</span>
+        <ChevronDown :size="16" class="absolute top-1/2 left-full ml-1.5 -translate-y-1/2 text-muted" />
+      </button>
+      <div class="flex items-center justify-end gap-0.5 sm:gap-2">
+        <button class="circle-btn size-9 sm:size-10" aria-label="批次編輯" @click="ui.selecting ? ui.stopSelect() : ui.startSelect()"><ListChecks :size="20" /></button>
+        <button class="circle-btn size-9 sm:size-10" aria-label="搜尋" @click="router.push('/search')"><Search :size="20" /></button>
       </div>
     </header>
 
@@ -275,20 +275,20 @@ onMounted(() => {
     </section>
     <section class="card p-0">
       <div class="select-none px-2 py-3" @pointerdown="onDown" @pointerup="onUp">
-        <div class="grid grid-cols-7 pb-1 text-center text-xs text-muted">
+        <div class="grid grid-cols-7 pb-2 text-center text-xs text-muted">
           <span v-for="(w, i) in WEEKDAYS" :key="w" :class="i === 0 && 'text-sun'">{{ w }}</span>
         </div>
         <div class="grid grid-cols-7">
           <button
             v-for="c in cells"
             :key="c.date"
-            class="flex h-[64px] flex-col items-center rounded-xl pt-1 transition-colors"
+            class="flex h-[60px] flex-col items-center rounded-xl pt-1.5 transition-colors"
             :class="selected === c.date && 'bg-primary-soft'"
             :aria-label="c.date"
             @click="pickDay(c.date, c.inMonth)"
           >
             <span
-              class="grid size-6 place-items-center rounded-full text-sm font-medium"
+              class="grid size-[22px] place-items-center rounded-full text-[13px] font-medium"
               :class="[c.inMonth ? weekTone(c.date) : 'text-muted/40', c.date === today() && 'bg-primary font-semibold !text-white']"
             >
               {{ dayLabel(c.date) }}
@@ -361,7 +361,6 @@ onMounted(() => {
     <!-- 月報: the year, month by month -->
     <template v-else>
       <section class="card mb-4">
-        <div class="mb-3 text-sm font-semibold text-muted">{{ month.slice(0, 4) }} 年</div>
         <div class="grid grid-cols-3 text-center">
           <div>
             <p class="text-xs text-muted">收入</p>
@@ -381,12 +380,12 @@ onMounted(() => {
         <button
           v-for="m in months"
           :key="m.month"
-          class="flex w-full items-center gap-3 px-4 py-3.5 text-left"
+          class="flex w-full items-center gap-3 px-4 py-3 text-left"
           :class="m.month === ym(today()) && 'bg-primary-soft/60'"
           @click="openMonth(m.month)"
         >
           <span class="w-12 shrink-0">
-            <span class="block text-lg font-bold">{{ m.label }}</span>
+            <span class="block text-base font-semibold">{{ m.label }}</span>
           </span>
           <span class="flex-1 text-right text-sm font-medium" :class="m.income ? 'text-income' : 'text-muted/60'">{{ fmt(m.income) }}</span>
           <span class="flex-1 text-right text-sm font-medium" :class="m.expense ? 'text-expense' : 'text-muted/60'">{{ fmt(m.expense) }}</span>

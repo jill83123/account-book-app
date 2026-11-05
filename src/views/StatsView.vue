@@ -282,11 +282,11 @@ const barTone = (spent: number, budget: number) =>
 <template>
   <div>
     <!-- one slim header: the ledger being looked at as the title (same as home; tap to switch), then the views and the period on a line each -->
-    <header class="mb-3 grid grid-cols-[1fr_auto_1fr] items-center">
+    <header class="sticky top-0 z-20 -mx-4 bg-bg/85 px-4 backdrop-blur mb-3 grid min-h-14 grid-cols-[1fr_auto_1fr] items-center py-2">
       <span />
       <button class="relative justify-self-center text-xl font-bold tracking-tight" aria-label="切換帳本" @click="ledgerSheet = true">
         <span class="block max-w-40 truncate">{{ data.ledgerMap.get(data.ledgerId)?.name ?? '' }}</span>
-        <ChevronDown :size="18" class="absolute top-1/2 left-full ml-1 -translate-y-1/2 text-muted" />
+        <ChevronDown :size="16" class="absolute top-1/2 left-full ml-1.5 -translate-y-1/2 text-muted" />
       </button>
       <span />
     </header>
@@ -412,7 +412,7 @@ const barTone = (spent: number, budget: number) =>
             <li v-if="!recordsOf(t.id).length" class="flex items-center justify-center gap-1.5 py-5 text-xs text-muted"><Inbox :size="15" />{{ pickLabel }}沒有紀錄</li>
             <li v-else class="pt-2">
               <p class="-mb-1 text-xs text-muted">{{ pickLabel }}{{ subId ? ` ｜ ${subId === t.id ? '未細分' : data.catName(subId)}` : '' }}的紀錄（{{ recordsOf(t.id).length }} 筆）</p>
-              <RecordList :records="allShown === t.id ? recordsOf(t.id) : recordsOf(t.id).slice(0, 4)" show-date no-select flat dense />
+              <RecordList :records="allShown === t.id ? recordsOf(t.id) : recordsOf(t.id).slice(0, 4)" show-date no-select flat />
               <button v-if="recordsOf(t.id).length > 4" class="flex w-full items-center justify-center gap-1 py-1 text-xs text-muted" @click="allShown = allShown === t.id ? '' : t.id">
                 {{ allShown === t.id ? '收起' : `顯示全部 ${recordsOf(t.id).length} 筆` }}
                 <ChevronDown :size="14" class="transition-transform" :class="allShown === t.id && 'rotate-180'" />
@@ -485,27 +485,27 @@ const barTone = (spent: number, budget: number) =>
         ]"
       />
       <div v-if="itemRows.length" class="card overflow-hidden p-0">
-        <!-- column titles; the one the list is sorted by is darker and carries an arrow -->
+        <!-- column titles double as the sort buttons: both carry an arrow, the sorted one is darker -->
         <div class="flex items-center border-b border-line px-4 py-2.5 text-sm text-muted">
           <span class="flex-1">{{ groupLabel }}</span>
-          <button class="flex w-14 items-center justify-center gap-0.5" :class="sortBy === 'count' && 'font-semibold text-ink'" @click="sortBy = 'count'">
-            次數<ChevronDown v-if="sortBy === 'count'" :size="12" />
+          <button class="flex w-14 items-center justify-center gap-0.5" :class="sortBy === 'count' && 'font-semibold text-ink'" aria-label="依次數排序" @click="sortBy = 'count'">
+            次數<ChevronDown :size="12" :class="sortBy !== 'count' && 'opacity-35'" />
           </button>
-          <button class="flex w-24 items-center justify-end gap-0.5" :class="sortBy === 'amount' && 'font-semibold text-ink'" @click="sortBy = 'amount'">
-            金額<ChevronDown v-if="sortBy === 'amount'" :size="12" />
+          <button class="flex w-24 items-center justify-end gap-0.5" :class="sortBy === 'amount' && 'font-semibold text-ink'" aria-label="依金額排序" @click="sortBy = 'amount'">
+            金額<ChevronDown :size="12" :class="sortBy !== 'amount' && 'opacity-35'" />
           </button>
         </div>
         <ul class="divide-y divide-line">
-          <li v-for="r in itemRows" :key="r.name">
-            <button class="flex w-full items-center px-4 py-3.5 text-left transition-colors" :class="openItem === r.name && 'bg-surface-2 font-semibold text-primary-strong shadow-[inset_3px_0_0_var(--color-primary)]'" @click="openItem = openItem === r.name ? '' : r.name">
+          <li v-for="r in itemRows" :key="r.name" :class="openItem && openItem !== r.name && 'opacity-40'" class="transition-opacity">
+            <button class="flex w-full items-center px-4 py-3.5 text-left" @click="openItem = openItem === r.name ? '' : r.name">
               <span class="min-w-0 flex-1 truncate">{{ r.name }}</span>
               <span class="w-14 text-center text-sm text-muted">{{ r.count }}</span>
               <span class="w-24 text-right font-medium">${{ fmt(r.total) }}</span>
             </button>
             <!-- the records behind this row; a fixed height, scroll for more -->
-            <div v-if="openItem === r.name" class="border-t border-line bg-surface px-4">
-              <RecordList :records="allShown === r.name ? recordsOfItem(r.name) : recordsOfItem(r.name).slice(0, 5)" show-date no-select flat dense />
-              <button v-if="recordsOfItem(r.name).length > 5" class="flex w-full items-center justify-center gap-1 border-t border-line py-2 text-xs text-muted" @click="allShown = allShown === r.name ? '' : r.name">
+            <div v-if="openItem === r.name" class="border-t border-line px-4">
+              <RecordList :records="allShown === r.name ? recordsOfItem(r.name) : recordsOfItem(r.name).slice(0, 5)" show-date no-select flat />
+              <button v-if="recordsOfItem(r.name).length > 5" class="flex w-full items-center justify-center gap-1 border-t border-line py-3 text-xs text-muted" @click="allShown = allShown === r.name ? '' : r.name">
                 {{ allShown === r.name ? '收起' : `顯示全部 ${recordsOfItem(r.name).length} 筆` }}
                 <ChevronDown :size="14" class="transition-transform" :class="allShown === r.name && 'rotate-180'" />
               </button>

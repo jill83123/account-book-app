@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Download, Trash2, Upload } from '@/lib/uiIcons'
+import { Download, LoaderCircle, Sparkles, TableProperties, Trash2, Upload } from '@/lib/uiIcons'
 import { db } from '@/db'
 import { TABLES } from '@/db/types'
 import { download, exportBackup, importBackup } from '@/lib/backup'
@@ -60,13 +60,17 @@ async function addDemo() {
   }
 }
 
+const wiping = ref(false)
+
 async function wipe(withCloud = false) {
   if (withCloud) {
     if (!(await ui.confirm('連同 Google 雲端一起清除？', { message: '會把這台裝置的資料，以及 Google 雲端硬碟裡這個 App 建立的試算表和照片移到垃圾桶，其他裝置同步後也會變空。\n垃圾桶可保留 30 天，期間可以從 Google 雲端硬碟救回。', danger: true, confirmText: '全部清除' }))) return
+    wiping.value = true
     try {
       await sync.wipeCloud()
     } catch (err) {
       ui.toast(err instanceof Error ? err.message : String(err), 'error')
+      wiping.value = false
       return
     }
   } else if (!(await ui.confirm('清除這台裝置的所有資料？', { message: '只會清除這台裝置上的資料與設定。\n已同步的 Google 試算表不會被刪除，重新登入後可以取回。', danger: true, confirmText: '清除' }))) return
@@ -84,36 +88,52 @@ async function wipe(withCloud = false) {
     <PageHeader title="備份與資料" />
 
     <h2 class="section-title">備份</h2>
-    <section class="card mb-5 space-y-3">
-      <p class="text-xs text-muted">把所有記錄存成一個檔案，換手機或重裝時可以匯入回來。</p>
-      <div class="grid grid-cols-2 gap-3">
-        <button class="btn btn-soft" @click="exportData"><Download :size="16" />匯出 JSON</button>
-        <label class="btn btn-soft"><Upload :size="16" />匯入<input type="file" accept="application/json,.json" class="hidden" @change="onImport" /></label>
+    <div class="card mb-5 divide-y divide-line p-0">
+      <div class="flex items-center gap-3 px-4 py-3.5">
+        <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-white"><Download :size="20" :stroke-width="2.3" /></span>
+        <span class="min-w-0 flex-1"><span class="block font-medium">匯出備份</span><span class="block text-xs text-muted">存成一個 JSON 檔，換手機或重裝時用</span></span>
+        <button class="btn btn-soft shrink-0 whitespace-nowrap px-4 py-2" @click="exportData">匯出</button>
       </div>
-    </section>
+      <div class="flex items-center gap-3 px-4 py-3.5">
+        <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-white"><Upload :size="20" :stroke-width="2.3" /></span>
+        <span class="min-w-0 flex-1"><span class="block font-medium">匯入備份</span><span class="block text-xs text-muted">用備份檔取代目前的資料</span></span>
+        <label class="btn btn-soft shrink-0 cursor-pointer whitespace-nowrap px-4 py-2">匯入<input type="file" accept="application/json,.json" class="hidden" @change="onImport" /></label>
+      </div>
+    </div>
 
     <h2 class="section-title">匯出成表格</h2>
-    <section class="card mb-5 space-y-3">
-      <p class="text-xs text-muted">所有記帳與借款存成一個 CSV，可以用 Excel 或試算表開啟，用「類型」欄分辨。</p>
-      <button class="btn btn-soft w-full" @click="exportCsvFile"><Download :size="16" />匯出 CSV</button>
-    </section>
+    <div class="card mb-5 p-0">
+      <div class="flex items-center gap-3 px-4 py-3.5">
+        <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-white"><TableProperties :size="20" :stroke-width="2.3" /></span>
+        <span class="min-w-0 flex-1"><span class="block font-medium">匯出 CSV</span><span class="block text-xs text-muted">記帳與借款，可用 Excel 開啟</span></span>
+        <button class="btn btn-soft shrink-0 whitespace-nowrap px-4 py-2" @click="exportCsvFile">匯出</button>
+      </div>
+    </div>
 
     <h2 class="section-title">範例資料</h2>
-    <section class="card mb-5 space-y-3">
-      <p class="text-xs text-muted">
-        放進約兩個月的假記錄：飲食、交通、購物、股票、保險攤提，還有分期、借款與一個旅行帳本，用來看每個畫面長什麼樣子。
-      </p>
-      <button class="btn btn-soft w-full" :disabled="loadingDemo" @click="addDemo">載入範例資料</button>
-    </section>
+    <div class="card mb-5 p-0">
+      <div class="flex items-center gap-3 px-4 py-3.5">
+        <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-white"><Sparkles :size="20" :stroke-width="2.3" /></span>
+        <span class="min-w-0 flex-1"><span class="block font-medium">載入範例資料</span><span class="block text-xs text-muted">約兩個月的假記錄，看各畫面的樣子</span></span>
+        <button class="btn btn-soft shrink-0 whitespace-nowrap px-4 py-2" :disabled="loadingDemo" @click="addDemo">載入</button>
+      </div>
+    </div>
 
     <h2 class="section-title">清除</h2>
-    <section class="card space-y-3">
-      <p class="text-xs text-muted">只會清除這台裝置上的資料，已同步的 Google 試算表不會被刪除。</p>
-      <button class="btn btn-ghost w-full text-danger" @click="wipe()"><Trash2 :size="16" />清除這台裝置的資料</button>
-      <template v-if="sync.signedIn && settings.s.workerUrl">
-        <p class="text-xs text-muted">想完全重來的話，可以連 Google 雲端裡的試算表和照片一起清掉（會先移到垃圾桶）。</p>
-        <button class="btn btn-ghost w-full text-danger" @click="wipe(true)"><Trash2 :size="16" />連同 Google 雲端一起清除</button>
-      </template>
-    </section>
+    <div class="card p-0">
+      <div class="flex items-center gap-3 px-4 py-3.5">
+        <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-danger text-white"><Trash2 :size="20" :stroke-width="2.3" /></span>
+        <template v-if="sync.signedIn && settings.s.workerUrl">
+          <span class="min-w-0 flex-1"><span class="block font-medium">清除所有資料</span><span class="block text-xs text-muted">含 Google 雲端，雲端資料先移到垃圾桶</span></span>
+          <button class="btn btn-ghost shrink-0 whitespace-nowrap px-4 py-2 text-danger" :disabled="wiping" @click="wipe(true)">
+            <LoaderCircle v-if="wiping" :size="16" class="animate-spin" />{{ wiping ? '清除中…' : '清除' }}
+          </button>
+        </template>
+        <template v-else>
+          <span class="min-w-0 flex-1"><span class="block font-medium">清除這台裝置的資料</span><span class="block text-xs text-muted">只清除這台裝置上的資料與設定</span></span>
+          <button class="btn btn-ghost shrink-0 whitespace-nowrap px-4 py-2 text-danger" @click="wipe()">清除</button>
+        </template>
+      </div>
+    </div>
   </div>
 </template>
