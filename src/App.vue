@@ -89,8 +89,8 @@ function add() {
     class="fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-md items-center gap-3 px-4"
     role="status"
   >
-    <div class="card flex w-full items-center gap-3 py-3 shadow-[0_4px_18px_rgba(0,0,0,0.14)]">
-      <RefreshCw :size="20" class="shrink-0 text-primary" />
+    <div class="card flex w-full items-center gap-3 py-2 shadow-[0_4px_18px_rgba(0,0,0,0.14)]">
+      <RefreshCw :size="18" class="shrink-0 text-primary" />
       <span class="flex-1 text-sm font-semibold">有新版本可用</span>
       <button class="text-sm text-muted" @click="pwa.needRefresh = false">稍後</button>
       <button class="btn btn-primary px-4 py-2" @click="pwa.update()">重新整理</button>
