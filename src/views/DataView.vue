@@ -7,7 +7,7 @@ import { download, exportBackup, importBackup } from '@/lib/backup'
 import { exportAllCsv } from '@/lib/csv'
 import { today } from '@/lib/date'
 import { hasDemo, loadDemo } from '@/lib/demo'
-import { useSettings } from '@/stores/settings'
+import { stopSavingSettings, useSettings } from '@/stores/settings'
 import { useSync } from '@/stores/sync'
 import { useUi } from '@/stores/ui'
 import PageHeader from '@/components/PageHeader.vue'
@@ -78,7 +78,21 @@ async function wipe(withCloud = false) {
     for (const t of TABLES) await db[t].clear()
     await db.images.clear()
   })
+  // wiping the cloud too should not log this device out of Google: keep the sign-in and the worker address it needs
+  const keep = withCloud
+    ? {
+        token: localStorage.getItem('ab.google.token'),
+        refresh: localStorage.getItem('ab.google.refresh'),
+        workerUrl: sync.signedIn ? settings.s.workerUrl : '',
+      }
+    : null
+  stopSavingSettings()
   localStorage.clear()
+  if (keep) {
+    if (keep.token) localStorage.setItem('ab.google.token', keep.token)
+    if (keep.refresh) localStorage.setItem('ab.google.refresh', keep.refresh)
+    if (keep.workerUrl) localStorage.setItem('ab.settings', JSON.stringify({ workerUrl: keep.workerUrl }))
+  }
   location.reload()
 }
 </script>

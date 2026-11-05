@@ -64,6 +64,12 @@ export interface LocalSettings {
 }
 
 const KEY = 'ab.settings'
+
+let saving = true
+/** After the storage has been wiped on purpose, stop the open page from writing its old settings back. */
+export function stopSavingSettings() {
+  saving = false
+}
 /** the Gemini model scanning starts with; Google retires old ones, so this moves forward over time */
 export const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash-lite'
 
@@ -121,6 +127,7 @@ export const useSettings = defineStore('settings', () => {
   watch(
     s,
     () => {
+      if (!saving) return
       try {
         localStorage.setItem(KEY, JSON.stringify(s))
       } catch {
