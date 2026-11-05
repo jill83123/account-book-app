@@ -273,3 +273,19 @@ export async function deleteFile(token: string, fileId: string) {
     if (!(e instanceof SheetsNotFoundError)) throw e
   }
 }
+
+/** Move a file to the Drive trash (still recoverable there for 30 days). A file that is already gone counts as done. */
+export async function trashFile(token: string, fileId: string) {
+  try {
+    await call(token, `${DRIVE}/files/${fileId}`, { method: 'PATCH', body: JSON.stringify({ trashed: true }) })
+  } catch (e) {
+    if (!(e instanceof SheetsNotFoundError)) throw e
+  }
+}
+
+/** Every spreadsheet this app made (not only the newest one). */
+export async function listSpreadsheets(token: string): Promise<string[]> {
+  const q = `appProperties has { key='accountBook' and value='1' } and trashed=false and mimeType='application/vnd.google-apps.spreadsheet'`
+  const res = await call(token, `${DRIVE}/files?q=${enc(q)}&fields=files(id)&pageSize=100`)
+  return ((await res.json()) as { files?: { id: string }[] }).files?.map((f) => f.id) ?? []
+}

@@ -7,10 +7,14 @@ import { download, exportBackup, importBackup } from '@/lib/backup'
 import { exportAllCsv } from '@/lib/csv'
 import { today } from '@/lib/date'
 import { hasDemo, loadDemo } from '@/lib/demo'
+import { useSettings } from '@/stores/settings'
+import { useSync } from '@/stores/sync'
 import { useUi } from '@/stores/ui'
 import PageHeader from '@/components/PageHeader.vue'
 
 const ui = useUi()
+const settings = useSettings()
+const sync = useSync()
 
 async function exportData() {
   download(`記帳本備份-${today()}.json`, await exportBackup())
@@ -56,8 +60,16 @@ async function addDemo() {
   }
 }
 
-async function wipe() {
-  if (!(await ui.confirm('清除這台裝置的所有資料？', { message: '只會清除這台裝置上的資料與設定。\n已同步的 Google 試算表不會被刪除，重新登入後可以取回。', danger: true, confirmText: '清除' }))) return
+async function wipe(withCloud = false) {
+  if (withCloud) {
+    if (!(await ui.confirm('連同 Google 雲端一起清除？', { message: '會把這台裝置的資料，以及 Google 雲端硬碟裡這個 App 建立的試算表和照片移到垃圾桶，其他裝置同步後也會變空。\n垃圾桶可保留 30 天，期間可以從 Google 雲端硬碟救回。', danger: true, confirmText: '全部清除' }))) return
+    try {
+      await sync.wipeCloud()
+    } catch (err) {
+      ui.toast(err instanceof Error ? err.message : String(err), 'error')
+      return
+    }
+  } else if (!(await ui.confirm('清除這台裝置的所有資料？', { message: '只會清除這台裝置上的資料與設定。\n已同步的 Google 試算表不會被刪除，重新登入後可以取回。', danger: true, confirmText: '清除' }))) return
   await db.transaction('rw', db.tables, async () => {
     for (const t of TABLES) await db[t].clear()
     await db.images.clear()
@@ -97,7 +109,11 @@ async function wipe() {
     <h2 class="section-title">清除</h2>
     <section class="card space-y-3">
       <p class="text-xs text-muted">只會清除這台裝置上的資料，已同步的 Google 試算表不會被刪除。</p>
-      <button class="btn btn-ghost w-full text-danger" @click="wipe"><Trash2 :size="16" />清除這台裝置的資料</button>
+      <button class="btn btn-ghost w-full text-danger" @click="wipe()"><Trash2 :size="16" />清除這台裝置的資料</button>
+      <template v-if="sync.signedIn && settings.s.workerUrl">
+        <p class="text-xs text-muted">想完全重來的話，可以連 Google 雲端裡的試算表和照片一起清掉（會先移到垃圾桶）。</p>
+        <button class="btn btn-ghost w-full text-danger" @click="wipe(true)"><Trash2 :size="16" />連同 Google 雲端一起清除</button>
+      </template>
     </section>
   </div>
 </template>

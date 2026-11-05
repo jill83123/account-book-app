@@ -11,7 +11,7 @@ import {
   revokeToken,
   setWorkerUrl,
 } from '@/lib/google/gis'
-import { SheetsAuthError } from '@/lib/google/sheets'
+import { findFolder, listImageFiles, listSpreadsheets, SheetsAuthError, trashFile } from '@/lib/google/sheets'
 import { runSync } from '@/lib/google/syncEngine'
 import { autoPostDue } from '@/lib/recurrence'
 import { useSettings } from './settings'
@@ -64,6 +64,17 @@ export const useSync = defineStore('sync', () => {
     settings.s.folderId = ''
     settings.s.lastSyncAt = 0
     url.value = ''
+  }
+
+  /** Move this app's spreadsheets, photos and folder in Google Drive to the trash. */
+  async function wipeCloud() {
+    const token = await accessToken()
+    const ids = new Set(await listSpreadsheets(token))
+    if (settings.s.spreadsheetId) ids.add(settings.s.spreadsheetId)
+    for (const id of (await listImageFiles(token)).values()) ids.add(id.fileId)
+    const folder = settings.s.folderId && settings.s.folderId !== 'none' ? settings.s.folderId : await findFolder(token)
+    if (folder) ids.add(folder)
+    for (const id of ids) await trashFile(token, id)
   }
 
   let running: Promise<boolean> | null = null
@@ -171,5 +182,5 @@ export const useSync = defineStore('sync', () => {
     catchUp()
   }
 
-  return { syncing, error, signedIn, unsynced, url, connect, disconnect, sync, refresh, init }
+  return { syncing, error, signedIn, unsynced, url, connect, disconnect, wipeCloud, sync, refresh, init }
 })
