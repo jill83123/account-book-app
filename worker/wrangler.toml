@@ -1,0 +1,32 @@
+name = "account-book-auth"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+# Google OAuth client ID, not a secret. Fill in before deploying.
+GOOGLE_CLIENT_ID = "xxxx.apps.googleusercontent.com"
+# Origins allowed to call this Worker, comma separated (add http://localhost:5173 for local dev)
+ALLOWED_ORIGINS = "https://username.github.io,http://localhost:5173"
+
+# 推播提醒（Web Push）的聯絡資訊，推播服務有狀況時用來聯絡你。
+# 不會真的寄信，格式要正確：mailto:你的信箱，或 https://你的網站網址，不要留空。
+VAPID_SUBJECT = "mailto:you@example.com"
+
+# 推播金鑰，由 scripts/gen-vapid.mjs 自動寫進 wrangler.local.toml。
+# 私鑰不要寫在這個檔案；部署時會自動改存成 Cloudflare 的加密密鑰。
+VAPID_PUBLIC_KEY = ""
+VAPID_PRIVATE_JWK = ""
+
+# The client secret is NOT stored here. Set it with:  npx wrangler secret put GOOGLE_CLIENT_SECRET
+# The Gemini API key for AI 發票辨識 is not stored here either. Set it with:  npx wrangler secret put GEMINI_API_KEY
+
+# --- 推播提醒（Web Push）---
+# 推播訂閱與提醒時間存在這個 KV。用這個指令建立，再把印出的 id 貼到下面：
+# npx wrangler kv namespace create account-book-push
+[[kv_namespaces]]
+binding = "PUSH"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# 每 5 分鐘檢查一次有沒有到時間的提醒
+[triggers]
+crons = ["*/5 * * * *"]

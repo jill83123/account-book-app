@@ -1,0 +1,13 @@
+{
+  "name": "account-book-auth",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/sync-config.mjs && wrangler dev -c wrangler.local.toml",
+    "deploy": "node scripts/deploy.mjs",
+    "sync-config": "node scripts/sync-config.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4"
+  }
+}

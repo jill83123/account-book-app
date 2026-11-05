@@ -1,0 +1,8 @@
+# Secrets and local config: wrangler.local.toml holds the push private key
+node_modules
+wrangler.local.toml
+wrangler.deploy.tmp.toml
+.dev.vars
+.wrangler/
+.env
+.env.*

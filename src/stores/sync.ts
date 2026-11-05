@@ -1,0 +1,164 @@
+import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
+import { CHANGE_EVENT, lastLocalChange } from '@/db'
+import {
+  cachedToken,
+  clearToken,
+  hasRefreshToken,
+  preloadGis,
+  refreshAccessToken,
+  requestToken,
+  revokeToken,
+  setWorkerUrl,
+} from '@/lib/google/gis'
+import { SheetsAuthError } from '@/lib/google/sheets'
+import { runSync } from '@/lib/google/syncEngine'
+import { autoPostDue } from '@/lib/recurrence'
+import { useSettings } from './settings'
+import { useUi } from './ui'
+
+/** after the last change, wait this long before syncing, so a run of edits becomes one sync */
+const AUTO_DELAY_MS = 15_000
+/** coming back to the app: skip the sync if one ran within this long */
+const CATCH_UP_MS = 60_000
+/** opening a record to edit it: skip the sync if one ran within this long */
+const STALE_MS = 30_000
+
+export const useSync = defineStore('sync', () => {
+  const settings = useSettings()
+  const ui = useUi()
+
+  const syncing = ref(false)
+  const error = ref('')
+  const signedIn = ref(hasRefreshToken() || Boolean(cachedToken()))
+  const url = ref('')
+  const tick = ref(0)
+
+  /** changes made on this device that the sheet has not seen yet */
+  const unsynced = computed(() => {
+    void tick.value
+    return lastLocalChange() > settings.s.lastSyncAt
+  })
+
+  async function accessToken(): Promise<string> {
+    const cached = cachedToken()
+    if (cached) return cached
+    const fresh = await refreshAccessToken()
+    if (fresh) return fresh
+    signedIn.value = false
+    throw new SheetsAuthError('尚未登入 Google，請到「同步」頁登入')
+  }
+
+  /** Must be called straight from a click: it opens Google's popup. */
+  async function connect(selectAccount = false) {
+    setWorkerUrl(settings.s.workerUrl)
+    await requestToken(selectAccount)
+    signedIn.value = true
+    error.value = ''
+  }
+
+  async function disconnect() {
+    await revokeToken()
+    signedIn.value = false
+    settings.s.spreadsheetId = ''
+    settings.s.folderId = ''
+    settings.s.lastSyncAt = 0
+    url.value = ''
+  }
+
+  let running: Promise<boolean> | null = null
+  let timer: ReturnType<typeof setTimeout> | undefined
+
+  /** Sync now. Resolves true on success; errors land in `error` (and a toast when `loud`). */
+  function sync(opts: { loud?: boolean; forceViews?: boolean } = {}): Promise<boolean> {
+    running ??= (async () => {
+      syncing.value = true
+      error.value = ''
+      const started = Date.now()
+      try {
+        setWorkerUrl(settings.s.workerUrl)
+        const attempt = () =>
+          runSync({
+            getToken: accessToken,
+            spreadsheetId: settings.s.spreadsheetId,
+            folderId: settings.s.folderId,
+            amortize: settings.s.amortize,
+            forceViews: opts.forceViews,
+            dropSeed: settings.s.seeded,
+          })
+        let res
+        try {
+          res = await attempt()
+        } catch (e) {
+          if (!(e instanceof SheetsAuthError) || !hasRefreshToken()) throw e
+          clearToken()
+          res = await attempt()
+        }
+        settings.s.spreadsheetId = res.spreadsheetId
+        settings.s.folderId = res.folderId
+        settings.s.seeded = false
+        url.value = res.url
+        settings.s.lastSyncAt = Math.max(started, lastLocalChange())
+        // pulled data may carry recurring rules that came due
+        await autoPostDue()
+        if (opts.loud) ui.toast(res.pulled ? `已同步，取得 ${res.pulled} 筆更新` : '已同步', 'success')
+        return true
+      } catch (e) {
+        if (e instanceof SheetsAuthError) signedIn.value = hasRefreshToken()
+        error.value = e instanceof Error ? e.message : String(e)
+        if (opts.loud) ui.toast(error.value, 'error')
+        return false
+      } finally {
+        syncing.value = false
+        tick.value++
+        running = null
+      }
+    })()
+    return running
+  }
+
+  function canAuto() {
+    return (
+      signedIn.value &&
+      Boolean(settings.s.workerUrl) &&
+      navigator.onLine &&
+      !error.value.includes('登入')
+    )
+  }
+
+  function schedule() {
+    clearTimeout(timer)
+    timer = setTimeout(() => {
+      if (canAuto()) void sync()
+    }, AUTO_DELAY_MS)
+  }
+
+  /** synced recently enough that going to the sheet again would only repeat the same reads */
+  const fresh = (ms: number) => !unsynced.value && Date.now() - settings.s.lastSyncAt < ms
+
+  /**
+   * Quietly bring this device up to date before something is edited, so it starts from the newest copy. Skipped when
+   * a sync just ran, and never holds the caller for longer than `waitMs`: on a slow network the edit goes ahead.
+   */
+  async function refresh(maxAgeMs = STALE_MS, waitMs = 3000) {
+    if (!canAuto() || fresh(maxAgeMs)) return
+    await Promise.race([sync(), new Promise((r) => setTimeout(r, waitMs))])
+  }
+
+  function init() {
+    preloadGis()
+    window.addEventListener(CHANGE_EVENT, () => {
+      tick.value++
+      if (canAuto()) schedule()
+    })
+    // coming back to the tab or the network returning is not worth a round trip when a sync only just ran
+    const catchUp = () => {
+      if (document.visibilityState === 'visible' && canAuto() && !fresh(CATCH_UP_MS)) void sync()
+    }
+    document.addEventListener('visibilitychange', catchUp)
+    window.addEventListener('online', catchUp)
+    catchUp()
+  }
+
+  return { syncing, error, signedIn, unsynced, url, connect, disconnect, sync, refresh, init }
+})

@@ -1,0 +1,214 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/chiron-hei-hk';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --primary: #4ab0e0;
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --surface-2: #f3f4f5;
+  --ink: #2c2f33;
+  --muted: #8d9399;
+  --line: #ebebeb;
+  --expense: #d0483f;
+  --income: #2f9e63;
+  --danger: #e0707a;
+  --success: #6cc28a;
+  --warn: #e8b84a;
+  --sun: #ee8f8f;
+  --sat: #8fc46a;
+  --shadow: 0 2px 10px rgb(0 0 0 / 0.07);
+  color-scheme: light;
+}
+
+.dark {
+  --bg: #1f2124;
+  --surface: #2b2d31;
+  --surface-2: #35383d;
+  --ink: #eceef0;
+  --muted: #9aa0a6;
+  --line: #3a3d42;
+  --expense: #ef7a72;
+  --income: #5fcf95;
+  --shadow: 0 2px 10px rgb(0 0 0 / 0.35);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans:
+    'Inter Variable', 'Chiron Hei HK Variable', 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei',
+    system-ui, sans-serif;
+  --color-primary: var(--primary);
+  --color-primary-soft: color-mix(in oklab, var(--primary) 14%, var(--surface));
+  --color-primary-strong: color-mix(in oklab, var(--primary) 78%, var(--ink));
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-expense: var(--expense);
+  --color-income: var(--income);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-warn: var(--warn);
+  --color-sun: var(--sun);
+  --color-sat: var(--sat);
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  /* digits all the same width, so amounts line up */
+  font-variant-numeric: tabular-nums;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  min-height: 100dvh;
+}
+
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+
+@layer components {
+  .card {
+    @apply rounded-[20px] bg-surface p-4;
+    box-shadow: var(--shadow);
+  }
+  /* round button at the corners of a page header */
+  .circle-btn {
+    @apply relative inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-ink transition hover:bg-surface-2 active:scale-95 disabled:opacity-40;
+  }
+  .icon-btn {
+    @apply inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink transition hover:bg-surface-2 active:scale-95 disabled:opacity-40;
+  }
+  .btn {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-transparent px-5 py-2 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-40;
+  }
+  .btn-sm {
+    @apply min-h-9 rounded-xl px-3 py-1 text-xs;
+  }
+  .btn-primary {
+    @apply bg-primary text-white hover:brightness-105;
+  }
+  .btn-soft {
+    @apply bg-primary-soft text-primary-strong;
+  }
+  .btn-ghost {
+    @apply border-line bg-surface text-ink hover:bg-surface-2;
+  }
+  .btn-danger {
+    @apply bg-danger text-white;
+  }
+  .input {
+    @apply min-h-12 w-full rounded-2xl border border-line bg-surface px-4 py-2 text-ink outline-none placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20;
+  }
+  textarea.input {
+    @apply py-3;
+  }
+  /* the soft rounded buttons that hold a value in the record form */
+  .field {
+    @apply flex min-h-12 w-full min-w-0 items-center justify-center gap-2 rounded-2xl border border-line bg-surface px-3 text-center text-[15px] transition active:scale-[0.99];
+  }
+  .field-empty {
+    @apply text-muted;
+  }
+  .label {
+    @apply mb-1.5 block text-xs font-semibold tracking-wide text-muted;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full border border-line bg-surface px-3 py-1.5 text-sm text-ink transition active:scale-95;
+  }
+  .chip-on {
+    @apply border-primary bg-primary-soft text-primary-strong;
+  }
+  .tag {
+    @apply inline-flex items-center rounded-full border border-primary/60 px-2 py-0.5 text-[11px] font-medium text-primary;
+  }
+  .check {
+    @apply size-5 shrink-0 cursor-pointer appearance-none rounded-md border border-line bg-surface transition checked:border-primary checked:bg-primary;
+  }
+  .section-title {
+    @apply mb-2 px-1 text-sm font-semibold text-muted;
+  }
+}
+
+/* a slim, quiet scrollbar on desktop browsers instead of the thick default one (touch screens have none) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 45%, transparent) transparent;
+}
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+.sheet-enter-active,
+.sheet-leave-active {
+  transition:
+    transform 0.22s ease,
+    opacity 0.22s ease;
+}
+.sheet-enter-from,
+.sheet-leave-to {
+  transform: translateY(24px);
+  opacity: 0;
+}
+
+/* the item tiles in the record form slide into place when one is moved, added or removed */
+.tabs-move {
+  transition: transform 0.22s ease;
+}
+.tabs-enter-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+.tabs-enter-from {
+  opacity: 0;
+  transform: scale(0.8);
+}
+.tabs-leave-active {
+  position: absolute;
+  opacity: 0;
+}
+
+/* rows in the category list slide when one is dragged to a new place */
+.rows-move {
+  transition: transform 0.2s ease;
+}
+
+/* the +/- buttons and typing are enough; hide the browser's own number arrows */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* round icon buttons drawn with no background still get the hover tint: the bg-transparent utility would otherwise win over the component's own hover */
+.icon-btn.bg-transparent:hover:not(:disabled) {
+  background-color: var(--color-surface-2);
+}
