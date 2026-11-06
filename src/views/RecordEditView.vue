@@ -822,7 +822,8 @@ watch(
   async (id) => {
     if (!id) return
     await nextTick()
-    partNameEl.value?.focus()
+    // 手機不自動聚焦，免得鍵盤一直跳出來
+    if (matchMedia('(pointer: fine)').matches) partNameEl.value?.focus()
   },
 )
 function savePart() {

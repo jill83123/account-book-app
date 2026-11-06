@@ -20,6 +20,20 @@ const list = computed(() => {
     .sort((a, b) => a.name.localeCompare(b.name))
 })
 
+/** 實際記錄裡每個商家各品項出現的筆數 */
+const usage = computed(() => {
+  const map = new Map<string, number>()
+  for (const r of data.records) {
+    if (!r.merchantId) continue
+    for (const l of r.lines) {
+      const name = l.name.trim()
+      if (name) map.set(`${r.merchantId}|${name}`, (map.get(`${r.merchantId}|${name}`) ?? 0) + 1)
+    }
+  }
+  return map
+})
+const used = (name: string) => usage.value.get(`${openId.value}|${name}`) ?? 0
+
 const openId = ref('')
 const open = computed({ get: () => Boolean(openId.value), set: (v: boolean) => !v && (openId.value = '') })
 const current = computed(() => data.merchantMap.get(openId.value))
@@ -71,14 +85,14 @@ async function destroy() {
     <BottomSheet v-model="open" :title="current?.name ?? ''">
       <template v-if="current">
         <ul v-if="current.items.length" class="card mb-4 divide-y divide-line p-0">
-          <li v-for="i in [...current.items].sort((a, b) => b.count - a.count)" :key="i.name" class="flex items-center gap-3 px-4 py-3">
+          <li v-for="i in [...current.items].sort((a, b) => used(b.name) - used(a.name))" :key="i.name" class="flex items-center gap-3 px-4 py-3">
             <span class="min-w-0 flex-1">
               <span class="block truncate text-xs text-muted"><CatPath :id="i.categoryId" /></span>
               <span class="block truncate font-medium">{{ i.name }}</span>
             </span>
             <span class="shrink-0 text-right">
               <span class="block text-sm">${{ fmt(i.price) }}</span>
-              <span class="block text-xs text-muted">{{ i.count }} 次</span>
+              <span class="block text-xs text-muted">{{ used(i.name) }} 次</span>
             </span>
             <button class="icon-btn size-9 text-muted" :aria-label="`移除 ${i.name}`" @click="dropItem(i.name)"><Trash2 :size="16" /></button>
           </li>
