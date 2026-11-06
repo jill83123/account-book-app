@@ -29,6 +29,13 @@ async function rename(id: string) {
   await save('merchants', { ...m, name })
 }
 
+/** merchants that at least one record uses: those stay, the rest can be deleted right here */
+const recordCount = computed(() => {
+  const n = new Map<string, number>()
+  for (const r of data.records) if (r.merchantId) n.set(r.merchantId, (n.get(r.merchantId) ?? 0) + 1)
+  return n
+})
+
 async function destroy(id: string) {
   const m = data.merchantMap.get(id)
   if (!m) return
@@ -82,11 +89,11 @@ function clear() {
           <Store :size="20" class="shrink-0 text-muted" />
           <span class="min-w-0 flex-1">
             <span class="block truncate font-medium" :class="m.id === model && 'text-primary'">{{ m.name }}</span>
-            <span class="block text-xs text-muted">{{ m.items.length }} 個品項</span>
+            <span class="block text-xs text-muted">{{ m.items.length }} 個品項｜{{ recordCount.get(m.id) ?? 0 }} 筆紀錄</span>
           </span>
         </button>
         <button
-          v-if="!m.items.length"
+          v-if="!recordCount.get(m.id)"
           class="icon-btn size-9 shrink-0 border-0 bg-transparent text-muted"
           :aria-label="`刪除 ${m.name}`"
           @click="destroy(m.id)"
