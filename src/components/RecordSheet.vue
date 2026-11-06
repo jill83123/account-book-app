@@ -190,10 +190,12 @@ async function destroy() {
           <span v-if="rec.lines[0]!.note">{{ rec.lines[0]!.note }}</span>
           <span v-if="rec.lines[0]!.amortMonths && rec.lines[0]!.amortMonths > 1">分 {{ rec.lines[0]!.amortMonths }} 個月攤提</span>
         </div>
-        <ul v-if="rec.lines[0]!.details?.length" class="space-y-1 text-sm">
-          <li v-for="(d, i) in rec.lines[0]!.details" :key="i" class="flex justify-between gap-3">
-            <span class="min-w-0 truncate">{{ d.name }}<span v-if="d.qty" class="text-muted"> ×{{ d.qty }}</span></span>
-            <span v-if="d.amount" class="shrink-0">${{ fmt(d.amount) }}</span>
+        <!-- three columns that size themselves, so the count and the price sit close and line up row to row -->
+        <ul v-if="rec.lines[0]!.details?.length" class="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-2 gap-y-1 text-sm">
+          <li v-for="(d, i) in rec.lines[0]!.details" :key="i" class="contents">
+            <span class="min-w-0 truncate">{{ d.name }}</span>
+            <span class="text-right text-muted">×{{ d.qty || 1 }}</span>
+            <span class="text-right">{{ d.amount ? `$${fmt(d.amount)}` : '' }}</span>
           </li>
         </ul>
       </div>
@@ -254,7 +256,10 @@ async function destroy() {
         </li>
       </ul>
 
-      <p v-if="rec.note && !rec.adjust" class="rounded-2xl bg-surface-2 p-3.5 text-sm whitespace-pre-wrap">{{ rec.note }}</p>
+      <div v-if="rec.note && !rec.adjust" class="rounded-2xl border border-line bg-surface px-4 py-3.5">
+        <p class="mb-1 text-xs text-muted">備註</p>
+        <p class="text-sm whitespace-pre-wrap">{{ rec.note }}</p>
+      </div>
 
       <!-- the photos on the left, the quiet record of when it was added and changed on the right -->
       <div v-if="photos.length || rec.updatedAt" class="flex items-end justify-between gap-3">

@@ -9,7 +9,7 @@ import RecordCard from './RecordCard.vue'
  * `reorder`: the list is one day, so holding a row and dragging it up or down places it among the others.
  * Picking several records has its own button; holding only moves a row.
  */
-const props = defineProps<{ records: Rec[]; showDate?: boolean; showLedger?: boolean; noSelect?: boolean; reorder?: boolean; flat?: boolean; dense?: boolean }>()
+const props = defineProps<{ records: Rec[]; showDate?: boolean; shortDate?: boolean; showLedger?: boolean; noSelect?: boolean; reorder?: boolean; flat?: boolean; dense?: boolean }>()
 const ui = useUi()
 
 /** what is shown; reordered live while a row is being carried */
@@ -178,7 +178,7 @@ onBeforeUnmount(() => {
           :class="drag?.id === r.id ? '-mx-3 rounded-2xl bg-surface px-3 shadow-xl ring-2 ring-primary' : !flat && 'bg-surface'"
           :style="drag?.id === r.id ? { transform: `translateY(${drag.dy}px) scale(1)`, transition: 'none' } : undefined"
         >
-          <RecordCard :rec="r" :show-date="showDate" :show-ledger="showLedger" :selecting="ui.selecting && !noSelect" :checked="ui.selectedIds.includes(r.id)" :dense="dense" />
+          <RecordCard :rec="r" :show-date="showDate" :short-date="shortDate" :show-ledger="showLedger" :selecting="ui.selecting && !noSelect" :checked="ui.selectedIds.includes(r.id)" :dense="dense" />
         </div>
       </button>
     </TransitionGroup>

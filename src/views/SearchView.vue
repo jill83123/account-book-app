@@ -277,9 +277,9 @@ function clearFilters() {
         </div>
         <p v-if="showCustom" class="mt-5 mb-2 px-0.5 text-xs text-muted">自訂區間</p>
         <div v-if="showCustom" class="flex items-center gap-2">
-          <DateField v-model="from" title="開始日期" placeholder="開始日期" clearable compact class="min-w-0 flex-1" />
+          <DateField v-model="from" title="開始日期" placeholder="開始日期" range="start" clearable compact class="min-w-0 flex-1" />
           <span class="text-muted">～</span>
-          <DateField v-model="to" title="結束日期" placeholder="結束日期" clearable compact class="min-w-0 flex-1" />
+          <DateField v-model="to" title="結束日期" placeholder="結束日期" range="end" clearable compact class="min-w-0 flex-1" />
         </div>
       </div>
       <ul v-if="picker === 'ledger'" class="card mb-2 divide-y divide-line overflow-hidden p-0 shadow-none border border-line">

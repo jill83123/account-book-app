@@ -15,7 +15,7 @@ const remembered = {
 </script>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { byCategory, toEntries, type CatTotal, type Entry } from '@/lib/calc'
 import { addYm, daysBetween, today, ym } from '@/lib/date'
@@ -139,6 +139,17 @@ function openCat(id: string) {
   pickMonth.value = ''
   trendShift.value = 0
   allShown.value = ''
+  if (expandedId.value) void nextTick(() => centerCat(id))
+}
+/** bring the opened category into view: centred between the top bar and the tab bar, or its top edge when it is taller than that */
+function centerCat(id: string) {
+  const el = document.querySelector<HTMLElement>(`[data-cat="${id}"]`)
+  if (!el) return
+  const top = 64
+  const bottom = window.innerHeight - 72
+  const r = el.getBoundingClientRect()
+  const target = r.height <= bottom - top ? top + (bottom - top - r.height) / 2 : top
+  window.scrollBy({ top: r.top - target, behavior: 'smooth' })
 }
 watch(tops, (l) => {
   if (expandedId.value && !l.some((t) => t.id === expandedId.value)) expandedId.value = ''
@@ -305,10 +316,11 @@ const barTone = (spent: number, budget: number) =>
     <!-- the period; the small button on the right picks month, year or a custom range -->
     <div class="mb-1 flex items-center gap-2">
       <div class="min-w-0 flex-1">
-        <div v-if="mode === 'range'" class="my-2 flex items-center gap-2">
-          <DateField v-model="rangeFrom" title="開始日期" compact class="min-w-0 flex-1 justify-center !min-h-0 !rounded-xl !px-2 !py-2 text-sm" />
+        <!-- the same size, border and weight as the 月 button beside them, so the row reads as one -->
+        <div v-if="mode === 'range'" class="flex items-center gap-2">
+          <DateField v-model="rangeFrom" title="開始日期" range="start" compact class="min-w-0 flex-1 justify-center !min-h-0 !rounded-xl !px-3 !py-2 text-sm font-medium" />
           <span class="text-muted">～</span>
-          <DateField v-model="rangeTo" title="結束日期" compact class="min-w-0 flex-1 justify-center !min-h-0 !rounded-xl !px-2 !py-2 text-sm" />
+          <DateField v-model="rangeTo" title="結束日期" range="end" compact class="min-w-0 flex-1 justify-center !min-h-0 !rounded-xl !px-3 !py-2 text-sm font-medium" />
         </div>
         <MonthNav v-else v-model="period" :year="mode === 'year'" />
       </div>
@@ -348,7 +360,7 @@ const barTone = (spent: number, budget: number) =>
 
       <div v-if="tops.length">
       <div class="card divide-y divide-line p-0">
-        <div v-for="t in tops" :key="t.id">
+        <div v-for="t in tops" :key="t.id" :data-cat="t.id">
           <button class="flex w-full items-center gap-3 px-4 py-3 text-left" @click="openCat(t.id)">
             <CatIcon :icon="t.icon" :color="t.color" :size="34" />
             <span class="min-w-0 flex-1 truncate font-medium">{{ t.name }}</span>
@@ -356,7 +368,7 @@ const barTone = (spent: number, budget: number) =>
             <span class="font-semibold">${{ fmt(t.total) }}</span>
             <ChevronDown :size="16" class="shrink-0 text-muted transition-transform" :class="expandedId === t.id && 'rotate-180'" />
           </button>
-          <ul v-if="expandedId === t.id" class="space-y-3 bg-surface-2/60 px-4 pt-3 pb-2">
+          <ul v-if="expandedId === t.id" class="space-y-3 bg-surface-2/60 px-4 pt-3">
             <!-- month by month; tap a bar to see just that month below -->
             <li class="pb-1">
               <div class="mb-2 flex items-baseline justify-between text-xs text-muted">
@@ -412,8 +424,8 @@ const barTone = (spent: number, budget: number) =>
             <li v-if="!recordsOf(t.id).length" class="flex items-center justify-center gap-1.5 py-5 text-xs text-muted"><Inbox :size="15" />{{ pickLabel }}沒有紀錄</li>
             <li v-else class="pt-2">
               <p class="-mb-1 text-xs text-muted">{{ pickLabel }}{{ subId ? ` ｜ ${subId === t.id ? '未細分' : data.catName(subId)}` : '' }}的紀錄（{{ recordsOf(t.id).length }} 筆）</p>
-              <RecordList :records="allShown === t.id ? recordsOf(t.id) : recordsOf(t.id).slice(0, 4)" show-date no-select flat />
-              <button v-if="recordsOf(t.id).length > 4" class="flex w-full items-center justify-center gap-1 py-1 text-xs text-muted" @click="allShown = allShown === t.id ? '' : t.id">
+              <RecordList :records="allShown === t.id ? recordsOf(t.id) : recordsOf(t.id).slice(0, 4)" show-date :short-date="mode !== 'range'" no-select flat />
+              <button v-if="recordsOf(t.id).length > 4" class="flex w-full items-center justify-center gap-1 pt-1 pb-3 text-xs text-muted" @click="allShown = allShown === t.id ? '' : t.id">
                 {{ allShown === t.id ? '收起' : `顯示全部 ${recordsOf(t.id).length} 筆` }}
                 <ChevronDown :size="14" class="transition-transform" :class="allShown === t.id && 'rotate-180'" />
               </button>

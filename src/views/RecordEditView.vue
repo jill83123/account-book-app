@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import {
   ArrowLeftRight,
   Calculator,
@@ -8,6 +8,7 @@ import {
   ScanLine,
   Star,
   Info,
+  GripVertical,
   Plus,
   Repeat as RepeatIcon,
   Store,
@@ -17,7 +18,6 @@ import {
   Trash2,
   Users,
   HandCoins,
-  GripVertical,
   X,
 } from '@/lib/uiIcons'
 import { remove, save } from '@/db'
@@ -334,6 +334,7 @@ watch(
     load()
     loadedAt = editing.value?.updatedAt ?? 0
     await nextTick()
+    baseline = formSnapshot()
     if (!editingId.value && matchMedia('(pointer: fine)').matches) amountEl.value?.focus()
     // the form is up at once; the newest copy is fetched behind it
     if (editingId.value) void freshen()
@@ -369,7 +370,41 @@ async function freshen() {
   }
   load()
   loadedAt = cur.updatedAt
+  await nextTick()
+  baseline = formSnapshot()
 }
+
+/** what the form held when it opened, to tell whether anything was changed */
+let baseline = ''
+let leaving = false
+function formSnapshot() {
+  return JSON.stringify([
+    type.value,
+    lines.value,
+    accountId.value,
+    toAccountId.value,
+    ledgerId.value,
+    merchantId.value,
+    newMerchantName.value,
+    date.value,
+    time.value,
+    note.value,
+    companions.value,
+    split.value,
+    repeat.value,
+    transferText.value,
+    toTotalText.value,
+    rateText.value,
+  ])
+}
+onBeforeRouteLeave(async () => {
+  if (leaving || !ready.value || formSnapshot() === baseline) return true
+  return await ui.confirm('放棄這筆記錄？', {
+    message: '離開後輸入的內容不會保留。',
+    confirmText: '離開',
+    danger: true,
+  })
+})
 onMounted(() => window.scrollTo(0, 0))
 
 watch(type, (t, old) => {
@@ -763,20 +798,57 @@ function useDetail(sug: { name: string; amount: number }) {
   syncDetails()
 }
 
+/** the part being added or edited in the small window */
+/** `priceText` only helps work out the subtotal; it is not kept */
+const partEdit = ref<{ id: string; name: string; qtyText: string; priceText: string; amountText: string; isNew: boolean } | null>(null)
+/** with a unit price typed, the subtotal follows price times count (one when no count) */
+function calcPart() {
+  const p = partEdit.value
+  if (!p) return
+  const price = evalExpr(p.priceText)
+  if (!price) return
+  const qty = evalExpr(p.qtyText) || 1
+  p.amountText = String(Math.round(price * qty * 100) / 100)
+}
 function addDetail() {
-  line.value.details.push({ id: uid(), name: '', amountText: '', qtyText: '' })
+  partEdit.value = { id: uid(), name: '', qtyText: '', priceText: '', amountText: '', isNew: true }
+}
+function editDetail(d: LineForm['details'][number]) {
+  partEdit.value = { id: d.id, name: d.name, qtyText: d.qtyText, priceText: '', amountText: d.amountText, isNew: false }
+}
+const partNameEl = ref<HTMLInputElement>()
+watch(
+  () => partEdit.value?.id,
+  async (id) => {
+    if (!id) return
+    await nextTick()
+    partNameEl.value?.focus()
+  },
+)
+function savePart() {
+  const p = partEdit.value
+  if (!p) return
+  partEdit.value = null
+  // nothing typed: nothing to add
+  if (!p.name.trim() && !p.amountText.trim()) return
+  const list = line.value.details
+  const next = { id: p.id, name: p.name, qtyText: p.qtyText, amountText: p.amountText }
+  const i = list.findIndex((x) => x.id === p.id)
+  if (i >= 0) list[i] = next
+  else list.push(next)
+  syncDetails()
 }
 function removeDetail(id: string) {
   line.value.details = line.value.details.filter((d) => d.id !== id)
   syncDetails()
 }
+function dropPart() {
+  const p = partEdit.value
+  partEdit.value = null
+  if (p) removeDetail(p.id)
+}
 
-// ---- reordering the parts: a button turns it on, then the bar on a row is dragged ----
-/** while on, the rows are plain (no fields to tap by mistake) and carry a bar to drag by */
-const sorting = ref(false)
-watch([active, () => line.value?.details.length ?? 0], ([, n]) => {
-  if (n < 2) sorting.value = false
-})
+// ---- reordering the parts: the bar on a row is dragged ----
 const detailListEl = ref<HTMLElement>()
 /** the part being carried, and how far it is drawn from its place */
 const partDrag = ref<{ id: string; dy: number } | null>(null)
@@ -793,8 +865,6 @@ function pressPart(e: PointerEvent, id: string) {
 /** once carrying, the page must not scroll under the finger */
 const stopPartScroll = (e: TouchEvent) => e.preventDefault()
 function startPartDrag(row: HTMLElement, clientY: number, id: string) {
-  // the keyboard is not wanted while a part is in the air
-  ;(document.activeElement as HTMLElement | null)?.blur()
   const r = row.getBoundingClientRect()
   partGrabY = clientY - (r.top + r.height / 2)
   partPointerY = clientY
@@ -851,8 +921,6 @@ function endPartDrag() {
   window.removeEventListener('pointerup', endPartDrag)
   window.removeEventListener('pointercancel', endPartDrag)
   partDrag.value = null
-  // letting go must not put the cursor into whatever field is under the finger
-  window.setTimeout(() => (document.activeElement as HTMLElement | null)?.blur(), 0)
 }
 onBeforeUnmount(() => endPartDrag())
 /** the parts added up */
@@ -1083,6 +1151,7 @@ async function submit() {
       await savePhotos(base.id, photos.value)
     }
     if (accountId.value) s.lastAccountId = accountId.value
+    leaving = true
     void router.replace('/')
   } finally {
     saving.value = false
@@ -1093,6 +1162,7 @@ async function destroy() {
   if (!(await ui.confirm('刪除這筆記錄？', { danger: true, confirmText: '刪除' }))) return
   await remove('records', editingId.value)
   await forgetPhotos(editingId.value)
+  leaving = true
   void router.back()
 }
 
@@ -1424,93 +1494,43 @@ function cancel() {
 
     <!-- the parts of this item: names and amounts, not categories -->
     <div v-if="type !== 'transfer'" class="mb-5">
-      <div class="mb-2 flex items-center justify-between">
-        <p class="label !mb-0 pb-1">細項（選填）</p>
-        <button
-          v-if="line.details.length > 1"
-          class="text-xs font-medium text-primary"
-          @click="sorting = !sorting"
-        >
-          {{ sorting ? '完成' : '調整排序' }}
-        </button>
-      </div>
+      <p class="label !mb-2 pb-1">細項（選填）</p>
       <div v-if="line.details.length" ref="detailListEl" class="relative">
         <!-- the parts only slide aside while one is being carried -->
         <TransitionGroup tag="ul" :name="partDrag ? 'rows' : 'still'" class="space-y-2">
-        <li
-          v-for="d in line.details"
-          :key="d.id"
-          data-part
-          :data-id="d.id"
-          class="relative"
-          :class="partDrag?.id === d.id && 'z-10'"
-        >
-        <!-- reordering: the part as a plain row, with a bar to drag it by -->
-        <div
-          v-if="sorting"
-          class="flex items-center gap-3 rounded-2xl border border-line bg-surface py-2 pr-1.5 pl-4 transition-transform duration-150 select-none"
-          :class="partDrag?.id === d.id ? 'shadow-xl ring-2 ring-primary' : ''"
-          :style="partDrag?.id === d.id ? { transform: `translateY(${partDrag.dy}px)`, transition: 'none' } : undefined"
-        >
-          <span class="min-w-0 flex-1 truncate" :class="!d.name.trim() && 'text-muted'">
-            {{ d.name.trim() || '未命名' }}<span v-if="d.qtyText" class="ml-1.5 text-xs text-muted">× {{ d.qtyText }}</span>
-          </span>
-          <span class="shrink-0 text-sm font-medium tabular-nums">{{ foreign ? currency : '$' }}{{ d.amountText || 0 }}</span>
-          <span
-            class="grid size-9 shrink-0 cursor-grab touch-none place-items-center rounded-full text-muted active:cursor-grabbing"
-            aria-label="拖曳調整順序"
-            @pointerdown.prevent="pressPart($event, d.id)"
+          <li
+            v-for="d in line.details"
+            :key="d.id"
+            data-part
+            :data-id="d.id"
+            class="relative"
+            :class="partDrag?.id === d.id && 'z-10'"
           >
-            <GripVertical :size="18" />
-          </span>
-        </div>
-        <div v-else class="flex items-center gap-2">
-          <input
-            v-model="d.name"
-            class="input min-w-0 flex-1 !min-h-0 !py-2.5"
-            placeholder="例如 漢堡"
-          />
-          <span class="relative w-[4.25rem] shrink-0">
-            <span
-              class="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-sm text-muted"
-              >×</span
+            <!-- tap the row to edit it; the bar on the right is dragged to reorder -->
+            <div
+              class="flex items-center gap-3 rounded-2xl border border-line bg-surface py-1.5 pr-1.5 pl-4 transition-transform duration-150 select-none"
+              :class="partDrag?.id === d.id ? 'bg-surface shadow-xl ring-2 ring-primary' : ''"
+              :style="partDrag?.id === d.id ? { transform: `translateY(${partDrag.dy}px)`, transition: 'none' } : undefined"
             >
-            <input
-              v-model="d.qtyText"
-              class="input w-full !min-h-0 !py-2.5 !pr-3 !pl-5 text-right text-sm"
-              inputmode="decimal"
-              placeholder="數量"
-              @input="syncDetails"
-            />
-          </span>
-          <span class="relative w-24 shrink-0">
-            <span
-              class="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-sm text-muted"
-              >{{ foreign ? currency : '$' }}</span
-            >
-            <input
-              v-model="d.amountText"
-              class="input w-full !min-h-0 !py-2.5 text-right"
-              :class="foreign ? '!pl-11' : '!pl-7'"
-              inputmode="decimal"
-              placeholder="0"
-              @input="syncDetails"
-            />
-          </span>
-          <button
-            class="icon-btn size-9 shrink-0 border-0 bg-transparent text-muted"
-            aria-label="移除細項"
-            @click="removeDetail(d.id)"
-          >
-            <X :size="16" />
-          </button>
-        </div>
-        </li>
+              <button class="flex min-w-0 flex-1 items-center gap-3 py-1.5 text-left" @click="editDetail(d)">
+                <span class="min-w-0 flex-1 truncate" :class="!d.name.trim() && 'text-muted'">
+                  {{ d.name.trim() || '未命名' }}<span v-if="d.qtyText" class="ml-1.5 text-xs text-muted">× {{ d.qtyText }}</span>
+                </span>
+                <span class="shrink-0 text-sm font-medium tabular-nums">{{ foreign ? currency : '$' }}{{ d.amountText || 0 }}</span>
+              </button>
+              <span
+                class="grid size-9 shrink-0 cursor-grab touch-none place-items-center rounded-full text-muted active:cursor-grabbing"
+                aria-label="拖曳調整順序"
+                @pointerdown.prevent="pressPart($event, d.id)"
+              >
+                <GripVertical :size="18" />
+              </span>
+            </div>
+          </li>
         </TransitionGroup>
       </div>
       <!-- new parts go at the bottom, under the ones already there -->
       <button
-        v-if="!sorting"
         class="mt-2 flex w-full items-center justify-center gap-1.5 rounded-2xl bg-primary-soft py-2.5 text-sm font-semibold text-primary-strong transition active:scale-[0.99]"
         @click="addDetail"
       >
@@ -1617,6 +1637,59 @@ function cancel() {
 
     <CategoryPickerSheet v-model:open="categorySheet" v-model="line.categoryId" :kind="kind" />
     <KeypadSheet v-model:open="keypadSheet" v-model="keypadValue" />
+    <!-- a small centred window for adding or editing one part -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="partEdit"
+          class="fixed inset-0 z-40 flex items-center justify-center bg-black/30 p-4"
+          @click.self="partEdit = null"
+          @keydown.esc="partEdit = null"
+        >
+          <form class="card w-full max-w-[21rem] space-y-5 p-5 shadow-xl" @submit.prevent="savePart">
+            <h2 class="text-lg leading-snug font-bold">{{ partEdit.isNew ? '新增細項' : '編輯細項' }}</h2>
+            <div class="space-y-3">
+              <input ref="partNameEl" v-model="partEdit.name" class="input" placeholder="名稱，例如 漢堡" />
+              <div class="grid grid-cols-2 gap-3">
+                <span class="relative">
+                  <span class="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-sm text-muted">×</span>
+                  <input v-model="partEdit.qtyText" class="input w-full !pr-3 !pl-7 text-right" inputmode="decimal" placeholder="數量" @input="calcPart" />
+                </span>
+                <span class="relative">
+                  <span class="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-sm text-muted">{{ foreign ? currency : '$' }}</span>
+                  <input
+                    v-model="partEdit.priceText"
+                    class="input w-full !pr-3 text-right"
+                    :class="foreign ? '!pl-11' : '!pl-7'"
+                    inputmode="decimal"
+                    placeholder="單價"
+                    @input="calcPart"
+                  />
+                </span>
+              </div>
+              <span class="relative block">
+                <span class="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-sm text-muted">{{ foreign ? currency : '$' }}</span>
+                <input
+                  v-model="partEdit.amountText"
+                  class="input w-full !pr-3 text-right"
+                  :class="foreign ? '!pl-11' : '!pl-7'"
+                  inputmode="decimal"
+                  placeholder="小計"
+                />
+              </span>
+            </div>
+            <div class="space-y-2">
+              <div class="grid grid-cols-2 gap-2">
+                <button type="button" class="btn btn-soft" @click="partEdit = null">取消</button>
+                <button type="submit" class="btn btn-primary">確認</button>
+              </div>
+              <button v-if="!partEdit.isNew" type="button" class="btn btn-ghost w-full text-danger" @click="dropPart">刪除這個細項</button>
+            </div>
+          </form>
+        </div>
+      </Transition>
+    </Teleport>
+
     <MerchantPickerSheet
       v-model:open="merchantSheet"
       v-model="merchantId"

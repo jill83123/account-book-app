@@ -7,7 +7,7 @@ import DatePickerSheet from './DatePickerSheet.vue'
 // two roots (the field and its sheet), so class and the like go to the field by hand
 defineOptions({ inheritAttrs: false })
 
-const props = defineProps<{ title?: string; placeholder?: string; clearable?: boolean; compact?: boolean }>()
+const props = defineProps<{ title?: string; placeholder?: string; clearable?: boolean; compact?: boolean; range?: 'start' | 'end' }>()
 /** YYYY-MM-DD, or '' for no date */
 const model = defineModel<string>({ required: true })
 const open = ref(false)
@@ -24,5 +24,5 @@ const label = computed(() =>
     <span class="min-w-0 truncate" :class="!model && 'text-muted'">{{ label }}</span>
     <CalendarDays v-if="!compact" :size="18" class="shrink-0 text-muted" />
   </button>
-  <DatePickerSheet v-model:open="open" v-model="model" :title="title" :clearable="clearable" />
+  <DatePickerSheet v-model:open="open" v-model="model" :title="title" :clearable="clearable" :range="range" />
 </template>

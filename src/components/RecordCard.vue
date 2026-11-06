@@ -8,7 +8,7 @@ import { fmt } from '@/lib/money'
 import { P } from '@/lib/colors'
 import CatIcon from './CatIcon.vue'
 
-const props = defineProps<{ rec: Rec; showDate?: boolean; showLedger?: boolean; selecting?: boolean; checked?: boolean; dense?: boolean }>()
+const props = defineProps<{ rec: Rec; showDate?: boolean; shortDate?: boolean; showLedger?: boolean; selecting?: boolean; checked?: boolean; dense?: boolean }>()
 const data = useData()
 
 const merchant = computed(() => (props.rec.merchantId ? data.merchantMap.get(props.rec.merchantId)?.name : ''))
@@ -46,8 +46,15 @@ const titleIsCat = computed(() => !first.value?.name && !parts.value)
  * The small line under the title, in pieces so each kind can look different: the category is a light chip, the parts
  * of the item are plain text, the merchant and the people follow a thin bar.
  */
-type Piece = { kind: 'text' | 'cat' | 'parts' | 'merchant' | 'who'; text: string }
+type Piece = { kind: 'text' | 'cat' | 'parts' | 'merchant' | 'who' | 'note'; text: string }
+/** the record note on one line; it only shows when the row has room left */
+const noteText = computed(() => (props.rec.adjust ? '' : (props.rec.note ?? '').replace(/\s+/g, ' ').trim()))
 const pieces = computed<Piece[]>(() => {
+  const out = basePieces()
+  if (noteText.value) out.push({ kind: 'note', text: noteText.value })
+  return out
+})
+function basePieces(): Piece[] {
   const r = props.rec
   if (r.type === 'transfer') return [{ kind: 'text', text: `${account.value} → ${data.accMap.get(r.toAccountId ?? '')?.name ?? ''}` }]
   if (r.adjust) return [{ kind: 'text', text: r.type === 'income' ? '補上差額' : '扣除差額' }]
@@ -65,7 +72,7 @@ const pieces = computed<Piece[]>(() => {
   if (merchant.value) out.push({ kind: 'merchant', text: merchant.value })
   if (r.companions?.length) out.push({ kind: 'who', text: r.companions.map(data.memberName).join('、') })
   return out
-})
+}
 
 // the category tag always leads the line; everything else follows it
 const catPiece = computed(() => pieces.value.find((p) => p.kind === 'cat'))
@@ -100,7 +107,7 @@ const tone = computed(() =>
       </div>
       <div class="mt-0.5 flex h-[18px] items-center gap-1.5 overflow-hidden text-xs whitespace-nowrap text-muted">
         <span v-if="catPiece" class="shrink-0 rounded bg-ink/[0.06] px-1.5 py-px">{{ catPiece.text }}</span>
-        <span v-if="showDate" class="shrink-0">{{ rec.date }}</span>
+        <span v-if="showDate" class="shrink-0">{{ shortDate ? rec.date.slice(5) : rec.date }}</span>
         <span v-if="showDate && restPieces.length" class="h-3 w-px shrink-0 bg-muted/40" />
         <template v-for="(p, i) in restPieces" :key="i">
           <span v-if="p.kind === 'parts'" class="min-w-0 truncate text-ink/70">{{ p.text }}</span>
@@ -108,6 +115,10 @@ const tone = computed(() =>
           <span v-else-if="p.kind === 'merchant' || p.kind === 'who'" class="inline-flex shrink-0 items-center gap-1.5">
             <span v-if="i > 0" class="h-3 w-px shrink-0 bg-muted/40" />
             <span class="max-w-28 truncate">{{ p.text }}</span>
+          </span>
+          <span v-else-if="p.kind === 'note'" class="inline-flex min-w-0 items-center gap-1.5">
+            <span v-if="i > 0 || (catPiece && !showDate)" class="h-3 w-px shrink-0 bg-muted/40" />
+            <span class="min-w-0 truncate">{{ p.text }}</span>
           </span>
           <span v-else class="min-w-0 truncate">{{ p.text }}</span>
         </template>
