@@ -1,9 +1,24 @@
 <script setup lang="ts">
-import { nextTick, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useUi } from '@/stores/ui'
 
 const ui = useUi()
 const inputEl = ref<HTMLInputElement>()
+
+// the on-screen keyboard only shrinks the visual viewport on iOS, so the dialog is centered in what is left above it
+const keyboard = ref(0)
+function measureKeyboard() {
+  const vv = window.visualViewport
+  keyboard.value = vv ? Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)) : 0
+}
+onMounted(() => {
+  window.visualViewport?.addEventListener('resize', measureKeyboard)
+  window.visualViewport?.addEventListener('scroll', measureKeyboard)
+})
+onBeforeUnmount(() => {
+  window.visualViewport?.removeEventListener('resize', measureKeyboard)
+  window.visualViewport?.removeEventListener('scroll', measureKeyboard)
+})
 
 watch(
   () => ui.dialog,
@@ -34,6 +49,7 @@ function submit() {
       <div
         v-if="ui.dialog"
         class="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-4"
+        :style="{ paddingBottom: `calc(1rem + ${keyboard}px)` }"
         @click.self="ui.closeDialog(null)"
         @keydown.esc="ui.closeDialog(null)"
       >
