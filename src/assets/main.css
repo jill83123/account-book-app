@@ -66,6 +66,8 @@ body {
   /* digits all the same width, so amounts line up */
   font-variant-numeric: tabular-nums;
   -webkit-tap-highlight-color: transparent;
+  /* a quick second tap is two taps, not a zoom */
+  touch-action: manipulation;
 }
 
 body {

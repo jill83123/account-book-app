@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, ref } from 'vue'
+import { onBeforeUnmount, ref, watch } from 'vue'
 import { X } from '@/lib/uiIcons'
 
 const { fade = true } = defineProps<{ title?: string; fade?: boolean }>()
@@ -17,13 +17,33 @@ function watchScroll(el: unknown) {
   for (const c of Array.from(el.children)) watcher.observe(c)
   check()
 }
-onBeforeUnmount(() => watcher?.disconnect())
+
+/** keep the page behind from scrolling while the sheet is open */
+let prevOverflow = ''
+function lock(on: boolean) {
+  if (on) {
+    prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+  } else document.body.style.overflow = prevOverflow
+}
+watch(
+  open,
+  (v, old) => {
+    if (v && !old) lock(true)
+    else if (!v && old) lock(false)
+  },
+  { immediate: true },
+)
+onBeforeUnmount(() => {
+  watcher?.disconnect()
+  if (open.value) lock(false)
+})
 </script>
 
 <template>
   <Teleport to="body">
     <Transition name="fade">
-      <div v-if="open" class="fixed inset-0 z-40 bg-black/30" @click="open = false" />
+      <div v-if="open" class="fixed inset-0 z-40 touch-none bg-black/30" @click="open = false" />
     </Transition>
     <Transition name="sheet">
       <!-- the title stays put and only the content below it scrolls, so a scrollbar never runs along the rounded corners -->
@@ -32,7 +52,7 @@ onBeforeUnmount(() => watcher?.disconnect())
         class="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-h-[88dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-2xl border-t border-line bg-bg shadow-2xl"
         @keydown.esc="open = false"
       >
-        <div class="flex shrink-0 items-center justify-between gap-3 px-5 pt-5 pb-4">
+        <div class="flex shrink-0 touch-none items-center justify-between gap-3 px-5 pt-5 pb-4">
           <h2 class="text-lg font-bold">{{ title }}</h2>
           <div class="ml-auto flex items-center gap-2">
             <slot name="actions" />
@@ -43,7 +63,7 @@ onBeforeUnmount(() => watcher?.disconnect())
         </div>
         <div
           :ref="watchScroll"
-          class="min-h-0 flex-1 overflow-y-auto px-5 [scrollbar-gutter:stable_both-edges]"
+          class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 [scrollbar-gutter:stable_both-edges]"
           :class="!$slots.footer && 'pb-[max(1.25rem,env(safe-area-inset-bottom))]'"
         >
           <!-- pinned to the top of the scroll area, with a fade under it -->

@@ -168,8 +168,11 @@ async function destroy() {
           </div>
         </div>
         <div
-          class="grid justify-between gap-y-3.5"
-          :class="iconTab === '顏色' ? 'grid-cols-[repeat(9,40px)]' : 'grid-cols-[repeat(8,44px)]'"
+          :class="
+            iconTab === '顏色'
+              ? 'grid grid-cols-[repeat(auto-fill,40px)] justify-between gap-x-3 gap-y-3.5'
+              : 'grid grid-cols-[repeat(8,44px)] justify-between gap-y-3.5'
+          "
         >
           <template v-if="iconTab === '顏色'">
             <button
