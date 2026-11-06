@@ -94,15 +94,13 @@ async function apply(n: number) {
       </template>
     </PageHeader>
 
-    <section class="card mb-4 space-y-3">
-      <p class="text-sm text-muted">
-        把一筆大額支出（例如年繳的保險、年繳的串流訂閱、買家電）平均分到之後每個月的報表。現金還是在付款那天扣，只有統計和試算表的月報會分月計算。
-      </p>
-      <div class="flex items-center justify-between gap-3">
-        <span class="font-semibold">報表分月計算</span>
-        <ToggleSwitch v-model="s.amortize" label="攤提" />
-      </div>
-    </section>
+    <p class="mb-3 px-1 text-sm text-muted">
+      把一筆大額支出（例如年繳的保險、年繳的串流訂閱、買家電）平均分到之後每個月的報表。現金還是在付款那天扣，只有統計和試算表的月報會分月計算。
+    </p>
+    <div class="card mb-4 flex items-center justify-between gap-3 px-4 py-3.5">
+      <span class="font-semibold">報表分月計算</span>
+      <ToggleSwitch v-model="s.amortize" label="攤提" />
+    </div>
 
     <div v-if="running.length" class="card divide-y divide-line p-0">
       <button v-for="i in running" :key="`${i.rec.id}-${i.line.id}`" class="flex w-full items-center gap-3 px-4 py-3.5 text-left" @click="choose(i)">

@@ -1174,7 +1174,7 @@ function cancel() {
 </script>
 
 <template>
-  <div v-if="ready" class="pb-24">
+  <div v-if="ready" class="pb-8">
     <header
       class="sticky top-0 z-20 -mx-4 mb-3 grid grid-cols-[1fr_auto_1fr] items-center bg-bg px-4 py-2"
     >
