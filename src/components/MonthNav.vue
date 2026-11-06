@@ -70,7 +70,7 @@ function jumpNow() {
   <BottomSheet v-model="open" :title="year ? '選擇年份' : '選擇月份'">
     <div class="mb-3 flex items-center justify-between">
       <button class="icon-btn" aria-label="往前" @click="view -= year ? 12 : 1"><ChevronLeft :size="20" /></button>
-      <span class="font-semibold">{{ year ? `${view} – ${view + 11}` : `${view} 年` }}</span>
+      <span class="font-semibold">{{ year ? `${view}～${view + 11}` : `${view} 年` }}</span>
       <button class="icon-btn" aria-label="往後" @click="view += year ? 12 : 1"><ChevronRight :size="20" /></button>
     </div>
     <div class="grid grid-cols-4 gap-2">

@@ -238,8 +238,9 @@ onBeforeUnmount(() => {
             <CatIcon icon="book" :color="l.color" :size="40" />
             <span class="min-w-0 flex-1">
               <span class="block font-medium">{{ l.name }}</span>
-              <span class="block text-xs text-muted">{{ currencyName(l.currency ?? baseCurrency) }}・{{ count(l.id) }} 筆{{ l.budget ? `，預設每月預算 $${fmt(l.budget)}` : '' }}</span>
+              <span class="block text-xs text-muted">{{ currencyName(l.currency ?? baseCurrency) }}{{ l.budget ? `｜每月預算 $${fmt(l.budget)}` : '' }}</span>
             </span>
+            <span class="shrink-0 text-sm text-muted tabular-nums">{{ count(l.id) }} 筆</span>
           </button>
         </li>
       </TransitionGroup>

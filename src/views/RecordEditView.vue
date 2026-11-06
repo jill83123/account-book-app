@@ -1270,15 +1270,12 @@ function cancel() {
         </div>
 
         <!-- right under the name: the starred items, one tap to fill one in -->
-        <div v-if="type !== 'transfer' && suggestions.length">
-          <p class="mb-1.5 px-1 text-xs text-muted">
-            {{ merchantId ? `已加星號的品名（${merchantLabel}）` : '已加星號的品名' }}
-          </p>
+        <div v-if="type !== 'transfer' && suggestions.length" class="-mt-1">
           <div class="flex flex-wrap gap-2">
             <button
               v-for="sug in suggestions"
               :key="`${sug.merchant}-${sug.name}`"
-              class="chip"
+              class="chip text-ink/85"
               @click="useSuggestion(sug)"
             >
               <span>{{ sug.name }}</span>
@@ -1405,22 +1402,13 @@ function cancel() {
     <div v-if="type !== 'transfer'" class="mb-5">
       <div class="mb-1.5 flex items-center justify-between px-1">
         <p class="label !mb-0">細項（選填）</p>
-        <div class="flex items-center gap-4">
-          <button
-            v-if="line.details.length > 1"
-            class="text-xs font-medium text-primary"
-            @click="sorting = !sorting"
-          >
-            {{ sorting ? '完成' : '調整排序' }}
-          </button>
-          <button
-            v-if="!sorting"
-            class="inline-flex items-center gap-1 text-xs font-medium text-primary"
-            @click="addDetail"
-          >
-            <Plus :size="14" />新增細項
-          </button>
-        </div>
+        <button
+          v-if="line.details.length > 1"
+          class="text-xs font-medium text-primary"
+          @click="sorting = !sorting"
+        >
+          {{ sorting ? '完成' : '調整排序' }}
+        </button>
       </div>
       <div v-if="line.details.length" ref="detailListEl" class="relative">
         <!-- the parts only slide aside while one is being carried -->
@@ -1496,6 +1484,14 @@ function cancel() {
         </li>
         </TransitionGroup>
       </div>
+      <!-- new parts go at the bottom, under the ones already there -->
+      <button
+        v-if="!sorting"
+        class="mt-2 flex w-full items-center justify-center gap-1.5 rounded-2xl bg-primary-soft py-2.5 text-sm font-semibold text-primary-strong transition active:scale-[0.99]"
+        @click="addDetail"
+      >
+        <Plus :size="16" />新增細項
+      </button>
       <p v-if="detailGap" class="mt-2 flex items-start gap-1.5 px-1 text-xs text-muted">
         <Info :size="14" class="mt-px shrink-0" />
         <span
@@ -1509,11 +1505,11 @@ function cancel() {
         同一個分類裡想分開記，例如早餐的漢堡和紅茶。
       </p>
       <!-- used before: one tap adds it with its last amount -->
-      <div v-if="detailSuggestions.length" class="mt-2 flex flex-wrap gap-1.5">
+      <div v-if="detailSuggestions.length" class="mt-3 flex flex-wrap gap-1.5">
         <button
           v-for="sug in detailSuggestions"
           :key="sug.name"
-          class="chip"
+          class="chip text-ink/85"
           @click="useDetail(sug)"
         >
           <span>{{ sug.name }}</span>

@@ -301,7 +301,7 @@ const accountItems = computed(() => [
         <button v-if="source" class="card flex w-full items-center gap-3 text-left" @click="openSource">
           <span class="min-w-0 flex-1">
             <span class="block text-xs text-muted">來自這筆分帳</span>
-            <span class="block truncate font-medium">{{ sourceTitle }}<span class="font-normal text-muted">　{{ source.date }}・共 ${{ fmt(source.total) }}</span></span>
+            <span class="block truncate font-medium">{{ sourceTitle }}<span class="font-normal text-muted">　{{ source.date }}｜共 ${{ fmt(source.total) }}</span></span>
           </span>
           <ChevronRight :size="16" class="shrink-0 text-muted" />
         </button>

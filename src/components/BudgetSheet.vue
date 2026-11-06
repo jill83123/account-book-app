@@ -77,7 +77,7 @@ async function reset() {
       <div>
         <div class="mb-1.5 flex items-baseline justify-between gap-3">
           <label class="label !mb-0" for="budget-amount">{{ monthLabel }}的預算</label>
-          <span class="text-xs text-muted">{{ target.budget ? `每月預設 $${fmt(target.budget)}` : '尚未設定每月預設' }}{{ hasOwn ? '・本月已自訂' : '' }}</span>
+          <span class="text-xs text-muted">{{ target.budget ? `每月預設 $${fmt(target.budget)}` : '尚未設定每月預設' }}{{ hasOwn ? '｜本月已自訂' : '' }}</span>
         </div>
         <input id="budget-amount" v-model="text" class="input" inputmode="numeric" placeholder="0（不設預算）" @keyup.enter="saveMonth" />
       </div>

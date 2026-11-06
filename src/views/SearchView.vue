@@ -131,7 +131,7 @@ const dateLabel = computed(() => {
   if (!hasDate.value) return ''
   const hit = presetHit.value
   if (hit) return hit.label
-  return `${from.value ? from.value.slice(5) : '…'} – ${to.value ? to.value.slice(5) : '…'}`
+  return `${from.value ? from.value.slice(5) : '…'}～${to.value ? to.value.slice(5) : '…'}`
 })
 const monthRange = (m: string) => {
   const [y, mo] = m.split('-').map(Number)
@@ -170,28 +170,28 @@ function clearFilters() {
         </button>
       </template>
     </PageHeader>
-    <div class="relative mb-4">
+    <div class="relative mb-3">
       <Search :size="18" class="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted" />
       <input ref="input" v-model="q" class="input pl-11" placeholder="品項、商家、分類或備註" />
     </div>
     <!-- one row of filters; each opens a drawer and shows what it holds once set -->
-    <div class="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 py-1 [scrollbar-width:none]">
+    <div class="mb-3 flex flex-wrap gap-2">
       <button
         v-for="f in [
           ...(data.ledgers.length > 1 ? [{ key: 'ledger', label: '帳本', value: summary(selLedgers.map(ledgerName)) }] : []),
           { key: 'date', label: '日期', value: dateLabel },
-          { key: 'merchant', label: '商家', value: summary(selMerchants.map(merchantName)) },
           { key: 'cat', label: '分類', value: summary(catLabels) },
+          { key: 'merchant', label: '商家', value: summary(selMerchants.map(merchantName)) },
           { key: 'account', label: '帳戶', value: summary(selAccounts.map(accountName)) },
         ]"
         :key="f.key"
-        class="flex shrink-0 items-center gap-1 rounded-full px-3.5 py-2 text-sm ring-1"
+        class="flex max-w-full items-center gap-1 rounded-full px-3.5 py-2 text-sm ring-1"
         :class="f.value ? 'bg-primary-soft font-semibold text-primary-strong ring-primary/40' : 'bg-surface text-ink ring-line'"
         @click="picker = f.key as 'ledger' | 'account' | 'merchant' | 'cat' | 'date'"
       >
-        <component :is="{ ledger: BookMarked, account: Wallet, date: CalendarDays, merchant: Store, cat: Layers }[f.key]" :size="15" />
-        {{ f.value ? `${f.label}：${f.value}` : f.label }}
-        <ChevronDown :size="14" class="opacity-60" />
+        <component :is="{ ledger: BookMarked, account: Wallet, date: CalendarDays, merchant: Store, cat: Layers }[f.key]" :size="15" class="shrink-0" />
+        <span class="min-w-0 truncate">{{ f.value ? `${f.label}：${f.value}` : f.label }}</span>
+        <ChevronDown :size="14" class="shrink-0 opacity-60" />
       </button>
     </div>
     <template v-if="hasFilter">
@@ -235,7 +235,7 @@ function clearFilters() {
         <p v-if="showCustom" class="mt-5 mb-2 px-0.5 text-xs text-muted">自訂區間</p>
         <div v-if="showCustom" class="flex items-center gap-2">
           <DateField v-model="from" title="開始日期" placeholder="開始日期" clearable compact class="min-w-0 flex-1" />
-          <span class="text-muted">–</span>
+          <span class="text-muted">～</span>
           <DateField v-model="to" title="結束日期" placeholder="結束日期" clearable compact class="min-w-0 flex-1" />
         </div>
       </div>
@@ -300,7 +300,7 @@ function clearFilters() {
       </template>
       <template #footer>
         <div class="flex gap-2">
-          <button v-if="picker === 'date' && hasDate" class="btn btn-ghost" @click="from = to = ''">清除</button>
+          <button v-if="picker === 'date' && hasDate" class="btn text-muted hover:bg-surface-2" @click="from = to = ''">清除</button>
           <button class="btn btn-primary flex-1" @click="picker = null">完成</button>
         </div>
       </template>

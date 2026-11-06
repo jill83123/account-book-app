@@ -99,7 +99,7 @@ const catOf = (r: Recurring) => data.catMap.get(r.template.lines[0]?.categoryId 
         <span class="min-w-0 flex-1">
           <span class="block truncate font-medium">{{ r.name }}</span>
           <span class="block truncate text-xs text-muted">
-            {{ r.kind === 'installment' ? `${r.generated} / ${r.count} 期` : repeatLabel(r) }} · {{ status(r) }}
+            {{ r.kind === 'installment' ? `${r.generated} / ${r.count} 期` : repeatLabel(r) }}｜{{ status(r) }}
           </span>
         </span>
         <span class="text-right">

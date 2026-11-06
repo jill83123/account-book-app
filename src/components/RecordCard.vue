@@ -99,7 +99,7 @@ const tone = computed(() =>
         <Repeat v-if="rec.recurringId" :size="13" class="shrink-0 text-muted" />
       </div>
       <div class="mt-0.5 flex h-[18px] items-center gap-1.5 overflow-hidden text-xs whitespace-nowrap text-muted">
-        <span v-if="catPiece" class="shrink-0 rounded bg-surface-2 px-1.5 py-px">{{ catPiece.text }}</span>
+        <span v-if="catPiece" class="shrink-0 rounded bg-ink/[0.06] px-1.5 py-px">{{ catPiece.text }}</span>
         <span v-if="showDate" class="shrink-0">{{ rec.date }}</span>
         <span v-if="showDate && restPieces.length" class="h-3 w-px shrink-0 bg-muted/40" />
         <template v-for="(p, i) in restPieces" :key="i">

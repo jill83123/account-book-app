@@ -140,7 +140,7 @@ const themeLabel = computed(() => ({ system: '跟隨系統', light: '淺色', da
             </div>
           </div>
           <div>
-            <MenuRow :icon="Palette" title="外觀" :sub="`${themeLabel}・主題色`" :open="openKey === 'look'" @click="toggle('look')" />
+            <MenuRow :icon="Palette" title="外觀" :sub="`${themeLabel}｜主題色`" :open="openKey === 'look'" @click="toggle('look')" />
             <div class="grid transition-[grid-template-rows] duration-200" :class="openKey === 'look' ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'" :inert="openKey !== 'look'">
               <div class="overflow-hidden"><AppearanceSettings /></div>
             </div>
