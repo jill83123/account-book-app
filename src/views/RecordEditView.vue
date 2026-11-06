@@ -1424,8 +1424,8 @@ function cancel() {
 
     <!-- the parts of this item: names and amounts, not categories -->
     <div v-if="type !== 'transfer'" class="mb-5">
-      <div class="mb-1.5 flex items-center justify-between px-1">
-        <p class="label !mb-0">細項（選填）</p>
+      <div class="mb-2 flex items-center justify-between">
+        <p class="label !mb-0 pb-1">細項（選填）</p>
         <button
           v-if="line.details.length > 1"
           class="text-xs font-medium text-primary"
@@ -1516,7 +1516,7 @@ function cancel() {
       >
         <Plus :size="16" />新增細項
       </button>
-      <p v-if="detailGap" class="mt-2 flex items-start gap-1.5 px-1 text-xs text-muted">
+      <p v-if="detailGap" class="mt-2 flex items-start gap-1.5 text-xs text-muted">
         <Info :size="14" class="mt-px shrink-0" />
         <span
           >細項加起來 {{ foreign ? `${currency} ` : '$' }}{{ fmt(detailSum(line)) }}，比上面的金額{{
@@ -1525,7 +1525,7 @@ function cancel() {
           {{ foreign ? `${currency} ` : '$' }}{{ fmt(Math.abs(detailGap)) }}。</span
         >
       </p>
-      <p v-if="!line.details.length && !detailSuggestions.length" class="px-1 text-xs text-muted">
+      <p v-if="!line.details.length && !detailSuggestions.length" class="mt-2 text-xs text-muted">
         同一個分類裡想分開記，例如早餐的漢堡和紅茶。
       </p>
       <!-- used before: one tap adds it with its last amount -->
