@@ -1,5 +1,20 @@
+<script lang="ts">
+/** filters kept while a record opened from the results is being viewed */
+interface Kept {
+  q: string
+  merchants: string[]
+  cats: string[]
+  accounts: string[]
+  ledgers: string[]
+  from: string
+  to: string
+}
+let restore = null as Kept | null
+</script>
+
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onBeforeRouteLeave } from 'vue-router'
 import { BookMarked, CalendarDays, Check, ChevronDown, Layers, ListChecks, Search, Store, Wallet } from '@/lib/uiIcons'
 import { addDays, addYm, daysInMonth, today, ym } from '@/lib/date'
 import { useData } from '@/stores/data'
@@ -16,15 +31,26 @@ const q = ref('')
 const input = ref<HTMLInputElement>()
 onMounted(() => input.value?.focus())
 
-const selMerchants = ref<string[]>([])
-const selCats = ref<string[]>([])
+// coming back from a record keeps what was filtered
+const back = restore
+restore = null
+if (back) q.value = back.q
+
+const selMerchants = ref<string[]>(back?.merchants ?? [])
+const selCats = ref<string[]>(back?.cats ?? [])
 /** account ids; an empty id stands for records kept without an account */
-const selAccounts = ref<string[]>([])
+const selAccounts = ref<string[]>(back?.accounts ?? [])
 // searching from a ledger starts inside it, so its records are listed right away
-const selLedgers = ref<string[]>(data.ledgers.length > 1 && data.ledgerId ? [data.ledgerId] : [])
+const startLedgers = data.ledgers.length > 1 && data.ledgerId ? [data.ledgerId] : []
+const selLedgers = ref<string[]>(back?.ledgers ?? [...startLedgers])
 const ledgerOn = computed(() => selLedgers.value.length > 0)
-const from = ref('')
-const to = ref('')
+const from = ref(back?.from ?? '')
+const to = ref(back?.to ?? '')
+onBeforeRouteLeave((dest) => {
+  restore = dest.path.startsWith('/record/')
+    ? { q: q.value, merchants: selMerchants.value, cats: selCats.value, accounts: selAccounts.value, ledgers: selLedgers.value, from: from.value, to: to.value }
+    : null
+})
 const hasDate = computed(() => !!from.value || !!to.value)
 const hasFilter = computed(() => !!q.value.trim() || hasDate.value || selMerchants.value.length > 0 || selCats.value.length > 0 || selAccounts.value.length > 0 || ledgerOn.value)
 
@@ -60,6 +86,22 @@ const results = computed(() => {
     return hay.includes(s)
   })
 })
+
+/** the list grows 50 rows at a time as the bottom comes into view */
+const PAGE = 50
+const shown = ref(PAGE)
+watch(results, () => (shown.value = PAGE))
+const more = ref<HTMLElement>()
+let io: IntersectionObserver | undefined
+watch(more, (el) => {
+  io?.disconnect()
+  if (!el) return
+  io ??= new IntersectionObserver((e) => e.some((x) => x.isIntersecting) && (shown.value += PAGE), { rootMargin: '200px' })
+  io.observe(el)
+})
+// look again after each batch, in case the bottom is still on screen
+watch(shown, () => nextTick(() => { if (more.value && io) { io.unobserve(more.value); io.observe(more.value) } }))
+onBeforeUnmount(() => io?.disconnect())
 
 /** drawer pickers: pick a merchant or a category to fill the search box */
 const picker = ref<'ledger' | 'account' | 'merchant' | 'cat' | 'date' | null>(null)
@@ -155,7 +197,7 @@ function clearFilters() {
   from.value = ''
   to.value = ''
   selMerchants.value = []
-  selLedgers.value = []
+  selLedgers.value = [...startLedgers]
   selCats.value = []
   selAccounts.value = []
 }
@@ -199,9 +241,10 @@ function clearFilters() {
         <p class="text-sm text-muted">
           {{ results.length }} 筆
         </p>
-        <button v-if="selMerchants.length || selCats.length || selAccounts.length || ledgerOn || hasDate" class="text-sm text-muted" @click="clearFilters">清除篩選</button>
+        <button v-if="selMerchants.length || selCats.length || selAccounts.length || ledgerOn || hasDate" class="text-sm text-muted" @click="clearFilters">重置篩選</button>
       </div>
-      <RecordList v-if="results.length" :records="results.slice(0, 200)" show-date :show-ledger="selLedgers.length !== 1" />
+      <RecordList v-if="results.length" :records="results.slice(0, shown)" show-date :show-ledger="selLedgers.length !== 1" />
+      <div v-if="shown < results.length" ref="more" class="h-10" />
     </template>
 
     <BottomSheet v-model="pickerOpen" :fade="false" :title="picker === 'cat' ? '選擇分類（可多選）' : picker === 'date' ? '選擇日期' : picker === 'ledger' ? '選擇帳本（可多選）' : picker === 'account' ? '選擇帳戶（可多選）' : '選擇商家（可多選）'">
