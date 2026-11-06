@@ -213,7 +213,8 @@ onBeforeUnmount(() => {
     <section class="mb-5">
       <h2 class="section-title">已選擇</h2>
       <div ref="listEl" class="card relative p-0">
-        <ul class="divide-y divide-line">
+        <!-- rows only slide aside while one is being carried -->
+        <TransitionGroup tag="ul" :name="drag ? 'rows' : 'still'" class="divide-y divide-line">
           <li
             v-for="c in rows"
             :key="c.code"
@@ -223,13 +224,20 @@ onBeforeUnmount(() => {
             :class="drag?.code === c.code && 'z-10'"
           >
             <div
-              class="flex items-center gap-2 py-3 pr-[7px] pl-4 select-none"
+              class="flex items-center gap-2 py-3 pr-[7px] pl-4 transition-[transform,scale,box-shadow] duration-150 select-none"
               :class="
                 drag?.code === c.code
-                  ? 'rounded-2xl bg-surface shadow-xl ring-2 ring-primary'
+                  ? 'scale-[1.02] rounded-2xl bg-surface shadow-xl ring-2 ring-primary'
                   : ''
               "
-              :style="drag?.code === c.code ? { transform: `translateY(${drag.dy}px)` } : undefined"
+              :style="
+                drag?.code === c.code
+                  ? {
+                      transform: `translateY(${drag.dy}px)`,
+                      transition: 'scale 150ms ease, box-shadow 150ms ease',
+                    }
+                  : undefined
+              "
               @pointerdown="press($event, c)"
               @contextmenu.prevent
             >
@@ -267,7 +275,7 @@ onBeforeUnmount(() => {
               </button>
             </div>
           </li>
-        </ul>
+        </TransitionGroup>
       </div>
     </section>
 

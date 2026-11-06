@@ -296,7 +296,7 @@ onBeforeUnmount(() => {
         >
           <div
             class="flex items-center gap-2 bg-surface p-3 transition-transform duration-150"
-            :class="[c.hidden && 'opacity-55', drag?.id === c.id && 'rounded-2xl shadow-xl']"
+            :class="[c.hidden && 'opacity-55', drag?.id === c.id && 'rounded-2xl shadow-xl ring-2 ring-primary']"
             :style="
               drag?.id === c.id
                 ? { transform: `translateY(${drag.dy}px) scale(1.02)`, transition: 'none' }

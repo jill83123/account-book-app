@@ -175,7 +175,7 @@ onBeforeUnmount(() => {
       >
         <div
           class="transition-transform duration-150"
-          :class="drag?.id === r.id ? '-mx-3 rounded-2xl bg-primary-soft px-3 shadow-xl ring-2 ring-primary' : !flat && 'bg-surface'"
+          :class="drag?.id === r.id ? '-mx-3 rounded-2xl bg-surface px-3 shadow-xl ring-2 ring-primary' : !flat && 'bg-surface'"
           :style="drag?.id === r.id ? { transform: `translateY(${drag.dy}px) scale(1)`, transition: 'none' } : undefined"
         >
           <RecordCard :rec="r" :show-date="showDate" :show-ledger="showLedger" :selecting="ui.selecting && !noSelect" :checked="ui.selectedIds.includes(r.id)" :dense="dense" />

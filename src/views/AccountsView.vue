@@ -229,35 +229,46 @@ onBeforeUnmount(() => {
         </div>
         <span v-else class="text-sm font-semibold" :class="tone(groupSum(g.list))">${{ fmt(groupSum(g.list)) }}</span>
       </div>
-      <div v-if="g.list.length" class="card relative divide-y divide-line p-0" :data-group="g.title">
-        <button
+      <TransitionGroup
+        v-if="g.list.length"
+        tag="div"
+        :name="carry ? 'rows' : 'still'"
+        class="card relative divide-y divide-line p-0"
+        :data-group="g.title"
+      >
+        <div
           v-for="a in shownList(g)"
           :key="a.id"
           :data-acc="a.id"
-          class="relative flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors select-none [-webkit-touch-callout:none]"
-          :class="carry?.id === a.id && 'z-10 bg-surface shadow-lg ring-1 ring-line'"
-          :style="carry?.id === a.id ? { transform: `translateY(${carry?.dy ?? 0}px)` } : undefined"
-          @pointerdown="holdStart($event, a, g)"
-          @pointermove="holdMove"
-          @pointerup="holdEnd"
-          @pointerleave="holdEnd"
-          @pointercancel="holdEnd"
-          @contextmenu.prevent
-          @click="openAccount(a)"
+          class="relative"
+          :class="carry?.id === a.id && 'z-10'"
         >
-          <CatIcon :icon="accountIcon(a)" :color="a.color" :size="40" />
-          <span class="min-w-0 flex-1 truncate font-medium">
-            {{ a.name }}
-            <span v-if="a.excluded" class="ml-1.5 text-xs font-normal text-muted">不計入總額</span>
-          </span>
-          <template v-if="a.kind === 'card'">
-            <span class="w-16 text-right text-sm font-semibold">${{ fmt(cardInfo(a).prev) }}</span>
-            <span class="w-16 text-right text-sm font-semibold">${{ fmt(cardInfo(a).cur) }}</span>
-          </template>
-          <span v-else class="font-semibold" :class="tone(bal(a))">{{ balText(a) }}</span>
-          <ChevronRight :size="16" class="text-muted" />
-        </button>
-      </div>
+          <button
+            class="relative flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors select-none [-webkit-touch-callout:none]"
+            :class="carry?.id === a.id && 'rounded-2xl bg-surface shadow-xl ring-2 ring-primary'"
+            :style="carry?.id === a.id ? { transform: `translateY(${carry?.dy ?? 0}px)` } : undefined"
+            @pointerdown="holdStart($event, a, g)"
+            @pointermove="holdMove"
+            @pointerup="holdEnd"
+            @pointerleave="holdEnd"
+            @pointercancel="holdEnd"
+            @contextmenu.prevent
+            @click="openAccount(a)"
+          >
+            <CatIcon :icon="accountIcon(a)" :color="a.color" :size="40" />
+            <span class="min-w-0 flex-1 truncate font-medium">
+              {{ a.name }}
+              <span v-if="a.excluded" class="ml-1.5 text-xs font-normal text-muted">不計入總額</span>
+            </span>
+            <template v-if="a.kind === 'card'">
+              <span class="w-16 text-right text-sm font-semibold">${{ fmt(cardInfo(a).prev) }}</span>
+              <span class="w-16 text-right text-sm font-semibold">${{ fmt(cardInfo(a).cur) }}</span>
+            </template>
+            <span v-else class="font-semibold" :class="tone(bal(a))">{{ balText(a) }}</span>
+            <ChevronRight :size="16" class="text-muted" />
+          </button>
+        </div>
+      </TransitionGroup>
       <p v-else class="card py-5 text-center text-sm text-muted">還沒有{{ g.label }}</p>
     </section>
 
