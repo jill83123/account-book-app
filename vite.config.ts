@@ -35,7 +35,7 @@ export default defineConfig({
       workbox: {
         // reminder notifications sent by the Worker (see public/push-sw.js)
         importScripts: ['push-sw.js'],
-        globPatterns: ['**/*.{js,css,html,svg,ico,woff2}'],
+        globPatterns: ['**/*.{js,css,html,svg,ico,woff2}', 'banks/*.jpg'],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
       },
     }),

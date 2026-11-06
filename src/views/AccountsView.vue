@@ -5,6 +5,7 @@ import { Archive, ArrowLeftRight, ChevronRight, Plus } from '@/lib/uiIcons'
 import type { Account } from '@/db/types'
 import { accountTwd, cardCycles, isForeignAccount, loanOutstanding, spendOn } from '@/lib/calc'
 import { save, saveMany } from '@/db'
+import { accountIcon } from '@/lib/banks'
 import { today } from '@/lib/date'
 import { fmt, fmtFx } from '@/lib/money'
 import { useData } from '@/stores/data'
@@ -244,7 +245,7 @@ onBeforeUnmount(() => {
           @contextmenu.prevent
           @click="openAccount(a)"
         >
-          <CatIcon :icon="a.kind === 'card' ? 'card' : a.kind === 'cash' ? 'coins' : a.kind === 'wallet' ? 'walletcards' : 'landmark'" :color="a.color" :size="40" />
+          <CatIcon :icon="accountIcon(a)" :color="a.color" :size="40" />
           <span class="min-w-0 flex-1 truncate font-medium">
             {{ a.name }}
             <span v-if="a.excluded" class="ml-1.5 text-xs font-normal text-muted">不計入總額</span>
@@ -283,7 +284,7 @@ onBeforeUnmount(() => {
       <ul v-else class="card divide-y divide-line p-0">
         <li v-for="a in archived" :key="a.id" class="flex items-center gap-3 px-4 py-3.5">
           <button class="flex min-w-0 flex-1 items-center gap-3 text-left" @click="archivedOpen = false; router.push(`/account/${a.id}`)">
-            <CatIcon :icon="a.kind === 'card' ? 'card' : a.kind === 'cash' ? 'coins' : a.kind === 'wallet' ? 'walletcards' : 'landmark'" :color="a.color" :size="36" />
+            <CatIcon :icon="accountIcon(a)" :color="a.color" :size="36" />
             <span class="min-w-0 flex-1 truncate font-medium">{{ a.name }}</span>
             <span class="text-sm text-muted">{{ balText(a) }}</span>
           </button>

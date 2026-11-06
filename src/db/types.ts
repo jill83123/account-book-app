@@ -14,6 +14,8 @@ export interface Account extends Base {
   initial: number
   order: number
   color: string
+  /** a bank logo as bank:<code>; missing means the default icon for its kind */
+  icon?: string
   archived?: boolean
   /** left out of the asset totals (the account itself still shows) */
   excluded?: boolean

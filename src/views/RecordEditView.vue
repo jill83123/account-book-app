@@ -37,6 +37,7 @@ import {
   savePhotos,
   type Photo,
 } from '@/lib/images'
+import { accountIcon } from '@/lib/banks'
 import { evalExpr, fmt, fmtFx } from '@/lib/money'
 import { learn, suggest } from '@/lib/merchants'
 import { buildRecord, type Repeat } from '@/lib/recurrence'
@@ -676,14 +677,7 @@ const accountItems = computed(() =>
       value: a.id,
       label: a.name,
       sub: `餘額 ${isForeignAccount(a) ? `${a.currency} ${fmtFx(data.balances.get(a.id) ?? 0)}` : `$${fmt(data.balances.get(a.id) ?? 0)}`}`,
-      icon:
-        a.kind === 'card'
-          ? 'card'
-          : a.kind === 'cash'
-            ? 'coins'
-            : a.kind === 'wallet'
-              ? 'walletcards'
-              : 'landmark',
+      icon: accountIcon(a),
       color: a.color,
     })),
 )
