@@ -56,7 +56,6 @@ async function add() {
 }
 
 async function done() {
-  if (typed.value.trim()) await add()
   model.value = [...draft.value]
   open.value = false
 }
@@ -67,24 +66,32 @@ async function done() {
     <div class="space-y-4">
       <div class="flex flex-wrap items-center gap-2">
         <button v-for="m in choices" :key="m.id" class="chip" :class="has(m.id) && 'chip-on'" @click="toggle(m.id)">{{ members.nameOf(m.id) }}</button>
-        <button v-if="!adding" class="chip text-muted" aria-label="新增成員" @click="startAdd"><Plus :size="16" /></button>
+        <button class="chip text-muted" aria-label="新增成員" @click="startAdd"><Plus :size="16" /></button>
       </div>
-
-      <!-- quick add: type a name, and it is saved as a member and picked -->
-      <div v-if="adding" class="flex gap-2">
-        <input
-          ref="inputEl"
-          v-model="typed"
-          class="input min-w-0 flex-1"
-          maxlength="12"
-          placeholder="成員的名字"
-          @keyup.enter="add"
-        />
-        <button class="btn btn-soft shrink-0" :disabled="!typed.trim()" @click="add">加入</button>
-      </div>
-      <p v-else-if="!choices.length" class="text-center text-sm text-muted">還沒有成員，點上面的 ＋ 新增。</p>
+      <p v-if="!choices.length" class="text-center text-sm text-muted">還沒有成員，點上面的 ＋ 新增。</p>
 
       <button class="btn btn-primary w-full" @click="done">完成</button>
     </div>
   </BottomSheet>
+
+  <!-- 新增成員用置中小視窗，跟新增帳本一樣 -->
+  <Teleport to="body">
+    <Transition name="fade">
+      <div
+        v-if="adding"
+        class="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-4"
+        @click.self="adding = false"
+        @keydown.esc="adding = false"
+      >
+        <form class="card w-full max-w-[21rem] space-y-5 p-5 shadow-xl" @submit.prevent="add">
+          <h2 class="text-lg leading-snug font-bold">新增成員</h2>
+          <input ref="inputEl" v-model="typed" class="input" maxlength="12" placeholder="成員的名字" />
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" class="btn btn-soft" @click="adding = false">取消</button>
+            <button type="submit" class="btn btn-primary" :disabled="!typed.trim()">新增</button>
+          </div>
+        </form>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
