@@ -191,11 +191,11 @@ async function destroy() {
           <span v-if="rec.lines[0]!.amortMonths && rec.lines[0]!.amortMonths > 1">分 {{ rec.lines[0]!.amortMonths }} 個月攤提</span>
         </div>
         <!-- three columns that size themselves, so the count and the price sit close and line up row to row -->
-        <ul v-if="rec.lines[0]!.details?.length" class="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-2 gap-y-1 text-sm">
+        <ul v-if="rec.lines[0]!.details?.length" class="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-2.5 gap-y-1 text-sm">
           <li v-for="(d, i) in rec.lines[0]!.details" :key="i" class="contents">
             <span class="min-w-0 truncate">{{ d.name }}</span>
             <span class="text-right text-muted">×{{ d.qty || 1 }}</span>
-            <span class="text-right">{{ d.amount ? `$${fmt(d.amount)}` : '' }}</span>
+            <span class="text-left">{{ d.amount ? `$${fmt(d.amount)}` : '' }}</span>
           </li>
         </ul>
       </div>
