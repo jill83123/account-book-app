@@ -323,6 +323,8 @@ function load() {
 }
 
 const amountEl = ref<HTMLInputElement>()
+// 手機只靠手指，金額直接用內建計算機，不開系統鍵盤
+const touchOnly = matchMedia('(pointer: coarse)').matches && !matchMedia('(pointer: fine)').matches
 const ready = ref(false)
 watch(
   () => data.ready,
@@ -635,8 +637,10 @@ function commitAmount() {
 const keypadValue = computed({
   get: () => (type.value === 'transfer' ? total.value : amountOf(line.value)),
   set: (v: number) => {
-    if (type.value === 'transfer') transferText.value = v ? String(v) : ''
-    else line.value.amountText = v ? String(v) : ''
+    if (type.value === 'transfer') {
+      transferText.value = v ? String(v) : ''
+      fromLeft()
+    } else line.value.amountText = v ? String(v) : ''
   },
 })
 
@@ -1240,10 +1244,12 @@ function cancel() {
             v-model="transferText"
             class="min-w-0 flex-1 bg-transparent text-right text-xl outline-none"
             :class="needToAmount && 'placeholder:text-[15px]'"
-            inputmode="decimal"
+            :inputmode="touchOnly ? 'none' : 'decimal'"
+            :readonly="touchOnly"
             :placeholder="needToAmount ? '轉出金額' : '0'"
             :aria-label="needToAmount ? `轉出金額 ${transferCur}` : undefined"
             @focus="($event.target as HTMLInputElement).select()"
+            @click="touchOnly && open('keypad')"
             @input="fromLeft"
           />
           <input
@@ -1251,9 +1257,11 @@ function cancel() {
             ref="amountEl"
             v-model="line.amountText"
             class="min-w-0 flex-1 bg-transparent text-right text-xl outline-none"
-            inputmode="decimal"
+            :inputmode="touchOnly ? 'none' : 'decimal'"
+            :readonly="touchOnly"
             placeholder="0"
             @focus="($event.target as HTMLInputElement).select()"
+            @click="touchOnly && open('keypad')"
             @blur="commitAmount"
             @keydown.enter.prevent="commitAmount"
           />

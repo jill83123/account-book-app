@@ -12,7 +12,7 @@ watch(open, (o) => {
   if (o) expr.value = model.value ? String(model.value) : ''
 })
 
-const keys = ['7', '8', '9', 'back', '4', '5', '6', '+', '1', '2', '3', '-', '0', '00', '×', '÷']
+const keys = ['7', '8', '9', 'back', '4', '5', '6', '+', '1', '2', '3', '-', '0', '.', '×', '÷']
 
 function press(k: string) {
   if (k === 'back') expr.value = expr.value.slice(0, -1)
