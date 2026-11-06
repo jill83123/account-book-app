@@ -101,9 +101,9 @@ function add() {
 
   <!-- after a long absence the newest copy is pulled first; the screen waits so nothing is edited on old data -->
   <div v-if="sync.catchingUp" class="fixed inset-0 z-50 grid place-items-center bg-bg/40 backdrop-blur-[2px]" role="status">
-    <div class="flex flex-col items-center gap-3 text-primary">
+    <div class="flex flex-col items-center gap-3 text-muted">
       <RefreshCw :size="32" class="animate-spin" />
-      <span class="text-sm font-semibold text-ink">同步中</span>
+      <span class="text-sm font-medium">同步中</span>
     </div>
   </div>
 

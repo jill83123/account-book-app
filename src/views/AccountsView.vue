@@ -226,7 +226,7 @@ onBeforeUnmount(() => {
     <section v-for="g in groups" :key="g.title" class="mb-5">
       <div class="mb-2 flex items-end justify-between px-1">
         <h2 class="text-sm font-semibold text-muted">{{ g.label }}</h2>
-        <div v-if="g.title === 'card'" class="flex gap-6 pr-6 text-xs text-muted">
+        <div v-if="g.title === 'card'" class="flex gap-3 pr-10 text-xs text-muted">
           <span class="w-16 text-right">上期帳單</span><span class="w-16 text-right">本期累計</span>
         </div>
         <span v-else class="text-sm font-semibold" :class="tone(groupSum(g.list))">${{ fmt(groupSum(g.list)) }}</span>
@@ -280,7 +280,7 @@ onBeforeUnmount(() => {
     <section class="mb-5">
       <div class="mb-2 flex items-end justify-between px-1">
         <h2 class="text-sm font-semibold text-muted">借款</h2>
-        <div class="flex gap-6 pr-6 text-xs text-muted">
+        <div class="flex gap-3 pr-10 text-xs text-muted">
           <span class="w-16 text-right">應付</span><span class="w-16 text-right">應收</span>
         </div>
       </div>
