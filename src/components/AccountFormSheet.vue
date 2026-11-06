@@ -2,7 +2,8 @@
 import { computed, ref, watch } from 'vue'
 import { remove, save } from '@/db'
 import type { Account, AccountKind } from '@/db/types'
-import { currencyItems, BASE_CURRENCY } from '@/lib/currency'
+import { BASE_CURRENCY } from '@/lib/currency'
+import { useCurrencyItems } from '@/lib/customCurrency'
 import { BANKS, BANK_PREFIX, PAYS } from '@/lib/banks'
 import { COLORS } from '@/lib/icons'
 import { uid } from '@/lib/id'
@@ -19,6 +20,7 @@ const props = defineProps<{ account?: Account }>()
 const open = defineModel<boolean>({ required: true })
 const emit = defineEmits<{ removed: [] }>()
 const data = useData()
+const currencyItems = useCurrencyItems(() => currency.value)
 const ui = useUi()
 
 const name = ref('')

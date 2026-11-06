@@ -213,7 +213,20 @@ export interface Member extends Base {
   name: string
 }
 
+/** A currency added by hand, or the show or hide choice for a built-in one, kept with the data so every device has it. */
+export interface CustomCurrency extends Base {
+  code: string
+  name: string
+  /** a built-in currency: this row only keeps whether it is shown, the rest of it lives in the app */
+  builtin?: boolean
+  /** offered in the pickers; missing means the default for that currency */
+  shown?: boolean
+  /** the place in the lists; missing means the default place */
+  order?: number
+}
+
 export type TableName =
+  | 'currencies'
   | 'members'
   | 'accounts'
   | 'categories'
@@ -224,6 +237,7 @@ export type TableName =
   | 'loans'
 
 export const TABLES: TableName[] = [
+  'currencies',
   'members',
   'accounts',
   'categories',
@@ -235,6 +249,7 @@ export const TABLES: TableName[] = [
 ]
 
 export interface TableMap {
+  currencies: CustomCurrency
   members: Member
   accounts: Account
   categories: Category

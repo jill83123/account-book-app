@@ -3,6 +3,7 @@ import type {
   Account,
   Base,
   Category,
+  CustomCurrency,
   ImageRow,
   ImageTrash,
   Ledger,
@@ -24,6 +25,7 @@ export class AppDB extends Dexie {
   recurrings!: EntityTable<Recurring, 'id'>
   loans!: EntityTable<Loan, 'id'>
   members!: EntityTable<Member, 'id'>
+  currencies!: EntityTable<CustomCurrency, 'id'>
   images!: EntityTable<ImageRow, 'id'>
   imageTrash!: EntityTable<ImageTrash, 'id'>
 
@@ -44,6 +46,8 @@ export class AppDB extends Dexie {
     this.version(3).stores({ members: 'id, updatedAt' })
     // photos removed on this device whose Drive copy still has to go
     this.version(4).stores({ imageTrash: 'id' })
+    // currencies added by hand, shared between devices like everything else
+    this.version(5).stores({ currencies: 'id, updatedAt' })
   }
 }
 

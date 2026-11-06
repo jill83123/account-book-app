@@ -20,9 +20,3 @@ export const CURRENCIES: CurrencyInfo[] = [
   { code: 'AUD', name: '澳幣' },
   { code: 'CAD', name: '加幣' },
 ]
-
-/** the picker rows: the name on top, the code underneath, so the names line up */
-export const currencyItems = CURRENCIES.map((c) => ({ value: c.code, label: c.name, sub: c.code }))
-
-/** "新台幣": the name for showing a ledger's or account's currency; an unknown code is shown as it is */
-export const currencyName = (code: string) => CURRENCIES.find((c) => c.code === code)?.name ?? code

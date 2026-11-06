@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { save } from '@/db'
-import { BASE_CURRENCY, currencyItems, currencyName } from '@/lib/currency'
+import { BASE_CURRENCY } from '@/lib/currency'
+import { useCurrencyItems, currencyName } from '@/lib/customCurrency'
 import { COLORS } from '@/lib/icons'
 import { uid } from '@/lib/id'
 import { Check, ChevronDown, Plus } from '@/lib/uiIcons'
@@ -23,7 +24,8 @@ const adding = ref(false)
 const name = ref('')
 const currency = ref(BASE_CURRENCY)
 const showCurrencies = ref(false)
-const currentCurrency = computed(() => currencyItems.find((c) => c.value === currency.value))
+const currencyItems = useCurrencyItems(() => currency.value)
+const currentCurrency = computed(() => currencyItems.value.find((c) => c.value === currency.value))
 function pickCurrency(code: string) {
   currency.value = code
   showCurrencies.value = false

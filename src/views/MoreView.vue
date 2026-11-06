@@ -6,6 +6,7 @@ import {
   BookMarked,
   CalendarClock,
   Cloud,
+  Coins,
   HandCoins,
   Hourglass,
   Layers,
@@ -17,6 +18,7 @@ import {
   Store,
   Users,
 } from '@/lib/uiIcons'
+import { useCurrencyEntries } from '@/lib/customCurrency'
 import { useData } from '@/stores/data'
 import { useSettings } from '@/stores/settings'
 import { useMembers } from '@/stores/members'
@@ -30,6 +32,7 @@ import AppearanceSettings from '@/components/AppearanceSettings.vue'
 const version = __APP_VERSION__
 const router = useRouter()
 const data = useData()
+const currencies = useCurrencyEntries()
 const { s } = useSettings()
 const sync = useSync()
 const pwa = usePwa()
@@ -71,6 +74,8 @@ const syncSub = computed(() => {
   return sync.unsynced ? '有尚未同步的變更' : '已同步'
 })
 
+const shownCurrencies = computed(() => currencies.value.filter((c) => c.shown).length)
+
 const groups = computed(() => [
   {
     title: '記帳設定',
@@ -78,6 +83,7 @@ const groups = computed(() => [
       { to: '/more/ledgers', icon: BookMarked, title: '帳本', sub: `${data.ledgers.length} 個帳本，設定每月預算` },
       { to: '/more/categories', icon: Layers, title: '分類', sub: '分類、子分類、圖示與預算' },
       { to: '/more/merchants', icon: Store, title: '商家與品項', sub: `${data.merchants.length} 個商家` },
+      { to: '/more/currencies', icon: Coins, title: '幣別', sub: `${shownCurrencies.value} 個顯示中，也可以自己新增` },
       { to: '/more/members', icon: Users, title: '成員', sub: members.list.length ? `${members.list.length} 位，記帳時可以選和誰一起` : '記帳時選和誰一起花的' },
     ],
   },

@@ -17,7 +17,7 @@ import MonthNav from '@/components/MonthNav.vue'
 import LedgerPickSheet from '@/components/LedgerPickSheet.vue'
 import FxSettleSheet from '@/components/FxSettleSheet.vue'
 import { isPending } from '@/lib/fx'
-import { currencyName } from '@/lib/currency'
+import { currencyName } from '@/lib/customCurrency'
 import PillTabs from '@/components/PillTabs.vue'
 import RecordList from '@/components/RecordList.vue'
 

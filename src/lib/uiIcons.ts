@@ -8,6 +8,7 @@ import {
   Calculator as LCalculator,
   CalendarClock as LCalendarClock,
   Clock as LClock,
+  Coins as LCoins,
   CalendarDays as LCalendarDays,
   Camera as LCamera,
   ChartNoAxesColumn as LChartNoAxesColumn,
@@ -116,6 +117,7 @@ export const ExternalLink = light(LExternalLink, 'ExternalLink')
 export const Eye = light(LEye, 'Eye')
 export const EyeOff = light(LEyeOff, 'EyeOff')
 export const GripVertical = light(LGripVertical, 'GripVertical')
+export const Coins = light(LCoins, 'Coins')
 export const HandCoins = light(LHandCoins, 'HandCoins')
 export const Hourglass = light(LHourglass, 'Hourglass')
 export const ImagePlus = light(LImagePlus, 'ImagePlus')

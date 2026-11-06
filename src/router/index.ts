@@ -26,6 +26,7 @@ const router = createRouter({
     { path: '/more/ledgers', component: () => import('@/views/LedgersView.vue') },
     { path: '/more/categories', component: () => import('@/views/CategoriesView.vue') },
     { path: '/more/merchants', component: () => import('@/views/MerchantsView.vue') },
+    { path: '/more/currencies', component: () => import('@/views/CurrenciesView.vue') },
     { path: '/more/members', component: () => import('@/views/MembersView.vue') },
     { path: '/more/recurring', component: () => import('@/views/RecurringView.vue') },
     { path: '/more/loans', component: () => import('@/views/LoansView.vue') },

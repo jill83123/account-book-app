@@ -5,7 +5,8 @@ import { computed, ref } from 'vue'
 import { Plus } from '@/lib/uiIcons'
 import { remove, save } from '@/db'
 import type { Ledger } from '@/db/types'
-import { BASE_CURRENCY, currencyItems, currencyName } from '@/lib/currency'
+import { BASE_CURRENCY } from '@/lib/currency'
+import { useCurrencyItems, currencyName } from '@/lib/customCurrency'
 import { COLORS } from '@/lib/icons'
 import { uid } from '@/lib/id'
 import { fmt } from '@/lib/money'
@@ -17,6 +18,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import SelectField from '@/components/SelectField.vue'
 
 const data = useData()
+const currencyItems = useCurrencyItems(() => currency.value)
 const ui = useUi()
 
 const open = ref(false)

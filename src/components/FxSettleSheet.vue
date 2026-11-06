@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { evalExpr, fmtFx, fmtRate } from '@/lib/money'
 import { foreignTotal, pendingOf, settlePending } from '@/lib/fx'
-import { currencyName } from '@/lib/currency'
+import { currencyName } from '@/lib/customCurrency'
 import { save } from '@/db'
 import { useData } from '@/stores/data'
 import { useUi } from '@/stores/ui'
