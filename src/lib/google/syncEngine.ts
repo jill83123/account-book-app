@@ -125,21 +125,23 @@ async function snapshot(): Promise<Snapshot> {
 async function openSpreadsheet(
   token: string,
   wanted: string,
-): Promise<{ id: string; info: SpreadsheetInfo; created: boolean }> {
+): Promise<{ id: string; info: SpreadsheetInfo; created: boolean; lost: boolean }> {
   let id = wanted
   if (id) {
     try {
       const info = await getInfo(token, id)
-      if (!info.trashed) return { id, info, created: false }
+      if (!info.trashed) return { id, info, created: false, lost: false }
     } catch (e) {
       if (!(e instanceof SheetsNotFoundError)) throw e
     }
     id = ''
   }
+  // the sheet this device used is gone (the cloud was cleared from somewhere): `lost` tells the sync not to feed old data back
+  const lost = Boolean(wanted)
   const found = await findSpreadsheet(token)
-  if (found) return { id: found, info: await getInfo(token, found), created: false }
+  if (found) return { id: found, info: await getInfo(token, found), created: false, lost }
   id = await createSpreadsheet(token, '記帳本', { sheetId: DATA_SHEET_ID, title: DATA_TITLE })
-  return { id, info: await getInfo(token, id), created: true }
+  return { id, info: await getInfo(token, id), created: true, lost }
 }
 
 /** A folder is only a place to keep things tidy, so a failure here never stops a sync. */
@@ -164,7 +166,7 @@ async function ensureFolder(token: string, sheetId: string, created: boolean, kn
 
 export async function runSync(opts: SyncOptions): Promise<SyncResult> {
   const token = await opts.getToken()
-  const { id, info, created } = await openSpreadsheet(token, opts.spreadsheetId)
+  const { id, info, created, lost } = await openSpreadsheet(token, opts.spreadsheetId)
   const folderId = await ensureFolder(token, id, created, opts.folderId ?? '')
 
   if (!info.sheets.some((s) => s.title === DATA_TITLE)) {
@@ -180,7 +182,8 @@ export async function runSync(opts: SyncOptions): Promise<SyncResult> {
   const marker = String(cells[0]?.[0] ?? '')
   const reminder = opts.reminder ? await shareReminder(token, id, String(cells[1]?.[0] ?? ''), opts.reminder) : undefined
 
-  if (opts.dropSeed && remote.length) {
+  // starter data, or a copy of a cloud that was cleared since: the sheet that is there now wins, or every starter item would appear twice
+  if ((opts.dropSeed || lost) && remote.length) {
     await db.transaction('rw', db.tables, async () => {
       for (const t of TABLES) await table(t).clear()
     })
