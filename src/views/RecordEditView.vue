@@ -1512,10 +1512,9 @@ function cancel() {
               :class="partDrag?.id === d.id ? 'bg-surface shadow-xl ring-2 ring-primary' : ''"
               :style="partDrag?.id === d.id ? { transform: `translateY(${partDrag.dy}px)`, transition: 'none' } : undefined"
             >
-              <button class="flex min-w-0 flex-1 items-center gap-3 py-1.5 text-left" @click="editDetail(d)">
-                <span class="min-w-0 flex-1 truncate" :class="!d.name.trim() && 'text-muted'">
-                  {{ d.name.trim() || '未命名' }}<span v-if="d.qtyText" class="ml-1.5 text-xs text-muted">× {{ d.qtyText }}</span>
-                </span>
+              <button class="flex min-w-0 flex-1 items-center gap-2.5 py-1.5 text-left" @click="editDetail(d)">
+                <span class="min-w-0 flex-1 truncate" :class="!d.name.trim() && 'text-muted'">{{ d.name.trim() || '未命名' }}</span>
+                <span class="shrink-0 text-sm text-muted">×{{ d.qtyText || 1 }}</span>
                 <span class="shrink-0 text-sm font-medium tabular-nums">{{ foreign ? currency : '$' }}{{ d.amountText || 0 }}</span>
               </button>
               <span
