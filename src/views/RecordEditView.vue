@@ -17,6 +17,7 @@ import {
   Trash2,
   Users,
   HandCoins,
+  GripVertical,
   X,
 } from '@/lib/uiIcons'
 import { remove, save } from '@/db'
@@ -766,6 +767,90 @@ function removeDetail(id: string) {
   syncDetails()
 }
 
+// ---- reordering the parts: a button turns it on, then the bar on a row is dragged ----
+/** while on, the rows are plain (no fields to tap by mistake) and carry a bar to drag by */
+const sorting = ref(false)
+watch([active, () => line.value?.details.length ?? 0], ([, n]) => {
+  if (n < 2) sorting.value = false
+})
+const detailListEl = ref<HTMLElement>()
+/** the part being carried, and how far it is drawn from its place */
+const partDrag = ref<{ id: string; dy: number } | null>(null)
+let partPointerY = 0
+let partGrabY = 0
+let partRaf = 0
+
+function pressPart(e: PointerEvent, id: string) {
+  if (e.pointerType === 'mouse' && e.button !== 0) return
+  const row = (e.currentTarget as HTMLElement).closest('li')!
+  navigator.vibrate?.(12)
+  startPartDrag(row, e.clientY, id)
+}
+/** once carrying, the page must not scroll under the finger */
+const stopPartScroll = (e: TouchEvent) => e.preventDefault()
+function startPartDrag(row: HTMLElement, clientY: number, id: string) {
+  // the keyboard is not wanted while a part is in the air
+  ;(document.activeElement as HTMLElement | null)?.blur()
+  const r = row.getBoundingClientRect()
+  partGrabY = clientY - (r.top + r.height / 2)
+  partPointerY = clientY
+  partDrag.value = { id, dy: 0 }
+  window.addEventListener('touchmove', stopPartScroll, { passive: false })
+  window.addEventListener('pointermove', movePart)
+  window.addEventListener('pointerup', endPartDrag)
+  window.addEventListener('pointercancel', endPartDrag)
+  partRaf = requestAnimationFrame(partFrame)
+}
+function movePart(e: PointerEvent) {
+  partPointerY = e.clientY
+}
+/** every frame: swap parts when the finger crosses one, and keep the carried part under the finger */
+function partFrame() {
+  const el = detailListEl.value
+  const d = partDrag.value
+  if (!el || !d) return
+  const box = el.getBoundingClientRect()
+  const items = [...el.querySelectorAll<HTMLElement>('[data-part]')]
+  const py = partPointerY - box.top
+  let target = 0
+  let best = Infinity
+  items.forEach((t, i) => {
+    // layout positions, so the rows' own sliding does not matter
+    const dist = Math.abs(py - (t.offsetTop + t.offsetHeight / 2))
+    if (dist < best) {
+      best = dist
+      target = i
+    }
+  })
+  const list = line.value.details
+  const from = list.findIndex((x) => x.id === d.id)
+  if (from >= 0 && target !== from) {
+    const [moved] = list.splice(from, 1)
+    list.splice(target, 0, moved!)
+  }
+  const cur = items.find((t) => t.dataset.id === d.id)
+  if (cur) {
+    const r = cur.getBoundingClientRect()
+    const centre = Math.min(box.bottom - r.height / 2, Math.max(box.top + r.height / 2, partPointerY - partGrabY))
+    const dy = Math.round(centre - (r.top + r.height / 2))
+    if (dy !== d.dy) partDrag.value = { id: d.id, dy }
+  }
+  // near the top or bottom of the screen, the page follows
+  if (partPointerY < 90) window.scrollBy(0, -10)
+  else if (partPointerY > window.innerHeight - 90) window.scrollBy(0, 10)
+  partRaf = requestAnimationFrame(partFrame)
+}
+function endPartDrag() {
+  cancelAnimationFrame(partRaf)
+  window.removeEventListener('touchmove', stopPartScroll)
+  window.removeEventListener('pointermove', movePart)
+  window.removeEventListener('pointerup', endPartDrag)
+  window.removeEventListener('pointercancel', endPartDrag)
+  partDrag.value = null
+  // letting go must not put the cursor into whatever field is under the finger
+  window.setTimeout(() => (document.activeElement as HTMLElement | null)?.blur(), 0)
+}
+onBeforeUnmount(() => endPartDrag())
 /** the parts added up */
 const detailSum = (l: LineForm) =>
   Math.round(l.details.reduce((n, d) => n + subtotalOf(d), 0) * 100) / 100
@@ -1320,15 +1405,54 @@ function cancel() {
     <div v-if="type !== 'transfer'" class="mb-5">
       <div class="mb-1.5 flex items-center justify-between px-1">
         <p class="label !mb-0">細項（選填）</p>
-        <button
-          class="inline-flex items-center gap-1 text-xs font-medium text-primary"
-          @click="addDetail"
-        >
-          <Plus :size="14" />新增細項
-        </button>
+        <div class="flex items-center gap-4">
+          <button
+            v-if="line.details.length > 1"
+            class="text-xs font-medium text-primary"
+            @click="sorting = !sorting"
+          >
+            {{ sorting ? '完成' : '調整排序' }}
+          </button>
+          <button
+            v-if="!sorting"
+            class="inline-flex items-center gap-1 text-xs font-medium text-primary"
+            @click="addDetail"
+          >
+            <Plus :size="14" />新增細項
+          </button>
+        </div>
       </div>
-      <ul v-if="line.details.length" class="space-y-2">
-        <li v-for="d in line.details" :key="d.id" class="flex items-center gap-2">
+      <div v-if="line.details.length" ref="detailListEl" class="relative">
+        <!-- the parts only slide aside while one is being carried -->
+        <TransitionGroup tag="ul" :name="partDrag ? 'rows' : 'still'" class="space-y-2">
+        <li
+          v-for="d in line.details"
+          :key="d.id"
+          data-part
+          :data-id="d.id"
+          class="relative"
+          :class="partDrag?.id === d.id && 'z-10'"
+        >
+        <!-- reordering: the part as a plain row, with a bar to drag it by -->
+        <div
+          v-if="sorting"
+          class="flex items-center gap-3 rounded-2xl border border-line bg-surface py-2 pr-1.5 pl-4 transition-transform duration-150 select-none"
+          :class="partDrag?.id === d.id ? 'shadow-xl ring-2 ring-primary' : ''"
+          :style="partDrag?.id === d.id ? { transform: `translateY(${partDrag.dy}px)`, transition: 'none' } : undefined"
+        >
+          <span class="min-w-0 flex-1 truncate" :class="!d.name.trim() && 'text-muted'">
+            {{ d.name.trim() || '未命名' }}<span v-if="d.qtyText" class="ml-1.5 text-xs text-muted">× {{ d.qtyText }}</span>
+          </span>
+          <span class="shrink-0 text-sm font-medium tabular-nums">{{ foreign ? currency : '$' }}{{ d.amountText || 0 }}</span>
+          <span
+            class="grid size-9 shrink-0 cursor-grab touch-none place-items-center rounded-full text-muted active:cursor-grabbing"
+            aria-label="拖曳調整順序"
+            @pointerdown.prevent="pressPart($event, d.id)"
+          >
+            <GripVertical :size="18" />
+          </span>
+        </div>
+        <div v-else class="flex items-center gap-2">
           <input
             v-model="d.name"
             class="input min-w-0 flex-1 !min-h-0 !py-2.5"
@@ -1368,8 +1492,10 @@ function cancel() {
           >
             <X :size="16" />
           </button>
+        </div>
         </li>
-      </ul>
+        </TransitionGroup>
+      </div>
       <p v-if="detailGap" class="mt-2 flex items-start gap-1.5 px-1 text-xs text-muted">
         <Info :size="14" class="mt-px shrink-0" />
         <span

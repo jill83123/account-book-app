@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { defaultBudget } from '@/lib/budget'
 import { today, ym } from '@/lib/date'
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { currencyOf } from '@/lib/calc'
 import { Plus } from '@/lib/uiIcons'
-import { remove, save } from '@/db'
+import { remove, save, saveMany } from '@/db'
 import type { Ledger } from '@/db/types'
 import { baseCurrency } from '@/lib/currency'
 import { useCurrencyItems, currencyName } from '@/lib/customCurrency'
@@ -85,6 +85,132 @@ async function destroy() {
 
 const count = (id: string) => data.records.filter((r) => r.ledgerId === id).length
 
+// ---- press and hold a ledger to reorder it (the same gesture as the other lists) ----
+/** the ledger being carried, and how far it is drawn from its place */
+const drag = ref<{ id: string; dy: number } | null>(null)
+let lastDrag = 0
+/** the order as shown; it is reordered live while a ledger is being dragged */
+const rows = ref<Ledger[]>([])
+watch(
+  () => data.sortedLedgers,
+  (l) => {
+    if (!drag.value) rows.value = [...l]
+  },
+  { immediate: true },
+)
+const HOLD_MS = 420
+let holdTimer = 0
+let holdFrom = { x: 0, y: 0 }
+const listEl = ref<HTMLElement>()
+let pointerY = 0
+let grabY = 0
+let raf = 0
+
+function cancelHold() {
+  window.clearTimeout(holdTimer)
+  window.removeEventListener('pointermove', watchHold)
+  window.removeEventListener('pointerup', cancelHold)
+  window.removeEventListener('pointercancel', cancelHold)
+}
+function watchHold(e: PointerEvent) {
+  // moving before the hold is up means the finger is scrolling or swiping
+  if (Math.hypot(e.clientX - holdFrom.x, e.clientY - holdFrom.y) > 8) cancelHold()
+}
+function press(e: PointerEvent, id: string) {
+  if (rows.value.length < 2) return
+  if (e.pointerType === 'mouse' && e.button !== 0) return
+  const row = (e.currentTarget as HTMLElement).closest('li')!
+  holdFrom = { x: e.clientX, y: e.clientY }
+  pointerY = e.clientY
+  window.addEventListener('pointermove', watchHold)
+  window.addEventListener('pointerup', cancelHold)
+  window.addEventListener('pointercancel', cancelHold)
+  holdTimer = window.setTimeout(() => {
+    cancelHold()
+    navigator.vibrate?.(12)
+    startDrag(row, pointerY, id)
+  }, HOLD_MS)
+}
+
+/** once dragging, the page must not scroll under the finger */
+const stopScroll = (e: TouchEvent) => e.preventDefault()
+
+function startDrag(row: HTMLElement, clientY: number, id: string) {
+  const r = row.getBoundingClientRect()
+  grabY = clientY - (r.top + r.height / 2)
+  pointerY = clientY
+  drag.value = { id, dy: 0 }
+  window.addEventListener('touchmove', stopScroll, { passive: false })
+  window.addEventListener('pointermove', onMove)
+  window.addEventListener('pointerup', endDrag)
+  window.addEventListener('pointercancel', endDrag)
+  raf = requestAnimationFrame(frame)
+}
+
+function onMove(e: PointerEvent) {
+  pointerY = e.clientY
+}
+
+/** every frame: swap rows when the finger crosses one, and keep the carried row under the finger */
+function frame() {
+  const el = listEl.value
+  const d = drag.value
+  if (!el || !d) return
+  const box = el.getBoundingClientRect()
+  const items = [...el.querySelectorAll<HTMLElement>('[data-row]')]
+  const py = pointerY - box.top
+  let target = 0
+  let best = Infinity
+  items.forEach((t, i) => {
+    // layout positions, so the rows' own sliding does not matter
+    const dist = Math.abs(py - (t.offsetTop + t.offsetHeight / 2))
+    if (dist < best) {
+      best = dist
+      target = i
+    }
+  })
+  const from = rows.value.findIndex((l) => l.id === d.id)
+  if (from >= 0 && target !== from) {
+    const [moved] = rows.value.splice(from, 1)
+    rows.value.splice(target, 0, moved!)
+  }
+  const cur = items.find((t) => t.dataset.id === d.id)
+  if (cur) {
+    const r = cur.getBoundingClientRect()
+    const centre = Math.min(box.bottom - r.height / 2, Math.max(box.top + r.height / 2, pointerY - grabY))
+    const dy = Math.round(centre - (r.top + r.height / 2))
+    if (dy !== d.dy) drag.value = { id: d.id, dy }
+  }
+  // near the top or bottom of the screen, the page follows
+  if (pointerY < 90) window.scrollBy(0, -10)
+  else if (pointerY > window.innerHeight - 90) window.scrollBy(0, 10)
+  raf = requestAnimationFrame(frame)
+}
+
+async function endDrag() {
+  cancelAnimationFrame(raf)
+  window.removeEventListener('touchmove', stopScroll)
+  window.removeEventListener('pointermove', onMove)
+  window.removeEventListener('pointerup', endDrag)
+  window.removeEventListener('pointercancel', endDrag)
+  if (!drag.value) return
+  lastDrag = Date.now()
+  drag.value = null
+  // the ledgers take their numbers in the new sequence; only the ones that moved are saved
+  const changed = rows.value.flatMap((l, i) => (l.order !== i ? [{ ...l, order: i }] : []))
+  if (changed.length) await saveMany('ledgers', changed)
+}
+
+/** a tap opens the ledger; the tap that ends a drag must not */
+function openRow(l: Ledger) {
+  if (drag.value || Date.now() - lastDrag < 400) return
+  edit(l)
+}
+
+onBeforeUnmount(() => {
+  cancelHold()
+  void endDrag()
+})
 </script>
 
 <template>
@@ -97,14 +223,26 @@ const count = (id: string) => data.records.filter((r) => r.ledgerId === id).leng
     <p class="mb-3 px-1 text-sm text-muted">
       帳本把記錄分開管理，例如日常、旅行、家用。帳戶餘額仍然是所有帳本合計。
     </p>
-    <div class="card divide-y divide-line p-0">
-      <button v-for="l in data.sortedLedgers" :key="l.id" class="flex w-full items-center gap-3 px-4 py-3.5 text-left" @click="edit(l)">
-        <CatIcon icon="book" :color="l.color" :size="40" />
-        <span class="min-w-0 flex-1">
-          <span class="block font-medium">{{ l.name }}</span>
-          <span class="block text-xs text-muted">{{ currencyName(l.currency ?? baseCurrency) }}・{{ count(l.id) }} 筆{{ l.budget ? `，預設每月預算 $${fmt(l.budget)}` : '' }}</span>
-        </span>
-      </button>
+    <div ref="listEl" class="card relative p-0">
+      <!-- rows only slide aside while one is being carried -->
+      <TransitionGroup tag="ul" :name="drag ? 'rows' : 'still'" class="divide-y divide-line">
+        <li v-for="l in rows" :key="l.id" data-row :data-id="l.id" class="relative" :class="drag?.id === l.id && 'z-10'">
+          <button
+            class="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-transform duration-150 select-none"
+            :class="drag?.id === l.id ? 'rounded-2xl bg-surface shadow-xl ring-2 ring-primary' : ''"
+            :style="drag?.id === l.id ? { transform: `translateY(${drag.dy}px)`, transition: 'none' } : undefined"
+            @pointerdown="press($event, l.id)"
+            @contextmenu.prevent
+            @click="openRow(l)"
+          >
+            <CatIcon icon="book" :color="l.color" :size="40" />
+            <span class="min-w-0 flex-1">
+              <span class="block font-medium">{{ l.name }}</span>
+              <span class="block text-xs text-muted">{{ currencyName(l.currency ?? baseCurrency) }}・{{ count(l.id) }} 筆{{ l.budget ? `，預設每月預算 $${fmt(l.budget)}` : '' }}</span>
+            </span>
+          </button>
+        </li>
+      </TransitionGroup>
     </div>
 
     <BottomSheet v-model="open" :title="editing ? '編輯帳本' : '新增帳本'">
