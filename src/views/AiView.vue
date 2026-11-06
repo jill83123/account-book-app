@@ -68,7 +68,7 @@ async function copy() {
           <ChevronDown :size="18" class="shrink-0 transition-transform group-open:rotate-180" />
         </summary>
         <div class="space-y-3 pb-4">
-          <p class="text-sm text-muted">預設的模型就能用。只有辨識時出現「找不到模型」才需要換，按下面的按鈕會列出有免費額度的 Flash 模型。</p>
+          <p class="text-sm text-muted">預設的模型就能用。只有辨識時出現<b>找不到模型</b>的錯誤才需要換，按下面的按鈕會列出有免費額度的 Flash 模型。</p>
           <div>
             <label class="label" for="model">模型</label>
             <input id="model" v-model="s.geminiModel" class="input" autocapitalize="off" list="models" />
@@ -87,7 +87,7 @@ async function copy() {
     <section class="card space-y-3">
       <h2 class="font-semibold">手動提詞（不需要金鑰）</h2>
       <p class="text-sm text-muted">
-        把這段提詞連同發票照片貼到任何 AI 對話（例如 Gemini App），再把回覆貼回「新增記錄 &gt; 掃描發票 &gt; 手動提詞」。提詞已經包含你目前的分類清單，修改分類後會自動更新。
+        把這段提詞連同發票照片貼到任何 AI 對話（例如 Gemini App），再把回覆貼回<b>新增記錄 → 掃描發票 → 手動提詞</b>的輸入框。提詞已經包含你目前的分類清單，修改分類後會自動更新。
       </p>
       <pre class="max-h-60 overflow-auto rounded-2xl bg-surface-2 p-3 text-xs leading-relaxed whitespace-pre-wrap">{{ prompt }}</pre>
       <button class="btn btn-primary w-full" @click="copy"><Copy :size="16" />複製提詞</button>

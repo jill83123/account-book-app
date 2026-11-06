@@ -72,10 +72,10 @@ async function destroy() {
   if (!a) return
   const used = data.records.some((r) => r.accountId === a.id || r.toAccountId === a.id)
   if (used) {
-    ui.toast('這個帳戶已有記錄，不能刪除，可以改成「封存」', 'error')
+    ui.toast('這個帳戶已有記錄，不能刪除，可以改成封存狀態', 'error')
     return
   }
-  if (!(await ui.confirm(`刪除「${a.name}」？`, { danger: true, confirmText: '刪除' }))) return
+  if (!(await ui.confirm(`刪除${a.name}？`, { danger: true, confirmText: '刪除' }))) return
   await remove('accounts', a.id)
   open.value = false
   emit('removed')

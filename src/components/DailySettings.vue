@@ -36,7 +36,7 @@ const remindTime = computed({
 const pushOn = computed({
   get: () => s.pushEnabled,
   set: (on: boolean) => {
-    if (on && !s.workerUrl.trim()) return ui.toast('請先在「Google 試算表同步」填入同步服務網址', 'error')
+    if (on && !s.workerUrl.trim()) return ui.toast('請先到 Google 試算表同步區塊填入同步服務網址', 'error')
     const job = on ? push.enable() : push.disable()
     job.then(
       () => ui.toast(on ? '已開啟背景推播' : '已關閉背景推播'),

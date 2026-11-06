@@ -36,10 +36,10 @@ async function rename() {
 async function destroy() {
   const id = editing.value
   const label = members.nameOf(id)
-  if (members.hasLoans(id)) return ui.toast(`「${label}」還有借款記錄，不能刪除`, 'error')
+  if (members.hasLoans(id)) return ui.toast(`${label}還有借款記錄，不能刪除`, 'error')
   const n = members.usage.get(id) ?? 0
-  const text = n ? `${n} 筆記錄上的「${label}」也會一併移除，記錄本身會保留。` : undefined
-  if (!(await ui.confirm(`刪除成員「${label}」？`, { danger: true, confirmText: '刪除', ...(text ? { message: text } : {}) }))) return
+  const text = n ? `${n} 筆記錄上的${label}也會一併移除，記錄本身會保留。` : undefined
+  if (!(await ui.confirm(`刪除成員${label}？`, { danger: true, confirmText: '刪除', ...(text ? { message: text } : {}) }))) return
   await members.remove(id)
   open.value = false
 }
@@ -49,7 +49,7 @@ async function destroy() {
   <div>
     <PageHeader title="成員" />
 
-    <p class="mb-3 px-1 text-sm text-muted">新增常一起花錢的人，記帳時就能選「和誰一起」。</p>
+    <p class="mb-3 px-1 text-sm text-muted">新增常一起花錢的人，記帳時就能用<b>和誰一起</b>欄位選他們。</p>
 
     <div class="mb-4 flex gap-2">
       <input v-model="typed" class="input min-w-0 flex-1" maxlength="12" placeholder="新增成員的名字" @keyup.enter="add" />

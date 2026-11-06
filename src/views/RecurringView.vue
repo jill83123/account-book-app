@@ -60,7 +60,7 @@ async function submit() {
 async function destroy() {
   const r = cur.value
   if (!r) return
-  if (!(await ui.confirm(`刪除「${r.name}」？`, { message: '之後不會再產生新記錄，已經入帳的記錄會保留。', danger: true, confirmText: '刪除' }))) return
+  if (!(await ui.confirm(`刪除${r.name}？`, { message: '之後不會再產生新記錄，已經入帳的記錄會保留。', danger: true, confirmText: '刪除' }))) return
   await remove('recurrings', r.id)
   open.value = false
 }
@@ -86,10 +86,10 @@ const catOf = (r: Recurring) => data.catMap.get(r.template.lines[0]?.categoryId 
     />
     <p class="mb-3 px-1 text-sm text-muted">
       <template v-if="tab === 'recurring'">
-        房租、訂閱、薪資這類固定發生的交易。在新增記錄時，把「商家」旁邊的「單次」改成週期就會建立。
+        房租、訂閱、薪資這類固定發生的交易。在新增記錄時，把<b>商家</b>旁邊的<b>單次</b>改成<b>週期</b>就會建立。
       </template>
       <template v-else>
-        信用卡分期等每月固定攤付的消費。新增記錄時選「分期」，會把總額拆成每月一期，自動入帳。
+        信用卡分期等每月固定攤付的消費。新增記錄時選<b>分期</b>，會把總額拆成每月一期，自動入帳。
       </template>
     </p>
 

@@ -10,7 +10,7 @@ export interface PushSlot {
 export const pushSupported = () =>
   'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
 
-const NO_URL = '請先在「更多 > Google 試算表同步」填入同步服務網址'
+const NO_URL = '請先到更多 → Google 試算表同步頁填入同步服務網址'
 
 async function call<T>(
   workerUrl: string,
@@ -53,7 +53,7 @@ export async function currentSubscription() {
 /** Ask for permission and subscribe this device. */
 export async function subscribePush(workerUrl: string): Promise<PushSubscription> {
   if (!pushSupported())
-    throw new Error('這個瀏覽器不支援推播通知（iPhone 請先「加入主畫面」再開啟）')
+    throw new Error('這個瀏覽器不支援推播通知（iPhone 請先加入主畫面再開啟）')
   const { publicKey } = await call<{ publicKey: string }>(workerUrl, '/push/key')
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') throw new Error('通知權限被拒絕，請到瀏覽器或系統設定開啟')

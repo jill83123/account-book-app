@@ -66,7 +66,7 @@ async function destroy() {
   if (data.ledgers.length < 2) return ui.toast('至少要保留一個帳本', 'error')
   const n = data.records.filter((r) => r.ledgerId === l.id).length
   if (n) return ui.toast(`這個帳本還有 ${n} 筆記錄，請先移走或刪除`, 'error')
-  if (!(await ui.confirm(`刪除帳本「${l.name}」？`, { danger: true, confirmText: '刪除' }))) return
+  if (!(await ui.confirm(`刪除帳本${l.name}？`, { danger: true, confirmText: '刪除' }))) return
   await remove('ledgers', l.id)
   open.value = false
 }

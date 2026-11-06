@@ -52,8 +52,8 @@ async function install() {
   if (pwa.installEvent) return pwa.install()
   await ui.confirm('安裝為應用程式', {
     message: pwa.isIos
-      ? '在 Safari 點下方的「分享」，再選「加入主畫面」。'
-      : '在瀏覽器選單裡選「安裝應用程式」或「加到主畫面」。\n如果找不到，請用 Chrome、Edge 或 Safari 開啟。',
+      ? '在 Safari 點下方的分享按鈕，再選加入主畫面。'
+      : '在瀏覽器選單裡選安裝應用程式，或加到主畫面。\n如果找不到，請用 Chrome、Edge 或 Safari 開啟。',
     confirmText: '知道了',
   })
 }

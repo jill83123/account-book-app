@@ -613,7 +613,7 @@ async function removeLine(id: string) {
   const label = l.name.trim() || data.catMap.get(l.categoryId)?.name || `第 ${i + 1} 項`
   if (
     !(await ui.confirm('移除這個品項？', {
-      message: `「${label}」會從這筆記錄移除。`,
+      message: `${label}會從這筆記錄移除。`,
       danger: true,
       confirmText: '移除',
     }))
@@ -862,7 +862,7 @@ async function submit() {
       ...(foreign.value ? { original: amountOf(l) } : {}),
       ...(l.note.trim() ? { note: l.note.trim() } : {}),
       ...(detailsOf(l).length ? { details: detailsOf(l) } : {}),
-      // spreading an expense over months is set up under 更多 > 攤提; editing a record keeps what is there
+      // spreading an expense over months is set up under 更多 → 攤提; editing a record keeps what is there
       ...(recType === 'expense' && l.amortMonths > 1 ? { amortMonths: l.amortMonths } : {}),
     }))
     sum = recLines.reduce((n, l) => n + l.amount, 0)

@@ -129,7 +129,7 @@ async function destroy(c: Category) {
   const ids = new Set([c.id, ...data.childrenOf(c.id, kind.value, true).map((k) => k.id)])
   const used = data.records.some((r) => r.lines.some((l) => ids.has(l.categoryId)))
   if (used) return ui.toast('已有記錄使用這個分類，不能刪除；可以改成隱藏', 'error')
-  if (!(await ui.confirm(`刪除分類「${c.name}」？`, { danger: true, confirmText: '刪除' }))) return
+  if (!(await ui.confirm(`刪除分類${c.name}？`, { danger: true, confirmText: '刪除' }))) return
   for (const id of ids) await remove('categories', id)
   if (level.value === c.id) level.value = ''
   open.value = false
@@ -367,7 +367,7 @@ onBeforeUnmount(() => {
           <label class="label">預設每月預算（選填）</label>
           <input v-model="budget" class="input" inputmode="numeric" placeholder="0" />
           <p class="mt-1.5 px-1 text-xs text-muted">
-            某個月想不一樣，到「統計 → 預算」點那個分類，就能只改那個月。
+            某個月想不一樣，到<b>統計 → 預算</b>，點那個分類，就能只改那個月。
           </p>
         </div>
         <div>

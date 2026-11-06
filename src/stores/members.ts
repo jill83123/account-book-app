@@ -28,7 +28,7 @@ export const useMembers = defineStore('members', () => {
 
   /** whether another member already has this name (names are how people are told apart, so each is used once) */
   const taken = (name: string, exceptId = '') => data.members.some((m) => m.id !== exceptId && m.name === name.trim())
-  const takenHint = (name: string) => `「${name.trim()}」已存在，可以考慮用綽號`
+  const takenHint = (name: string) => `${name.trim()}已存在，可以考慮用綽號`
 
   /** a new member. '' when the name is empty */
   async function add(name: string): Promise<string> {

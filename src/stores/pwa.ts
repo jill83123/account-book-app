@@ -50,7 +50,7 @@ export const usePwa = defineStore('pwa', () => {
     }
   }
 
-  // installing as an app: Chrome and Edge offer a prompt we can trigger; iOS Safari only has Share > Add to Home Screen
+  // installing as an app: Chrome and Edge offer a prompt we can trigger; iOS Safari only has Share → Add to Home Screen
   interface InstallPrompt extends Event {
     prompt: () => Promise<void>
     userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>

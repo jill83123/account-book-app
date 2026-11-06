@@ -87,7 +87,7 @@ function done() {
         <div>
           <label class="label" for="split-mine">我的部分（這筆一共 ${{ fmt(total) }}）</label>
           <input id="split-mine" v-model="mineText" class="input" inputmode="decimal" placeholder="0" />
-          <p v-if="payer && mineOther > 0 && !tooMuch" class="mt-1.5 px-1 text-xs text-muted">你欠{{ members.nameOf(payer) }} ${{ fmt(mineOther) }}，之後在「借款」還給他。</p>
+          <p v-if="payer && mineOther > 0 && !tooMuch" class="mt-1.5 px-1 text-xs text-muted">你欠{{ members.nameOf(payer) }} ${{ fmt(mineOther) }}，之後在<b>借款</b>頁還給他。</p>
         </div>
       </template>
 

@@ -83,12 +83,12 @@ async function disconnect() {
       <h2 class="label">一次性的設定（約 10 分鐘）</h2>
       <ol class="list-decimal space-y-2 pl-5 text-muted marker:text-muted">
         <li>到 Google Cloud Console 建立一個專案（名稱自訂，個人專案即可）。</li>
-        <li>在「API 和服務 &gt; 程式庫」啟用 <b class="text-primary-strong">Google Sheets API</b> 與 <b class="text-primary-strong">Google Drive API</b>。</li>
+        <li>在 <b>API 和服務 → 程式庫</b>中啟用 <b class="text-primary-strong">Google Sheets API</b> 與 <b class="text-primary-strong">Google Drive API</b>。</li>
         <li>
-          「OAuth 同意畫面」選「外部」，把你自己的 Google 帳號加入「測試使用者」。若想避免授權每 7 天過期，把發布狀態改成「正式版」（個人使用不需要審核，登入時會看到未驗證的提醒，選「進階」繼續即可）。
+          <b>OAuth 同意畫面</b>選<b>外部</b>，把你自己的 Google 帳號加入<b>測試使用者</b>。若想避免授權每 7 天過期，把發布狀態改成<b>正式版</b>（個人使用不需要審核，登入時會看到未驗證的提醒，選<b>進階</b>繼續即可）。
         </li>
         <li>
-          「憑證」建立 OAuth 用戶端 ID，類型選「網頁應用程式」，「已授權的 JavaScript 來源」填這個網站的網址（例如
+          在<b>憑證</b>頁建立 OAuth 用戶端 ID，類型選<b>網頁應用程式</b>，<b>已授權的 JavaScript 來源</b>填這個網站的網址（例如
           <code class="rounded bg-surface-2 px-1">https://你的帳號.github.io</code>，開發時再加
           <code class="rounded bg-surface-2 px-1">http://localhost:5173</code>）。
         </li>
@@ -96,7 +96,7 @@ async function disconnect() {
           部署 <code class="rounded bg-surface-2 px-1">worker/</code> 資料夾裡的 Cloudflare Worker：填入用戶端 ID 與允許的網址，並用
           <code class="rounded bg-surface-2 px-1">wrangler secret put GOOGLE_CLIENT_SECRET</code> 設定用戶端密鑰。它只負責換發長效授權，不會儲存任何資料。
         </li>
-        <li>把 Worker 網址貼到上面，按「登入 Google 並建立試算表」，授權時要勾選「查看、編輯、建立及刪除這個應用程式的 Google 雲端硬碟檔案」。</li>
+        <li>把 Worker 網址貼到上面，按<b>登入 Google 並建立試算表</b>按鈕，授權時要勾選這項權限：<b>查看</b>、編輯、建立及刪除這個應用程式的 Google 雲端硬碟檔案。</li>
       </ol>
       <p class="text-muted">
         （App 只能存取它自己建立的那份試算表，看不到你雲端硬碟裡的其他檔案。）

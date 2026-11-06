@@ -72,7 +72,7 @@ async function reset() {
 </script>
 
 <template>
-  <BottomSheet v-model="open" :title="`「${target?.name ?? ''}」的預算`">
+  <BottomSheet v-model="open" :title="`${target?.name ?? ''}的預算`">
     <div v-if="target" class="space-y-4">
       <div>
         <div class="mb-1.5 flex items-baseline justify-between gap-3">

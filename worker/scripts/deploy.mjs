@@ -1,6 +1,6 @@
 // 部署 Worker：  npm run deploy
 // 1. 讓 wrangler.local.toml 跟上範例，有沒填的項目就停下來
-// 2. 部署時把推播私鑰從設定值裡拿掉，部署完再用 Cloudflare 的加密「密鑰」存上去，
+// 2. 部署時把推播私鑰從設定值裡拿掉，部署完再用 Cloudflare 的加密密鑰存上去，
 //    這樣儀表板看不到明文；私鑰仍然只寫在你本機的 wrangler.local.toml
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'

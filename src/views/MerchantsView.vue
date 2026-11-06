@@ -42,7 +42,7 @@ async function dropItem(name: string) {
 async function destroy() {
   const m = current.value
   if (!m) return
-  if (!(await ui.confirm(`刪除商家「${m.name}」？`, { message: '已記錄的帳目不會被刪除，只是不再顯示商家名稱。', danger: true, confirmText: '刪除' }))) return
+  if (!(await ui.confirm(`刪除商家${m.name}？`, { message: '已記錄的帳目不會被刪除，只是不再顯示商家名稱。', danger: true, confirmText: '刪除' }))) return
   await remove('merchants', m.id)
   open.value = false
 }

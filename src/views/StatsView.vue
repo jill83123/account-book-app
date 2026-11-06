@@ -256,7 +256,7 @@ const budgetOpen = computed({
   },
 })
 function editBudget(table: 'categories' | 'ledgers', id: string) {
-  if (mode.value !== 'month') return ui.toast('要改某個月的預算，請先切到「月」', 'info')
+  if (mode.value !== 'month') return ui.toast('要改某個月的預算，請先切到月檢視', 'info')
   budgetTarget.value = { table, id }
 }
 const budgetRows = computed(() => {
@@ -446,7 +446,7 @@ const barTone = (spent: number, budget: number) =>
         </template>
         <div v-else class="space-y-1 py-3 text-sm text-muted">
           <p>還沒有設定總預算。</p>
-          <p>到「帳本」設定每月預算，或到「分類」替各分類設定。</p>
+          <p>到<b>帳本</b>頁設定每月預算，或到<b>分類</b>頁替各分類設定。</p>
         </div>
       </section>
 

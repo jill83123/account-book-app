@@ -53,7 +53,7 @@ function clear() {
       @click="create"
     >
       <Plus :size="20" class="text-primary" />
-      <span>新增商家「{{ q.trim() }}」</span>
+      <span>新增商家{{ q.trim() }}</span>
     </button>
     <ul v-if="list.length" class="card divide-y divide-line p-0">
       <li v-for="m in list" :key="m.id">
