@@ -7,11 +7,17 @@ const open = defineModel<boolean>({ required: true })
 
 /** the fades above and below the pinned bars only make sense while the list actually scrolls */
 const scrolls = ref(false)
+/** scrolled all the way down: nothing is left to fade out above the bottom bar */
+const atEnd = ref(true)
 let watcher: ResizeObserver | undefined
 function watchScroll(el: unknown) {
   watcher?.disconnect()
   if (!(el instanceof HTMLElement)) return
-  const check = () => (scrolls.value = el.scrollHeight > el.clientHeight + 1)
+  const check = () => {
+    scrolls.value = el.scrollHeight > el.clientHeight + 1
+    atEnd.value = el.scrollTop + el.clientHeight >= el.scrollHeight - 2
+  }
+  el.addEventListener('scroll', check, { passive: true })
   watcher = new ResizeObserver(check)
   watcher.observe(el)
   for (const c of Array.from(el.children)) watcher.observe(c)
@@ -74,7 +80,7 @@ onBeforeUnmount(() => {
           <slot />
           <!-- pinned to the bottom, with a fade above it -->
           <div v-if="$slots.footer" class="sticky bottom-0 z-10 -mx-5 bg-bg px-5 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] "
-            :class="fade && scrolls && 'before:pointer-events-none before:absolute before:inset-x-0 before:bottom-full before:h-12 before:bg-gradient-to-t before:from-bg before:from-5% before:via-bg/80 before:via-40% before:to-transparent'"
+            :class="fade && scrolls && !atEnd && 'before:pointer-events-none before:absolute before:inset-x-0 before:bottom-full before:h-12 before:bg-gradient-to-t before:from-bg before:from-5% before:via-bg/80 before:via-40% before:to-transparent'"
           >
             <slot name="footer" />
           </div>
