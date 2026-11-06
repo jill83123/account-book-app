@@ -73,7 +73,7 @@ const catOf = (r: Recurring) => data.catMap.get(r.template.lines[0]?.categoryId 
   <div>
     <PageHeader title="週期與分期">
       <template #right>
-        <button class="circle-btn" aria-label="新增" @click="router.push({ path: '/record/new' })"><Plus :size="22" /></button>
+        <button class="circle-btn" aria-label="新增" @click="router.push({ path: '/record/new', query: { repeat: tab } })"><Plus :size="22" /></button>
       </template>
     </PageHeader>
     <PillTabs

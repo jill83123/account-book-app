@@ -23,7 +23,7 @@ import { fmt } from '@/lib/money'
 import { useData } from '@/stores/data'
 import { useSettings } from '@/stores/settings'
 import { useUi } from '@/stores/ui'
-import { ChevronDown, Inbox } from '@/lib/uiIcons'
+import { ChevronDown, Inbox, Settings2 } from '@/lib/uiIcons'
 import BudgetSheet from '@/components/BudgetSheet.vue'
 import CatIcon from '@/components/CatIcon.vue'
 import DateField from '@/components/DateField.vue'
@@ -299,7 +299,9 @@ const barTone = (spent: number, budget: number) =>
         <span class="block max-w-40 truncate">{{ data.ledgerMap.get(data.ledgerId)?.name ?? '' }}</span>
         <ChevronDown :size="16" class="absolute top-1/2 left-full ml-1.5 -translate-y-1/2 text-muted" />
       </button>
-      <span />
+      <div class="flex items-center justify-end gap-0.5 sm:gap-2">
+        <button class="circle-btn size-9 sm:size-10" aria-label="統計設定" @click="router.push('/stats/settings')"><Settings2 :size="20" /></button>
+      </div>
     </header>
 
     <PillTabs

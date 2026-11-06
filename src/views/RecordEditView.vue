@@ -302,6 +302,12 @@ function load() {
     return
   }
   if (route.query.type === 'transfer') type.value = 'transfer'
+  // 從週期與分期頁新增：直接帶入對應的類型
+  if (route.query.repeat === 'recurring') {
+    repeat.value = { kind: 'recurring', freq: 'monthly', interval: 1, autoPost: true }
+  } else if (route.query.repeat === 'installment') {
+    repeat.value = { kind: 'installment', periods: 12, fee: 0 }
+  }
   // from a card's "記繳卡費": the card is the destination and the statement is the amount
   const toQ = route.query.to
   if (typeof toQ === 'string' && data.accMap.has(toQ)) toAccountId.value = toQ

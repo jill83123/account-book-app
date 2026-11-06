@@ -23,6 +23,7 @@ const router = createRouter({
       component: () => import('@/views/MoreView.vue'),
       meta: { nav: true },
     },
+    { path: '/stats/settings', component: () => import('@/views/StatsSettingsView.vue') },
     { path: '/more/ledgers', component: () => import('@/views/LedgersView.vue') },
     { path: '/more/categories', component: () => import('@/views/CategoriesView.vue') },
     { path: '/more/merchants', component: () => import('@/views/MerchantsView.vue') },
