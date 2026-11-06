@@ -53,8 +53,8 @@ onBeforeUnmount(() => watcher?.disconnect())
           </div>
           <slot />
           <!-- pinned to the bottom, with a fade above it -->
-          <div v-if="$slots.footer" class="sticky bottom-0 z-10 bg-bg pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] "
-            :class="scrolls && 'before:pointer-events-none before:absolute before:inset-x-0 before:bottom-full before:h-10 before:bg-gradient-to-t before:from-bg before:to-transparent'"
+          <div v-if="$slots.footer" class="sticky bottom-0 z-10 -mx-5 bg-bg px-5 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] "
+            :class="scrolls && 'before:pointer-events-none before:absolute before:inset-x-0 before:bottom-full before:h-12 before:bg-gradient-to-t before:from-bg before:from-5% before:via-bg/80 before:via-40% before:to-transparent'"
           >
             <slot name="footer" />
           </div>

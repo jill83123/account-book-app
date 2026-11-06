@@ -118,7 +118,7 @@ async function destroy() {
 
 <template>
   <BottomSheet v-model="open" :title="account ? '編輯帳戶' : '新增帳戶'">
-    <div class="space-y-4 pb-6">
+    <div class="space-y-4 pb-12">
       <div>
         <label class="label">名稱</label>
         <input v-model="name" class="input" placeholder="例如：玉山銀行" maxlength="20" />
@@ -138,7 +138,7 @@ async function destroy() {
       </div>
       <div v-if="kind !== 'card'">
         <label class="label">幣別</label>
-        <SelectField v-model="currency" title="選擇幣別" :items="currencyItems" />
+        <SelectField v-model="currency" title="選擇幣別" :items="currencyItems" inline />
       </div>
       <div v-if="kind !== 'card' && currency !== BASE_CURRENCY" class="grid grid-cols-2 gap-3">
         <div>
