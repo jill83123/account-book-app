@@ -5,7 +5,7 @@ import { computed, ref } from 'vue'
 import { Plus } from '@/lib/uiIcons'
 import { remove, save } from '@/db'
 import type { Ledger } from '@/db/types'
-import { BASE_CURRENCY } from '@/lib/currency'
+import { baseCurrency } from '@/lib/currency'
 import { useCurrencyItems, currencyName } from '@/lib/customCurrency'
 import { COLORS } from '@/lib/icons'
 import { uid } from '@/lib/id'
@@ -26,16 +26,16 @@ const editing = ref<Ledger | null>(null)
 const name = ref('')
 const color = ref(COLORS[0]!)
 const budget = ref('')
-const currency = ref(BASE_CURRENCY)
+const currency = ref(baseCurrency.value)
 const rateText = ref('')
-const foreign = computed(() => currency.value !== BASE_CURRENCY)
+const foreign = computed(() => currency.value !== baseCurrency.value)
 
 function edit(l?: Ledger) {
   editing.value = l ?? null
   name.value = l?.name ?? ''
   color.value = l?.color ?? COLORS[data.ledgers.length % COLORS.length]!
   budget.value = l?.budget ? String(l.budget) : ''
-  currency.value = l?.currency ?? BASE_CURRENCY
+  currency.value = l?.currency ?? baseCurrency.value
   rateText.value = l?.rate ? String(l.rate) : ''
   open.value = true
 }
@@ -44,7 +44,7 @@ async function submit() {
   if (!name.value.trim()) return ui.toast('請輸入帳本名稱', 'error')
   const old = editing.value
   // records already in the ledger are in its currency, so it cannot change under them
-  if (old && (old.currency ?? BASE_CURRENCY) !== currency.value && data.records.some((r) => r.ledgerId === old.id)) {
+  if (old && (old.currency ?? baseCurrency.value) !== currency.value && data.records.some((r) => r.ledgerId === old.id)) {
     return ui.toast('這個帳本已經有記錄，不能改幣別', 'error')
   }
   const rate = Number(rateText.value)
@@ -91,7 +91,7 @@ const count = (id: string) => data.records.filter((r) => r.ledgerId === id).leng
         <CatIcon icon="book" :color="l.color" :size="40" />
         <span class="min-w-0 flex-1">
           <span class="block font-medium">{{ l.name }}</span>
-          <span class="block text-xs text-muted">{{ currencyName(l.currency ?? BASE_CURRENCY) }}・{{ count(l.id) }} 筆{{ l.budget ? `，預設每月預算 $${fmt(l.budget)}` : '' }}</span>
+          <span class="block text-xs text-muted">{{ currencyName(l.currency ?? baseCurrency) }}・{{ count(l.id) }} 筆{{ l.budget ? `，預設每月預算 $${fmt(l.budget)}` : '' }}</span>
         </span>
       </button>
     </div>
@@ -112,9 +112,9 @@ const count = (id: string) => data.records.filter((r) => r.ledgerId === id).leng
           <div class="field justify-start gap-3 pr-3">
             <span class="whitespace-nowrap text-sm text-muted">1 {{ currency }} =</span>
             <input v-model="rateText" class="min-w-0 flex-1 bg-transparent text-right text-lg outline-none" inputmode="decimal" placeholder="先不填" />
-            <span class="text-sm text-muted">{{ BASE_CURRENCY }}</span>
+            <span class="text-sm text-muted">{{ baseCurrency }}</span>
           </div>
-          <p class="mt-1.5 px-1 text-xs text-muted">不知道也沒關係，照{{ currency }}記，旅行後在帳單頁填總共花了多少台幣，一次換算。</p>
+          <p class="mt-1.5 px-1 text-xs text-muted">不知道也沒關係，照{{ currency }}記，旅行後在帳單頁填總共花了多少{{ currencyName(baseCurrency) }}，一次換算。</p>
         </div>
         <div>
           <label class="label">預設每月預算（選填）</label>

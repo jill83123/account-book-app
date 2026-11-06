@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { remove, save } from '@/db'
-import { BASE_CURRENCY } from '@/lib/currency'
+import { baseCurrency } from '@/lib/currency'
 import {
+  currencyName,
+  saveBaseCurrency,
   saveCurrencyOrder,
   setCurrencyShown,
   useCurrencyEntries,
+  useCurrencyItems,
   type CurrencyEntry,
 } from '@/lib/customCurrency'
 import { uid } from '@/lib/id'
@@ -13,10 +16,31 @@ import { Eye, EyeOff, Pencil, Plus, Trash2 } from '@/lib/uiIcons'
 import { useData } from '@/stores/data'
 import { useUi } from '@/stores/ui'
 import PageHeader from '@/components/PageHeader.vue'
+import SelectField from '@/components/SelectField.vue'
 
 const data = useData()
 const ui = useUi()
 const entries = useCurrencyEntries()
+
+// ---- the default currency: new things start in it, and everything is counted in it ----
+const baseItems = useCurrencyItems(() => baseCurrency.value)
+const base = computed({
+  get: () => baseCurrency.value,
+  set: (code: string) => void changeBase(code),
+})
+
+async function changeBase(code: string) {
+  if (code === baseCurrency.value) return
+  // amounts already recorded are not converted, so say so before the numbers change meaning
+  if (
+    data.records.length &&
+    !(await ui.confirm(`已經有記錄了，金額不會自動換算。確定把預設幣別改成${currencyName(code)}？`, {
+      confirmText: '改成',
+    }))
+  )
+    return
+  await saveBaseCurrency(code)
+}
 
 const chosen = computed(() => entries.value.filter((c) => c.shown))
 
@@ -211,6 +235,11 @@ onBeforeUnmount(() => {
     </PageHeader>
 
     <section class="mb-5">
+      <h2 class="section-title">預設幣別</h2>
+      <SelectField v-model="base" title="預設幣別" :items="baseItems" inline />
+    </section>
+
+    <section class="mb-5">
       <h2 class="section-title">已選擇</h2>
       <div ref="listEl" class="card relative p-0">
         <!-- rows only slide aside while one is being carried -->
@@ -242,7 +271,12 @@ onBeforeUnmount(() => {
               @contextmenu.prevent
             >
               <span class="min-w-0 flex-1">
-                <span class="block truncate font-medium">{{ c.name }}</span>
+                <span class="block truncate font-medium"
+                  >{{ c.name
+                  }}<span v-if="c.code === baseCurrency" class="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary"
+                    >預設</span
+                  ></span
+                >
                 <span class="block text-xs text-muted">{{ c.code }}</span>
               </span>
               <button
@@ -267,7 +301,7 @@ onBeforeUnmount(() => {
                 data-nodrag
                 class="icon-btn size-9 border-0 bg-transparent text-muted disabled:opacity-40"
                 :aria-label="c.shown ? `隱藏${c.name}` : `顯示${c.name}`"
-                :disabled="c.code === BASE_CURRENCY"
+                :disabled="c.code === baseCurrency"
                 @click="setCurrencyShown(c, !c.shown)"
               >
                 <Eye v-if="c.shown" :size="18" />
@@ -309,7 +343,7 @@ onBeforeUnmount(() => {
             data-nodrag
             class="icon-btn size-9 border-0 bg-transparent text-muted disabled:opacity-40"
             :aria-label="c.shown ? `隱藏${c.name}` : `顯示${c.name}`"
-            :disabled="c.code === BASE_CURRENCY"
+            :disabled="c.code === baseCurrency"
             @click="setCurrencyShown(c, !c.shown)"
           >
             <Eye v-if="c.shown" :size="18" />

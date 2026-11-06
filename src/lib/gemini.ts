@@ -1,5 +1,6 @@
 import type { Category } from '@/db/types'
 import type { Draft } from '@/stores/ui'
+import { baseName } from './customCurrency'
 import { aiToken } from './google/gis'
 
 const API = 'https://generativelanguage.googleapis.com/v1beta'
@@ -39,7 +40,7 @@ function buildMergePrompt(names: string[]): string {
     '3. category 必須從下面的分類清單中挑最適合整筆消費的一個，原文照抄（包含斜線）；不要為每樣東西各挑分類。',
     '4. details 是買的每樣東西，各一項：name 用繁體中文，去掉條碼與無意義的縮寫；amount 是該項的小計；有明確的數量才填 qty（數字，不含單位），看不出來就省略。',
     '5. 折扣、優惠、折價券放進 details，用負數金額，name 寫「折扣」。',
-    '6. 這一列的 amount 是 details 全部加起來的實付金額。amount 一律是新台幣整數，不含小數點與貨幣符號。',
+    `6. 這一列的 amount 是 details 全部加起來的實付金額。amount 一律是${baseName()}整數，不含小數點與貨幣符號。`,
     '7. date 格式 YYYY-MM-DD，time 格式 HH:mm，看不出來就省略該欄位。民國年請換算成西元年。',
     '8. total 是發票上的實付總額。',
     '',
@@ -62,7 +63,7 @@ export function buildPrompt(cats: Category[], mode: ScanMode = 'split'): string 
     '2. 品項名稱使用繁體中文，去掉條碼、數量代號與無意義的縮寫，讓人一看就懂。',
     '3. 每個品項各自一列；同一商品買多件時金額填該品項的小計。',
     '4. 折扣、優惠、折價券用負數金額單獨一列，品項名稱寫「折扣」。',
-    '5. amount 一律是新台幣整數，不含小數點與貨幣符號。',
+    `5. amount 一律是${baseName()}整數，不含小數點與貨幣符號。`,
     `6. category 必須從下面的分類清單中挑最適合的一個，原文照抄（包含斜線）${names.includes('其他') ? '；真的不適用才填「其他」' : ''}。`,
     '7. date 格式 YYYY-MM-DD，time 格式 HH:mm，看不出來就省略該欄位。民國年請換算成西元年。',
     '8. total 是發票上的實付總額。',

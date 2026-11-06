@@ -39,7 +39,7 @@
 - **分頁**：用 `PillTabs`。
 - **拖曳排序**：長按整列（約 0.4 秒）開始，不要放拖曳把手圖示。被拖的那一列只加邊框和浮起，不要把背景變藍：`rounded-2xl bg-surface shadow-xl ring-2 ring-primary`（首頁記錄列、分類、資產、幣別都一樣），加 `translateY` 跟著手指，其他列即時換位並有滑動動畫（`TransitionGroup` 的 `rows` 與 `still`）。手指拖曳時要擋住頁面捲動（`touchmove` 的 `preventDefault`）。程式照 `CategoriesView.vue` 的 `press`、`startDrag`、`frame` 寫。放列的卡片要加 `relative`，不然列的 `offsetTop` 會相對於 body，位置算錯。
 - **可編輯的列**：右邊放鉛筆圖示按鈕（`Pencil`，跟分類頁一樣）開編輯，不要用點整列；內建項目沒有鉛筆。
-- **下拉選擇**：不要用原生 `select`。用 `SelectField`；放在抽屜裡面的欄位加 `inline`，選項直接懸浮展開，不要再開一層抽屜。
+- **下拉選擇**：不要用原生 `select`。用 `SelectField`；選項不多的欄位（例如幣別）加 `inline`，選項直接懸浮展開。放在抽屜裡面的一定要加，不要再開一層抽屜。
 - **抽屜**（`BottomSheet`）：儲存按鈕放 `footer` 插槽，會固定在底部並有漸層。內容底部要多留空間，不然最後一列會被漸層蓋住。
 - 同一個畫面不要抽屜疊抽屜。
 
@@ -49,6 +49,7 @@
 - 新增一張資料表要改：`db/types.ts`（型別、`TableName`、`TABLES`、`TableMap`）、`db/index.ts`（升 Dexie 版本）、`stores/data.ts`（`live` 與回傳）。同步、備份、清除資料都靠 `TABLES`，不用另外改。
 - 會跟著 Google 試算表同步的資料要放資料表，不要放 `stores/settings.ts`（那個只存本機）。
 - 內建項目的使用者選擇（例如顯示或隱藏）用固定 id 存一筆，避免多台裝置各建一份。
+- 預設幣別是可以更換的，程式裡讀 `baseCurrency`（`lib/currency.ts`），不要寫死 TWD；畫面上要說新台幣的地方用 `currencyName(baseCurrency)`，不要直接寫台幣。
 
 ## 驗證
 

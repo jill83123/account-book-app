@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { computed, ref, shallowRef } from 'vue'
+import { computed, ref, shallowRef, watch } from 'vue'
 import { liveQuery } from 'dexie'
 import { db, table } from '@/db'
 import type {
@@ -17,6 +17,7 @@ import type {
   TableName,
 } from '@/db/types'
 import { accountBalances } from '@/lib/calc'
+import { BASE_ROW_ID, DEFAULT_BASE, setBaseCurrency } from '@/lib/currency'
 import { compareRecords } from '@/lib/order'
 import { useSettings } from './settings'
 
@@ -45,6 +46,15 @@ export const useData = defineStore('data', () => {
       error: (e) => console.error(e),
     })
   }
+
+  // the default currency is a synced row; wait until the rows are in so a slow load never resets it
+  watch(
+    [ready, currencies],
+    ([r, rows]) => {
+      if (r) setBaseCurrency(rows.find((x) => x.id === BASE_ROW_ID)?.code ?? DEFAULT_BASE)
+    },
+    { immediate: true },
+  )
 
   function start() {
     const pending = new Set<TableName>()

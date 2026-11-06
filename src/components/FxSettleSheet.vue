@@ -2,7 +2,8 @@
 import { computed, ref, watch } from 'vue'
 import { evalExpr, fmtFx, fmtRate } from '@/lib/money'
 import { foreignTotal, pendingOf, settlePending } from '@/lib/fx'
-import { currencyName } from '@/lib/customCurrency'
+import { baseCurrency } from '@/lib/currency'
+import { baseName, currencyName } from '@/lib/customCurrency'
 import { save } from '@/db'
 import { useData } from '@/stores/data'
 import { useUi } from '@/stores/ui'
@@ -22,7 +23,7 @@ const rate = computed(() => (foreign.value > 0 && twd.value > 0 ? twd.value / fo
 watch(open, (o) => o && (text.value = ''), { immediate: true })
 
 async function done() {
-  if (twd.value <= 0) return ui.toast('請輸入花了多少台幣', 'error')
+  if (twd.value <= 0) return ui.toast(`請輸入花了多少${baseName()}`, 'error')
   const n = await settlePending(list.value, Math.round(twd.value))
   // the next record of this ledger uses the same rate
   const l = data.ledgerMap.get(props.ledgerId)
@@ -35,18 +36,18 @@ async function done() {
 <template>
   <BottomSheet v-model="open" :title="`換算${currencyName(currency)}`">
     <div class="space-y-4">
-      <p class="text-sm text-muted">這 {{ list.length }} 筆都是用{{ currencyName(currency) }}記的，還沒換成台幣。填一個總共花了多少台幣，會依每筆的比例換算。</p>
+      <p class="text-sm text-muted">這 {{ list.length }} 筆都是用{{ currencyName(currency) }}記的，還沒換成{{ currencyName(baseCurrency) }}。填一個總共花了多少{{ currencyName(baseCurrency) }}，會依每筆的比例換算。</p>
       <div class="card flex items-baseline justify-between">
         <span class="text-sm text-muted">{{ currency }} 合計</span>
         <span class="text-xl font-bold tabular-nums">{{ currency }} {{ fmtFx(foreign) }}</span>
       </div>
       <div>
-        <label class="label" for="fx-twd">總共花了多少台幣</label>
+        <label class="label" for="fx-twd">總共花了多少{{ currencyName(baseCurrency) }}</label>
         <div class="field justify-start gap-2">
           <span class="text-muted">$</span>
           <input id="fx-twd" v-model="text" class="min-w-0 flex-1 bg-transparent text-lg outline-none" inputmode="decimal" placeholder="0" />
         </div>
-        <p v-if="rate > 0" class="mt-1.5 px-1 text-xs text-muted">相當於 1 {{ currency }} = {{ fmtRate(rate) }} TWD</p>
+        <p v-if="rate > 0" class="mt-1.5 px-1 text-xs text-muted">相當於 1 {{ currency }} = {{ fmtRate(rate) }} {{ baseCurrency }}</p>
       </div>
       <button class="btn btn-primary w-full" :disabled="twd <= 0" @click="done">換算</button>
     </div>

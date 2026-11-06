@@ -1,5 +1,33 @@
-/** The currency every report is kept in. Other currencies are converted with a rate when saved. */
-export const BASE_CURRENCY = 'TWD'
+import { ref } from 'vue'
+
+/** The default currency until another one is chosen. */
+export const DEFAULT_BASE = 'TWD'
+/** the fixed id of the row that keeps the choice, so two devices never make two rows */
+export const BASE_ROW_ID = 'fx-base'
+
+const CACHE_KEY = 'base-currency'
+function cached(): string {
+  try {
+    return localStorage.getItem(CACHE_KEY) || DEFAULT_BASE
+  } catch {
+    return DEFAULT_BASE
+  }
+}
+
+/**
+ * The currency every report is kept in. Other currencies are converted with a rate when saved.
+ * The choice itself is synced data; the copy kept here only stops a wrong currency flashing while the data loads.
+ */
+export const baseCurrency = ref(cached())
+
+export function setBaseCurrency(code: string) {
+  baseCurrency.value = code
+  try {
+    localStorage.setItem(CACHE_KEY, code)
+  } catch {
+    /* private window: the synced row still decides */
+  }
+}
 
 export interface CurrencyInfo {
   code: string

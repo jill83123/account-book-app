@@ -27,7 +27,8 @@ import { useSync } from '@/stores/sync'
 import { useUi, type Draft } from '@/stores/ui'
 import { addedAt, relativeLabel, today, weekday, WEEKDAYS } from '@/lib/date'
 import { uid } from '@/lib/id'
-import { BASE_CURRENCY } from '@/lib/currency'
+import { baseCurrency } from '@/lib/currency'
+import { currencyName } from '@/lib/customCurrency'
 import { isForeignAccount } from '@/lib/calc'
 import {
   addPhoto,
@@ -104,20 +105,20 @@ const repeat = ref<Repeat>({ kind: 'once' })
 const recurringId = ref<string | undefined>()
 const transferText = ref('')
 /** prices are typed in this currency and saved converted to TWD with this rate */
-const currency = ref(BASE_CURRENCY)
+const currency = ref(baseCurrency.value)
 const rate = ref(1)
 /** a ledger keeps one currency (and, once known, its rate); a new record takes both from it */
 function useLedgerMoney() {
   const l = data.ledgerMap.get(ledgerId.value)
-  currency.value = l?.currency ?? BASE_CURRENCY
-  rate.value = l?.currency && l.currency !== BASE_CURRENCY ? (l.rate ?? 0) : 1
+  currency.value = l?.currency ?? baseCurrency.value
+  rate.value = l?.currency && l.currency !== baseCurrency.value ? (l.rate ?? 0) : 1
 }
 /** a wallet kept in its own currency decides the record's currency and rate; an account without one follows the ledger */
 function useAccountMoney() {
   const a = data.accMap.get(accountId.value)
   if (!a?.currency) return useLedgerMoney()
   currency.value = a.currency
-  rate.value = a.currency === BASE_CURRENCY ? 1 : (a.rate ?? 0)
+  rate.value = a.currency === baseCurrency.value ? 1 : (a.rate ?? 0)
 }
 watch(ledgerId, () => {
   if (!editingId.value && !route.query.copy) useAccountMoney()
@@ -125,7 +126,7 @@ watch(ledgerId, () => {
 watch(accountId, () => {
   if (!editingId.value && !route.query.copy && type.value !== 'transfer') useAccountMoney()
 })
-const foreign = computed(() => currency.value !== BASE_CURRENCY && type.value !== 'transfer')
+const foreign = computed(() => currency.value !== baseCurrency.value && type.value !== 'transfer')
 
 const sheet = ref<
   | ''
@@ -183,16 +184,16 @@ const baseOf = (l: LineForm) => (foreign.value ? Math.round(amountOf(l) * rate.v
 const srcAcc = computed(() => data.accMap.get(accountId.value))
 const dstAcc = computed(() => data.accMap.get(toAccountId.value))
 const srcForeign = computed(() => Boolean(srcAcc.value && isForeignAccount(srcAcc.value)))
-const transferSrcCur = computed(() => (srcForeign.value ? srcAcc.value!.currency! : BASE_CURRENCY))
+const transferSrcCur = computed(() => (srcForeign.value ? srcAcc.value!.currency! : baseCurrency.value))
 const transferSrcRate = computed(() => (srcForeign.value ? (srcAcc.value!.rate ?? 0) : 1))
 const transferDstCur = computed(() =>
-  dstAcc.value && isForeignAccount(dstAcc.value) ? dstAcc.value.currency! : BASE_CURRENCY,
+  dstAcc.value && isForeignAccount(dstAcc.value) ? dstAcc.value.currency! : baseCurrency.value,
 )
 /** asks how much arrived when the two wallets are in different currencies */
 const needToAmount = computed(
   () =>
     type.value === 'transfer' &&
-    transferDstCur.value !== BASE_CURRENCY &&
+    transferDstCur.value !== baseCurrency.value &&
     transferDstCur.value !== transferSrcCur.value,
 )
 const toTotalText = ref('')
@@ -266,7 +267,7 @@ function load() {
     companions.value = [...(r.companions ?? [])]
     split.value = r.split
     recurringId.value = copying ? undefined : r.recurringId
-    currency.value = r.currency ?? BASE_CURRENCY
+    currency.value = r.currency ?? baseCurrency.value
     rate.value = r.rate ?? 1
     if (!copying) void loadPhotos(r.id).then((p) => (photos.value = p))
     const items = r.merchantId ? (data.merchantMap.get(r.merchantId)?.items ?? []) : []
@@ -1175,10 +1176,10 @@ function cancel() {
           </button>
         </div>
         <p v-if="foreign && rate > 0" class="px-1 text-right text-xs text-muted">
-          約 ${{ fmt(baseOf(line)) }}（1 {{ currency }} = {{ fmtFx(rate) }} {{ BASE_CURRENCY }}）
+          約 ${{ fmt(baseOf(line)) }}（1 {{ currency }} = {{ fmtFx(rate) }} {{ baseCurrency }}）
         </p>
         <p v-else-if="foreign" class="px-1 text-right text-xs text-muted">
-          還沒有匯率，先照 {{ currency }} 記，之後再換算成台幣
+          還沒有匯率，先照 {{ currency }} 記，之後再換算成{{ currencyName(baseCurrency) }}
         </p>
 
         <div v-if="type !== 'transfer'" class="field justify-start gap-2 pr-2">

@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { remove, save } from '@/db'
 import type { Account, AccountKind } from '@/db/types'
-import { BASE_CURRENCY } from '@/lib/currency'
+import { baseCurrency } from '@/lib/currency'
 import { useCurrencyItems } from '@/lib/customCurrency'
 import { BANKS, BANK_PREFIX, PAYS } from '@/lib/banks'
 import { COLORS } from '@/lib/icons'
@@ -47,7 +47,7 @@ const statementDay = ref(1)
 const dueDay = ref(15)
 const archived = ref(false)
 const excluded = ref(false)
-const currency = ref(BASE_CURRENCY)
+const currency = ref(baseCurrency.value)
 const rateText = ref('')
 /** the switch reads as "included", the data stores the opposite so old accounts count by default */
 const included = computed({
@@ -72,7 +72,7 @@ watch(open, (o) => {
   dueDay.value = a?.dueDay ?? 15
   archived.value = a?.archived ?? false
   excluded.value = a?.excluded ?? false
-  currency.value = a?.currency ?? BASE_CURRENCY
+  currency.value = a?.currency ?? baseCurrency.value
   rateText.value = a?.rate ? String(a.rate) : ''
 })
 
@@ -91,7 +91,7 @@ async function submit() {
     ...(icon.value ? { icon: icon.value } : {}),
     ...(archived.value ? { archived: true } : {}),
     ...(excluded.value ? { excluded: true } : {}),
-    ...(kind.value !== 'card' && currency.value !== BASE_CURRENCY
+    ...(kind.value !== 'card' && currency.value !== baseCurrency.value
       ? { currency: currency.value, rate: evalExpr(rateText.value) ?? 0 }
       : {}),
     ...(kind.value === 'card'
@@ -140,9 +140,9 @@ async function destroy() {
         <label class="label">幣別</label>
         <SelectField v-model="currency" title="選擇幣別" :items="currencyItems" inline />
       </div>
-      <div v-if="kind !== 'card' && currency !== BASE_CURRENCY" class="grid grid-cols-2 gap-3">
+      <div v-if="kind !== 'card' && currency !== baseCurrency" class="grid grid-cols-2 gap-3">
         <div>
-          <label class="label">匯率（1 {{ currency }} = ? TWD）</label>
+          <label class="label">匯率（1 {{ currency }} = ? {{ baseCurrency }}）</label>
           <input
             v-model="rateText"
             class="input"

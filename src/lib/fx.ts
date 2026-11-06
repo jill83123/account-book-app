@@ -1,9 +1,9 @@
 import { saveMany } from '@/db'
 import type { Rec } from '@/db/types'
-import { BASE_CURRENCY } from './currency'
+import { baseCurrency } from './currency'
 
 /** A foreign record saved without a rate: its price is only known in that currency until the trip is settled. */
-export const isPending = (r: Pick<Rec, 'currency' | 'rate'>): boolean => Boolean(r.currency) && r.currency !== BASE_CURRENCY && r.rate === 0
+export const isPending = (r: Pick<Rec, 'currency' | 'rate'>): boolean => Boolean(r.currency) && r.currency !== baseCurrency.value && r.rate === 0
 
 /** What a pending record cost, in its own currency. */
 export const foreignTotal = (r: Pick<Rec, 'lines'>): number => r.lines.reduce((n, l) => n + (l.original ?? 0), 0)

@@ -17,6 +17,7 @@ import MonthNav from '@/components/MonthNav.vue'
 import LedgerPickSheet from '@/components/LedgerPickSheet.vue'
 import FxSettleSheet from '@/components/FxSettleSheet.vue'
 import { isPending } from '@/lib/fx'
+import { baseCurrency } from '@/lib/currency'
 import { currencyName } from '@/lib/customCurrency'
 import PillTabs from '@/components/PillTabs.vue'
 import RecordList from '@/components/RecordList.vue'
@@ -240,7 +241,7 @@ onMounted(() => {
 
     <!-- foreign spending without a rate: convert it once the trip is over -->
     <button v-for="p in pendingFx" :key="p.currency" class="mt-1 mb-2 flex w-full items-center gap-2 rounded-2xl bg-primary-soft px-4 py-2.5 text-left text-sm text-primary-strong" @click="fxCurrency = p.currency">
-      <span class="min-w-0 flex-1 truncate">有 {{ p.count }} 筆{{ currencyName(p.currency) }}還沒換算成台幣</span>
+      <span class="min-w-0 flex-1 truncate">有 {{ p.count }} 筆{{ currencyName(p.currency) }}還沒換算成{{ currencyName(baseCurrency) }}</span>
       <span class="shrink-0 font-semibold">去換算</span>
     </button>
 

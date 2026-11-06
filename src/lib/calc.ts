@@ -2,7 +2,7 @@ import type { Account, Category, Loan, Rec } from '@/db/types'
 import { addDays, addMonths, addYm, daysInMonth, parse, ym } from './date'
 import { splitEven } from './money'
 import { myTotal, paidByOther } from './split'
-import { BASE_CURRENCY } from './currency'
+import { baseCurrency } from './currency'
 
 /** One line of one record, ready for reports. */
 export interface Entry {
@@ -79,7 +79,7 @@ export function loanOutstanding(l: Loan): number {
 }
 
 /** An account kept in a currency other than TWD (its balance is shown and counted in that currency). */
-export const isForeignAccount = (a: Pick<Account, 'currency'>): boolean => Boolean(a.currency) && a.currency !== BASE_CURRENCY
+export const isForeignAccount = (a: Pick<Account, 'currency'>): boolean => Boolean(a.currency) && a.currency !== baseCurrency.value
 
 /** An account's balance in its own currency, as the amount in TWD it is worth at the account's rate. */
 export const accountTwd = (a: Account, native: number): number => (isForeignAccount(a) ? native * (a.rate ?? 0) : native)

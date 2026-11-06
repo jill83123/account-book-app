@@ -3,6 +3,7 @@
  * every sync rewrites them, and the app keeps its own copy in the hidden `_data` tab.
  */
 import type { Account, Category, Ledger, Loan, Member, Merchant, Rec, Recurring } from '@/db/types'
+import { baseCurrency } from '../currency'
 import { compareRecords } from '../order'
 import { myTotal } from '../split'
 
@@ -512,7 +513,7 @@ function ledgersTable(s: Snapshot, ledgers: Map<string, Ledger>): TableSpec {
       const mine = s.records.filter((r) => r.ledgerId === l.id && !r.adjust)
       const income = mine.filter((r) => r.type === 'income').reduce((a, r) => a + r.total, 0)
       const expense = mine.filter((r) => r.type === 'expense').reduce((a, r) => a + myTotal(r), 0)
-      return [l.name, l.currency ?? 'TWD', l.budget || '', mine.length, income, expense, income - expense]
+      return [l.name, l.currency ?? baseCurrency.value, l.budget || '', mine.length, income, expense, income - expense]
     })
   return {
     title: '帳本',

@@ -8,6 +8,8 @@ import { forgetPhotos, loadPhotos, releasePhotos, type Photo } from '@/lib/image
 import { addedAt, weekday, WEEKDAYS } from '@/lib/date'
 import { evalExpr, fmt, fmtFx, fmtRate } from '@/lib/money'
 import { loanOutstanding } from '@/lib/calc'
+import { baseCurrency } from '@/lib/currency'
+import { baseName } from '@/lib/customCurrency'
 import { myTotal } from '@/lib/split'
 import { foreignTotal, isPending } from '@/lib/fx'
 import { useData } from '@/stores/data'
@@ -104,8 +106,8 @@ const details = computed(() => {
     out.push({ icon: Users, text: r.companions?.length ? `和${r.companions.map(data.memberName).join('、')}` : '', empty: !r.companions?.length })
   }
   if (r.recurringId) out.push({ icon: Repeat, text: rule.value?.name ?? '週期交易' })
-  if (isPending(r)) out.push({ icon: ArrowLeftRight, text: '還沒換算成台幣' })
-  if (r.currency && r.rate) out.push({ icon: ArrowLeftRight, text: `1 ${r.currency} = ${fmtRate(r.rate)} TWD` })
+  if (isPending(r)) out.push({ icon: ArrowLeftRight, text: `還沒換算成${baseName()}` })
+  if (r.currency && r.rate) out.push({ icon: ArrowLeftRight, text: `1 ${r.currency} = ${fmtRate(r.rate)} ${baseCurrency.value}` })
   return out
 })
 

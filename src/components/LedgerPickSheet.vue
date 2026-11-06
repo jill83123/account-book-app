@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { save } from '@/db'
-import { BASE_CURRENCY } from '@/lib/currency'
+import { baseCurrency } from '@/lib/currency'
 import { useCurrencyItems, currencyName } from '@/lib/customCurrency'
 import { COLORS } from '@/lib/icons'
 import { uid } from '@/lib/id'
@@ -17,12 +17,12 @@ const emit = defineEmits<{ pick: [id: string] }>()
 const data = useData()
 const ui = useUi()
 
-const items = computed(() => data.sortedLedgers.map((l) => ({ value: l.id, label: l.name, sub: currencyName(l.currency ?? BASE_CURRENCY), icon: 'book', color: l.color })))
+const items = computed(() => data.sortedLedgers.map((l) => ({ value: l.id, label: l.name, sub: currencyName(l.currency ?? baseCurrency.value), icon: 'book', color: l.color })))
 
 // a new ledger without leaving this sheet: a name, and a currency if it is not TWD
 const adding = ref(false)
 const name = ref('')
-const currency = ref(BASE_CURRENCY)
+const currency = ref(baseCurrency.value)
 const showCurrencies = ref(false)
 const currencyItems = useCurrencyItems(() => currency.value)
 const currentCurrency = computed(() => currencyItems.value.find((c) => c.value === currency.value))
@@ -35,7 +35,7 @@ watch(open, (o) => {
     adding.value = false
     showCurrencies.value = false
     name.value = ''
-    currency.value = BASE_CURRENCY
+    currency.value = baseCurrency.value
   }
 })
 
@@ -49,7 +49,7 @@ async function create() {
     name: n,
     order: data.ledgers.length,
     color: COLORS[data.ledgers.length % COLORS.length]!,
-    ...(currency.value !== BASE_CURRENCY ? { currency: currency.value } : {}),
+    ...(currency.value !== baseCurrency.value ? { currency: currency.value } : {}),
   })
   model.value = id
   emit('pick', id)

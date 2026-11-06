@@ -51,9 +51,9 @@ export interface Ledger extends Base {
   name: string
   order: number
   color: string
-  /** the currency everything in this ledger is recorded in; missing means TWD */
+  /** the currency everything in this ledger is recorded in; missing means the default currency */
   currency?: string
-  /** TWD for one unit of `currency`, once known; missing until the trip is converted */
+  /** default currency for one unit of `currency`, once known; missing until the trip is converted */
   rate?: number
   /** monthly budget for the whole ledger */
   budget?: number
@@ -223,6 +223,8 @@ export interface CustomCurrency extends Base {
   shown?: boolean
   /** the place in the lists; missing means the default place */
   order?: number
+  /** the single row (fixed id) that says which currency is the default one everything is kept in; it is not a currency itself */
+  base?: boolean
 }
 
 export type TableName =

@@ -1,10 +1,10 @@
 import { computed } from 'vue'
 import { save, saveMany } from '@/db'
 import { useData } from '@/stores/data'
-import { BASE_CURRENCY, CURRENCIES, type CurrencyInfo } from './currency'
+import { BASE_ROW_ID, baseCurrency, CURRENCIES, type CurrencyInfo } from './currency'
 
 /** the built-in currencies the pickers offer until a choice is made */
-const DEFAULT_SHOWN = new Set([BASE_CURRENCY, 'JPY', 'USD'])
+const DEFAULT_SHOWN = new Set(['TWD', 'JPY', 'USD'])
 
 export interface CurrencyEntry extends CurrencyInfo {
   builtin: boolean
@@ -26,13 +26,13 @@ export function useCurrencyEntries() {
         entry: {
           ...c,
           builtin: true,
-          shown: c.code === BASE_CURRENCY || (row?.shown ?? DEFAULT_SHOWN.has(c.code)),
+          shown: c.code === baseCurrency.value || (row?.shown ?? DEFAULT_SHOWN.has(c.code)),
           ...(row ? { rowId: row.id } : {}),
         } as CurrencyEntry,
       }
     })
     const added = rows
-      .filter((r) => !r.builtin)
+      .filter((r) => !r.builtin && !r.base)
       .sort((a, b) => a.code.localeCompare(b.code))
       .map((r, i) => ({
         place: r.order ?? 2000 + i,
@@ -40,7 +40,7 @@ export function useCurrencyEntries() {
           code: r.code,
           name: r.name,
           builtin: false,
-          shown: r.shown ?? true,
+          shown: r.code === baseCurrency.value || (r.shown ?? true),
           rowId: r.id,
         } as CurrencyEntry,
       }))
@@ -63,6 +63,16 @@ export async function setCurrencyShown(c: CurrencyEntry, shown: boolean) {
   })
 }
 
+/** make this currency the default one: it is shown, and everything is counted in it */
+export async function saveBaseCurrency(code: string) {
+  const data = useData()
+  const row = data.currencies.find((r) => r.id === BASE_ROW_ID)
+  await save('currencies', { ...(row ?? {}), id: BASE_ROW_ID, code, name: '', base: true })
+}
+
+/** the name of the default currency, for sentences */
+export const baseName = () => currencyName(baseCurrency.value)
+
 /** the picker rows: the name on top, the code underneath; a currency in use stays offered even when hidden */
 export function useCurrencyItems(keep?: () => string | undefined) {
   const all = useCurrencyEntries()
@@ -77,7 +87,7 @@ export function useCurrencyItems(keep?: () => string | undefined) {
 export function currencyName(code: string) {
   return (
     CURRENCIES.find((c) => c.code === code)?.name ??
-    useData().currencies.find((c) => c.code === code)?.name ??
+    useData().currencies.find((c) => c.code === code && !c.base)?.name ??
     code
   )
 }
