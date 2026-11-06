@@ -6,10 +6,14 @@ const ui = useUi()
 const inputEl = ref<HTMLInputElement>()
 
 // the on-screen keyboard only shrinks the visual viewport on iOS, so the dialog is centered in what is left above it
+// iOS also scrolls the visual viewport down inside the page to reveal the input, so the top offset has to be skipped too
 const keyboard = ref(0)
+const offsetTop = ref(0)
 function measureKeyboard() {
   const vv = window.visualViewport
-  keyboard.value = vv ? Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)) : 0
+  if (!vv) return
+  offsetTop.value = Math.max(0, Math.round(vv.offsetTop))
+  keyboard.value = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop))
 }
 onMounted(() => {
   window.visualViewport?.addEventListener('resize', measureKeyboard)
@@ -49,7 +53,10 @@ function submit() {
       <div
         v-if="ui.dialog"
         class="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-4"
-        :style="{ paddingBottom: `calc(1rem + ${keyboard}px)` }"
+        :style="{
+          paddingTop: `calc(1rem + ${offsetTop}px)`,
+          paddingBottom: `calc(1rem + ${keyboard}px)`,
+        }"
         @click.self="ui.closeDialog(null)"
         @keydown.esc="ui.closeDialog(null)"
       >
