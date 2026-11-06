@@ -1,4 +1,4 @@
-import type { Account, Category, Loan, Rec } from '@/db/types'
+import type { Account, Category, Ledger, Loan, Rec } from '@/db/types'
 import { addDays, addMonths, addYm, daysInMonth, parse, ym } from './date'
 import { splitEven } from './money'
 import { myTotal, paidByOther } from './split'
@@ -78,54 +78,57 @@ export function loanOutstanding(l: Loan): number {
   return l.principal - l.repayments.reduce((s, p) => s + p.amount, 0)
 }
 
-/** An account kept in a currency other than TWD (its balance is shown and counted in that currency). */
-export const isForeignAccount = (a: Pick<Account, 'currency'>): boolean => Boolean(a.currency) && a.currency !== baseCurrency.value
+/** The currency an account or ledger is kept in; missing means the default one. */
+export const currencyOf = (x: { currency?: string } | undefined): string => x?.currency || baseCurrency.value
 
-/** An account's balance in its own currency, as the amount in TWD it is worth at the account's rate. */
-export const accountTwd = (a: Account, native: number): number => (isForeignAccount(a) ? native * (a.rate ?? 0) : native)
+/** An account kept in a currency other than the default one: its balance is not counted in the totals. */
+export const isForeignAccount = (a: Pick<Account, 'currency'>): boolean => currencyOf(a) !== baseCurrency.value
 
 /**
- * Balances in each account's own currency. A TWD account takes the TWD total of every record. A foreign account takes
- * the prices as typed when the record is in its currency, else the TWD total turned back with the account's rate.
+ * The records that count in the accounts. Nothing is converted, so a record only moves an account when both are in the
+ * same currency (a ledger's currency for an expense or income, the two wallets for a transfer, unless the transfer says
+ * how much arrived). Balance adjustments always count.
  */
+export function countedRecords(records: Rec[], ledgers: Ledger[], accounts: Account[]): Rec[] {
+  const led = new Map(ledgers.map((l) => [l.id, l]))
+  const acc = new Map(accounts.map((a) => [a.id, a]))
+  return records.filter((r) => {
+    if (r.adjust) return true
+    const from = acc.get(r.accountId)
+    if (r.type === 'transfer') {
+      return r.toTotal != null || currencyOf(from) === currencyOf(r.toAccountId ? acc.get(r.toAccountId) : undefined)
+    }
+    return currencyOf(led.get(r.ledgerId)) === currencyOf(from)
+  })
+}
+
+/** Balances of the accounts, each in its own currency: what they started with, plus every record, transfer and loan payment. */
 export function accountBalances(accounts: Account[], records: Rec[], loans: Loan[]) {
   const bal = new Map<string, number>()
-  const byId = new Map<string, Account>()
+  const cur = new Map<string, string>()
   for (const a of accounts) {
     bal.set(a.id, a.initial)
-    byId.set(a.id, a)
+    cur.set(a.id, currencyOf(a))
   }
   const add = (id: string | undefined, n: number) => {
     if (id && bal.has(id)) bal.set(id, bal.get(id)! + n)
   }
-  /** an amount that is in TWD, put into the account's own currency */
-  const addTwd = (id: string | undefined, twd: number) => {
-    const a = id ? byId.get(id) : undefined
-    if (!a) return
-    add(id, isForeignAccount(a) ? (a.rate ? twd / a.rate : 0) : twd)
-  }
-  /** a record's amount as the account holds it */
-  const amountIn = (id: string | undefined, r: Rec): number => {
-    const a = id ? byId.get(id) : undefined
-    if (!a || !isForeignAccount(a)) return r.total
-    if (r.currency === a.currency) return r.lines.reduce((n, l) => n + (l.original ?? 0), 0)
-    return a.rate ? r.total / a.rate : 0
+  /** loans are in the default currency, so only an account in it takes them */
+  const addLoan = (id: string | undefined, n: number) => {
+    if (id && cur.get(id) === baseCurrency.value) add(id, n)
   }
   for (const r of records) {
-    if (r.type === 'expense') add(r.accountId, paidByOther(r) ? 0 : -amountIn(r.accountId, r))
-    else if (r.type === 'income') add(r.accountId, amountIn(r.accountId, r))
+    if (r.type === 'expense') add(r.accountId, paidByOther(r) ? 0 : -r.total)
+    else if (r.type === 'income') add(r.accountId, r.total)
     else {
-      add(r.accountId, -amountIn(r.accountId, r))
-      const to = r.toAccountId ? byId.get(r.toAccountId) : undefined
-      // a transfer that says how much arrived (in the wallet's own currency) is taken as it is
-      if (to && isForeignAccount(to) && r.toTotal != null) add(r.toAccountId, r.toTotal)
-      else addTwd(r.toAccountId, r.total)
+      add(r.accountId, -r.total)
+      add(r.toAccountId, r.toTotal ?? r.total)
     }
   }
   for (const l of loans) {
     const sign = l.direction === 'lend' ? -1 : 1
-    addTwd(l.accountId, sign * l.principal)
-    for (const p of l.repayments) addTwd(p.accountId, -sign * p.amount)
+    addLoan(l.accountId, sign * l.principal)
+    for (const p of l.repayments) addLoan(p.accountId, -sign * p.amount)
   }
   return bal
 }

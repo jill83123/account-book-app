@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { evalExpr, fmt, fmtFx, money, splitEven } from '@/lib/money'
+import { evalExpr, fmt, money, splitEven } from '@/lib/money'
 
 describe('money', () => {
   it('formats', () => {
     expect(fmt(1234567)).toBe('1,234,567')
     expect(money(1500)).toBe('$1,500')
-    expect(fmtFx(12.5)).toBe('12.5')
   })
   it('evalExpr evaluates arithmetic', () => {
     expect(evalExpr('120+35*2')).toBe(190)

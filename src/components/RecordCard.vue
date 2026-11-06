@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { myTotal } from '@/lib/split'
-import { foreignTotal, isPending } from '@/lib/fx'
 import { computed } from 'vue'
 import { ArrowLeftRight, Circle, CircleCheck, Repeat, Scale } from '@/lib/uiIcons'
 import type { Rec } from '@/db/types'
 import { useData } from '@/stores/data'
-import { fmt, fmtFx } from '@/lib/money'
+import { fmt } from '@/lib/money'
 import { P } from '@/lib/colors'
 import CatIcon from './CatIcon.vue'
 
@@ -67,7 +66,6 @@ const pieces = computed<Piece[]>(() => {
 const catPiece = computed(() => pieces.value.find((p) => p.kind === 'cat'))
 const restPieces = computed(() => pieces.value.filter((p) => p.kind !== 'cat'))
 
-const pending = computed(() => isPending(props.rec))
 const sign = computed(() => (props.rec.type === 'income' ? '+' : props.rec.type === 'expense' ? '' : ''))
 const tone = computed(() =>
   props.rec.type === 'income' ? 'text-income' : props.rec.type === 'expense' ? 'text-expense' : 'text-muted',
@@ -111,10 +109,10 @@ const tone = computed(() =>
       </div>
     </div>
     <div class="flex shrink-0 flex-col items-end">
-      <span class="text-base leading-6 font-semibold" :class="tone">{{ sign }}{{ pending ? `${rec.currency} ${fmtFx(foreignTotal(rec))}` : `$${fmt(myTotal(rec))}` }}</span>
-      <span v-if="account && rec.type !== 'transfer'" class="mt-0.5 flex h-[18px] max-w-full items-center gap-1">
+      <span class="text-base leading-6 font-semibold" :class="tone">{{ sign }}${{ fmt(myTotal(rec)) }}</span>
+      <span v-if="(account || ledger) && rec.type !== 'transfer'" class="mt-0.5 flex h-[18px] max-w-full items-center gap-1">
         <span v-if="ledger" class="tag truncate" :style="ledgerStyle">{{ ledger }}</span>
-        <span class="tag shrink-0" :style="accountStyle">{{ account }}</span>
+        <span v-if="account" class="tag shrink-0" :style="accountStyle">{{ account }}</span>
       </span>
     </div>
   </div>

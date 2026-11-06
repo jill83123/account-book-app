@@ -48,7 +48,6 @@ const dueDay = ref(15)
 const archived = ref(false)
 const excluded = ref(false)
 const currency = ref(baseCurrency.value)
-const rateText = ref('')
 /** the switch reads as "included", the data stores the opposite so old accounts count by default */
 const included = computed({
   get: () => !excluded.value,
@@ -73,7 +72,6 @@ watch(open, (o) => {
   archived.value = a?.archived ?? false
   excluded.value = a?.excluded ?? false
   currency.value = a?.currency ?? baseCurrency.value
-  rateText.value = a?.rate ? String(a.rate) : ''
 })
 
 async function submit() {
@@ -91,9 +89,7 @@ async function submit() {
     ...(icon.value ? { icon: icon.value } : {}),
     ...(archived.value ? { archived: true } : {}),
     ...(excluded.value ? { excluded: true } : {}),
-    ...(kind.value !== 'card' && currency.value !== baseCurrency.value
-      ? { currency: currency.value, rate: evalExpr(rateText.value) ?? 0 }
-      : {}),
+    ...(kind.value !== 'card' && currency.value !== baseCurrency.value ? { currency: currency.value } : {}),
     ...(kind.value === 'card'
       ? { statementDay: day(statementDay.value), dueDay: day(dueDay.value) }
       : {}),
@@ -139,17 +135,6 @@ async function destroy() {
       <div v-if="kind !== 'card'">
         <label class="label">幣別</label>
         <SelectField v-model="currency" title="選擇幣別" :items="currencyItems" inline />
-      </div>
-      <div v-if="kind !== 'card' && currency !== baseCurrency" class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="label">匯率（1 {{ currency }} = ? {{ baseCurrency }}）</label>
-          <input
-            v-model="rateText"
-            class="input"
-            inputmode="decimal"
-            placeholder="還不知道就留空"
-          />
-        </div>
       </div>
       <div>
         <label class="label">{{

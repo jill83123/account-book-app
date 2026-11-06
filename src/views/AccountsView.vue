@@ -3,11 +3,12 @@ import { computed, onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Archive, ArrowLeftRight, ChevronRight, Plus } from '@/lib/uiIcons'
 import type { Account } from '@/db/types'
-import { accountTwd, cardCycles, isForeignAccount, loanOutstanding, spendOn } from '@/lib/calc'
+import { cardCycles, isForeignAccount, loanOutstanding, spendOn } from '@/lib/calc'
 import { save, saveMany } from '@/db'
 import { accountIcon } from '@/lib/banks'
 import { today } from '@/lib/date'
-import { fmt, fmtFx } from '@/lib/money'
+import { currencyName } from '@/lib/customCurrency'
+import { fmt } from '@/lib/money'
 import { useData } from '@/stores/data'
 import AccountFormSheet from '@/components/AccountFormSheet.vue'
 import BottomSheet from '@/components/BottomSheet.vue'
@@ -35,15 +36,16 @@ const payable = computed(() =>
 
 const active = computed(() => data.sortedAccounts.filter((a) => !a.archived))
 const bal = (a: Account) => data.balances.get(a.id) ?? 0
-/** a balance as written: a foreign wallet in its own currency */
-const balText = (a: Account) => (isForeignAccount(a) ? `${a.currency} ${fmtFx(bal(a))}` : `$${fmt(bal(a))}`)
+/** a wallet in another currency shows its own currency in front */
+const balText = (a: Account) => `$${fmt(bal(a))}`
 
 const totals = computed(() => {
   let assets = receivable.value
   let debts = -payable.value
   for (const a of active.value) {
-    if (a.excluded) continue
-    const b = accountTwd(a, bal(a))
+    // a wallet in another currency is not converted, so it stays out of the totals
+    if (a.excluded || isForeignAccount(a)) continue
+    const b = bal(a)
     if (b >= 0) assets += b
     else debts += b
   }
@@ -60,12 +62,12 @@ function cardInfo(a: Account) {
   if (!a.statementDay) return { prev: 0, cur: 0 }
   const cy = cardCycles(a.statementDay, today())
   return {
-    prev: spendOn(a.id, data.records, cy.prev.start, cy.prev.end),
-    cur: spendOn(a.id, data.records, cy.cur.start, cy.cur.end),
+    prev: spendOn(a.id, data.counted, cy.prev.start, cy.prev.end),
+    cur: spendOn(a.id, data.counted, cy.cur.start, cy.cur.end),
   }
 }
 
-const groupSum = (list: Account[]) => list.reduce((s, a) => s + accountTwd(a, bal(a)), 0)
+const groupSum = (list: Account[]) => list.reduce((s, a) => s + (isForeignAccount(a) ? 0 : bal(a)), 0)
 const tone = (n: number) => (n < 0 ? 'text-expense' : 'text-primary')
 
 // ---- sorting: hold a row, then drag it up or down inside its group (the same gesture as on the home page) ----
@@ -256,9 +258,12 @@ onBeforeUnmount(() => {
             @click="openAccount(a)"
           >
             <CatIcon :icon="accountIcon(a)" :color="a.color" :size="40" />
-            <span class="min-w-0 flex-1 truncate font-medium">
-              {{ a.name }}
-              <span v-if="a.excluded" class="ml-1.5 text-xs font-normal text-muted">不計入總額</span>
+            <span class="min-w-0 flex-1">
+              <span class="block truncate font-medium">
+                {{ a.name }}
+                <span v-if="a.excluded" class="ml-1.5 text-xs font-normal text-muted">不計入總額</span>
+              </span>
+              <span v-if="isForeignAccount(a)" class="block text-xs text-muted">{{ currencyName(a.currency!) }}</span>
             </span>
             <template v-if="a.kind === 'card'">
               <span class="w-16 text-right text-sm font-semibold">${{ fmt(cardInfo(a).prev) }}</span>

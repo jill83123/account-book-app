@@ -1,4 +1,4 @@
-import { db, markLocalChange, save, saveMany, stamp } from '@/db'
+import { db, markLocalChange, remove, save, saveMany, stamp } from '@/db'
 import type { Account, Category, CategoryKind, Ledger, Line, Loan, Rec, Recurring, RecordType } from '@/db/types'
 import { addDays, today } from './date'
 import { uid } from './id'
@@ -32,12 +32,11 @@ interface Entry {
   /** `other`: who paid it */
   payer?: string
   repaid?: Record<string, number>
-  /** prices are in this currency; `rate` is how many TWD one unit cost (cash changed beforehand has its own rate) */
-  fx?: { currency: string; rate: number }
 }
 
-const CASH_JPY = { currency: 'JPY', rate: 0.2105 } // changed at the bank before the trip
-const CARD_JPY = { currency: 'JPY', rate: 0.2178 } // the card's rate on the day
+
+/** the trip's ledger: the year is in the name, so a later trip gets its own */
+const TRIP = '2026.09 日本'
 
 const ENTRIES: Entry[] = [
   // income
@@ -95,17 +94,19 @@ const ENTRIES: Entry[] = [
   { ago: 26, time: '22:00', account: '信用卡', shop: 'Udemy', lines: [['Python 課程', '課程', 490]] },
   { ago: 20, time: '12:00', account: '錢包', lines: [['同事婚禮紅包', '紅包禮金', 2000]] },
   { ago: 40, time: '10:00', account: '銀行帳戶', shop: '富邦產險', lines: [['機車保險（年繳）', '保險', 12000, 12]] },
-  // a trip, in its own ledger
-  { ago: 44, time: '09:00', account: '信用卡', ledger: '日本旅行', shop: '樂桃航空', lines: [['來回機票', '旅遊', 9800]] },
-  { ago: 44, time: '09:30', account: '信用卡', ledger: '日本旅行', shop: 'Booking.com', lines: [['住宿 4 晚', '旅遊', 16000]] },
-  { ago: 43, time: '09:10', account: '錢包', ledger: '日本旅行', fx: CASH_JPY, shop: '全家便利商店', lines: [['', '早餐', 500, undefined, [['御飯糰', 360], ['熱咖啡', 140]]]] },
-  { ago: 43, time: '10:00', account: '錢包', ledger: '日本旅行', fx: CASH_JPY, shop: 'Suica', lines: [['交通卡加值', '大眾運輸', 3000]] },
-  { ago: 42, time: '13:00', account: '錢包', ledger: '日本旅行', fx: CASH_JPY, shop: '一蘭拉麵', with: ['小美'], lines: [['', '午餐', 1180, undefined, [['拉麵', 980], ['加麵', 200]]]] },
-  { ago: 42, time: '16:30', account: '信用卡', ledger: '日本旅行', fx: CARD_JPY, shop: 'teamLab', with: ['小美'], lines: [['門票 2 張', '旅遊', 7600]] },
-  { ago: 42, time: '19:00', account: '錢包', ledger: '日本旅行', fx: CASH_JPY, shop: '唐吉訶德', with: ['小美'], lines: [['藥妝', '美妝保養', 9800], ['零食', '零食', 3000]] },
-  { ago: 41, time: '17:00', account: '信用卡', ledger: '日本旅行', fx: CARD_JPY, shop: '機場免稅店', lines: [['伴手禮', '禮物', 15000]] },
-  // a foreign charge in the everyday ledger
-  { ago: 9, time: '21:40', account: '信用卡', fx: { currency: 'USD', rate: 31.8 }, shop: 'Steam', lines: [['獨立遊戲', '遊戲', 19.99]] },
+  // a trip: what was spent there is written down in yen in the trip's own ledger, with no account; back home, the whole trip is one entry in TWD in the everyday ledger, in one category, with its parts as details
+  { ago: 43, time: '09:10', account: '', ledger: TRIP, shop: '全家便利商店', lines: [['', '早餐', 500, undefined, [['御飯糰', 360], ['熱咖啡', 140]]]] },
+  { ago: 43, time: '10:00', account: '', ledger: TRIP, shop: 'Suica', lines: [['交通卡加值', '大眾運輸', 3000]] },
+  { ago: 43, time: '12:40', account: '', ledger: TRIP, shop: '築地銀だこ', lines: [['章魚燒', '零食', 680]] },
+  { ago: 43, time: '19:20', account: '', ledger: TRIP, shop: '串カツ田中', with: ['小美'], lines: [['', '晚餐', 3600, undefined, [['串炸套餐', 2800], ['啤酒', 800]]]] },
+  { ago: 42, time: '13:00', account: '', ledger: TRIP, shop: '一蘭拉麵', with: ['小美'], lines: [['', '午餐', 1180, undefined, [['拉麵', 980], ['加麵', 200]]]] },
+  { ago: 42, time: '16:30', account: '', ledger: TRIP, shop: 'teamLab', with: ['小美'], lines: [['門票 2 張', '旅遊', 7600]] },
+  { ago: 42, time: '19:00', account: '', ledger: TRIP, shop: '唐吉訶德', with: ['小美'], lines: [['藥妝', '美妝保養', 9800], ['零食', '零食', 3000]] },
+  { ago: 42, time: '22:00', account: '', ledger: TRIP, shop: 'ローソン', lines: [['飲料', '飲料', 420]] },
+  { ago: 41, time: '10:00', account: '', ledger: TRIP, shop: '星巴克', lines: [['咖啡', '飲料', 650]] },
+  { ago: 41, time: '12:30', account: '', ledger: TRIP, shop: '吉野家', lines: [['牛丼', '午餐', 580]] },
+  { ago: 41, time: '17:00', account: '', ledger: TRIP, shop: '機場免稅店', lines: [['伴手禮', '禮物', 15000]] },
+  { ago: 40, time: '20:00', account: '信用卡', note: '回國後一次記', lines: [['日本旅遊', '旅遊', 35930, undefined, [['來回機票', 9800], ['住宿 4 晚', 16000], ['餐飲', 1680], ['交通', 660], ['藥妝、零食', 2820], ['teamLab 門票', 1670], ['伴手禮', 3300]]]] },
   // breakfasts: one item in one category, written down in parts
   { ago: 0, time: '08:05', account: '錢包', shop: '麥當勞', lines: [['', '早餐', 85, undefined, [['麥香雞堡', 55], ['紅茶', 30]]]] },
   { ago: 2, time: '07:50', account: '錢包', shop: '美而美', lines: [['', '早餐', 75, undefined, [['豬排蛋吐司', 45], ['奶茶', 30]]]] },
@@ -312,9 +313,21 @@ export async function loadDemo(): Promise<number> {
   let ledgers = await readLedgers()
   const daily = ledgers[0]
   if (daily && !daily.budget) await save('ledgers', { ...daily, budget: 30000 })
-  if (!ledgers.some((l) => l.name === '日本旅行')) {
-    const l: Ledger = { id: uid(), name: '日本旅行', order: ledgers.length, color: P.pink, currency: 'JPY', rate: CASH_JPY.rate, updatedAt: 0 }
+  // earlier demos called it by another name: it is the same ledger, not a second one
+  const earlier = ledgers.find((l) => ['日本旅行', '2026 日本旅行', '2026 日本自由行', '2026 日本'].includes(l.name))
+  if (earlier) {
+    await save('ledgers', { ...earlier, name: TRIP })
+    ledgers = await readLedgers()
+  }
+  if (!ledgers.some((l) => l.name === TRIP)) {
+    const l: Ledger = { id: uid(), name: TRIP, order: ledgers.length, color: P.pink, currency: 'JPY', updatedAt: 0 }
     await save('ledgers', l)
+    ledgers = await readLedgers()
+  }
+  // an earlier demo gave the trip a yen wallet to start from; it has none now
+  const trip = ledgers.find((l) => l.name === TRIP)
+  if (trip?.accountId) {
+    await save('ledgers', { ...trip, accountId: undefined })
     ledgers = await readLedgers()
   }
   const ledgerId = (name?: string) => (name ? ledgers.find((l) => l.name === name) : ledgers[0])?.id ?? ledgers[0]!.id
@@ -332,9 +345,7 @@ export async function loadDemo(): Promise<number> {
             id: uid(),
             name,
             categoryId: catId(category, kind),
-            // stored in TWD; the price as entered is kept next to it
-            amount: e.fx ? Math.round(price * e.fx.rate) : price,
-            ...(e.fx ? { original: price } : {}),
+            amount: price,
             ...(amortMonths ? { amortMonths } : {}),
             ...(parts ? { details: parts.map(([n, a]) => ({ name: n, amount: a })) } : {}),
           }))
@@ -344,7 +355,7 @@ export async function loadDemo(): Promise<number> {
       date: day(e.ago),
       time: e.time,
       ledgerId: ledgerId(e.ledger),
-      accountId: acc(e.account),
+      accountId: e.account ? acc(e.account) : '',
       ...(e.to ? { toAccountId: acc(e.to) } : {}),
       lines,
       total: type === 'transfer' ? (e.amount ?? 0) : lines.reduce((n, l) => n + l.amount, 0),
@@ -358,7 +369,6 @@ export async function loadDemo(): Promise<number> {
                 : { mode: e.split, shares: sharesFor(e.split, lines.reduce((n, l) => n + l.amount, 0), e.with.map(mid)) },
           }
         : {}),
-      ...(e.fx ? { currency: e.fx.currency, rate: e.fx.rate } : {}),
       updatedAt: 0,
     }
     if (e.shop && type !== 'transfer') {
@@ -482,5 +492,13 @@ export async function loadDemo(): Promise<number> {
     await db.loans.bulkPut([...old.map((l) => ({ ...l, deleted: true, updatedAt: stamp() })), ...loans.map((l) => ({ ...l, updatedAt: stamp() }))])
   })
   markLocalChange()
+  // an earlier demo had a yen wallet. It goes, unless something the person wrote down uses it
+  const yenWallet = accounts.find((a) => a.name === '日圓現金')
+  if (yenWallet) {
+    const used = await db.records
+      .filter((r) => !r.deleted && !r.id.startsWith('demo-') && (r.accountId === yenWallet.id || r.toAccountId === yenWallet.id))
+      .count()
+    if (!used) await remove('accounts', yenWallet.id)
+  }
   return records.length
 }

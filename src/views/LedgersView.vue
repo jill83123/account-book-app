@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { defaultBudget } from '@/lib/budget'
 import { today, ym } from '@/lib/date'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { currencyOf } from '@/lib/calc'
 import { Plus } from '@/lib/uiIcons'
 import { remove, save } from '@/db'
 import type { Ledger } from '@/db/types'
@@ -27,7 +28,18 @@ const name = ref('')
 const color = ref(COLORS[0]!)
 const budget = ref('')
 const currency = ref(baseCurrency.value)
-const rateText = ref('')
+/** empty: no preset, a new record starts with the account used last */
+const accountId = ref('')
+const accountItems = computed(() => [
+  { value: '', label: '不指定' },
+  ...data.sortedAccounts
+    // a record keeps to its ledger's currency, so only an account in that currency can be the preset
+    .filter((a) => (!a.archived || a.id === accountId.value) && currencyOf(a) === currency.value)
+    .map((a) => ({ value: a.id, label: a.name })),
+])
+watch(currency, () => {
+  if (accountId.value && currencyOf(data.accMap.get(accountId.value)) !== currency.value) accountId.value = ''
+})
 const foreign = computed(() => currency.value !== baseCurrency.value)
 
 function edit(l?: Ledger) {
@@ -36,7 +48,7 @@ function edit(l?: Ledger) {
   color.value = l?.color ?? COLORS[data.ledgers.length % COLORS.length]!
   budget.value = l?.budget ? String(l.budget) : ''
   currency.value = l?.currency ?? baseCurrency.value
-  rateText.value = l?.rate ? String(l.rate) : ''
+  accountId.value = l?.accountId && data.accMap.has(l.accountId) ? l.accountId : ''
   open.value = true
 }
 
@@ -47,12 +59,10 @@ async function submit() {
   if (old && (old.currency ?? baseCurrency.value) !== currency.value && data.records.some((r) => r.ledgerId === old.id)) {
     return ui.toast('這個帳本已經有記錄，不能改幣別', 'error')
   }
-  const rate = Number(rateText.value)
-  if (foreign.value && rateText.value.trim() && !(rate > 0)) return ui.toast('匯率格式不正確', 'error')
   await save('ledgers', {
     ...editing.value,
     currency: foreign.value ? currency.value : undefined,
-    rate: foreign.value && rate > 0 ? rate : undefined,
+    accountId: accountId.value || undefined,
     id: editing.value?.id ?? uid(),
     name: name.value.trim(),
     color: color.value,
@@ -74,6 +84,7 @@ async function destroy() {
 }
 
 const count = (id: string) => data.records.filter((r) => r.ledgerId === id).length
+
 </script>
 
 <template>
@@ -104,17 +115,12 @@ const count = (id: string) => data.records.filter((r) => r.ledgerId === id).leng
         </div>
         <div>
           <label class="label">幣別</label>
-          <SelectField v-model="currency" title="選擇幣別" :items="currencyItems" />
-          <p class="mt-1.5 px-1 text-xs text-muted">一個帳本用一種幣別，這個帳本裡的記錄都用它記。</p>
+          <SelectField v-model="currency" title="選擇幣別" :items="currencyItems" inline />
+          <p v-if="foreign" class="mt-1.5 px-1 text-xs text-muted">金額不會換算，只會影響同幣別的帳戶。</p>
         </div>
-        <div v-if="foreign">
-          <label class="label">匯率（選填）</label>
-          <div class="field justify-start gap-3 pr-3">
-            <span class="whitespace-nowrap text-sm text-muted">1 {{ currency }} =</span>
-            <input v-model="rateText" class="min-w-0 flex-1 bg-transparent text-right text-lg outline-none" inputmode="decimal" placeholder="先不填" />
-            <span class="text-sm text-muted">{{ baseCurrency }}</span>
-          </div>
-          <p class="mt-1.5 px-1 text-xs text-muted">不知道也沒關係，照{{ currency }}記，旅行後在帳單頁填總共花了多少{{ currencyName(baseCurrency) }}，一次換算。</p>
+        <div>
+          <label class="label">預設帳戶（選填）</label>
+          <SelectField v-model="accountId" title="選擇預設帳戶" :items="accountItems" inline />
         </div>
         <div>
           <label class="label">預設每月預算（選填）</label>

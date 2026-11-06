@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db, remove, save, saveMany, stamp } from '@/db'
 import { syncSplitLoans } from '@/lib/split'
-import { isPending, settlePending } from '@/lib/fx'
 import { line, rec } from './helpers'
 
 beforeEach(async () => {
@@ -78,29 +77,5 @@ describe('syncSplitLoans', () => {
     })
     await syncSplitLoans({ id: 'bill', date: '2026-03-01' })
     expect(await db.loans.filter((l) => !l.deleted).count()).toBe(0)
-  })
-})
-
-describe('fx settle', () => {
-  it('pending = foreign currency with rate 0', () => {
-    expect(isPending({ currency: 'JPY', rate: 0 })).toBe(true)
-    expect(isPending({ currency: 'JPY', rate: 0.2 })).toBe(false)
-    expect(isPending({ currency: 'TWD', rate: 0 })).toBe(false)
-    expect(isPending({})).toBe(false)
-  })
-  it('settlePending spreads the TWD total exactly and sets one rate', async () => {
-    const mk = (id: string, yen: number[]) =>
-      rec({ id, currency: 'JPY', rate: 0, lines: yen.map((y) => line(0, { original: y })) })
-    const rs = [mk('t1', [1000, 333]), mk('t2', [777])]
-    await saveMany('records', rs)
-    expect(await settlePending(rs, 1000)).toBe(2)
-    const out = await db.records.toArray()
-    expect(out.reduce((s, r) => s + r.total, 0)).toBe(1000)
-    expect(new Set(out.map((r) => r.rate)).size).toBe(1)
-    expect(out[0]!.rate).toBeCloseTo(1000 / 2110, 5)
-  })
-  it('settlePending does nothing with no foreign amounts or non-positive TWD', async () => {
-    expect(await settlePending([rec()], 1000)).toBe(0)
-    expect(await settlePending([rec({ lines: [line(0, { original: 5 })] })], 0)).toBe(0)
   })
 })

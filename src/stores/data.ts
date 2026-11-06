@@ -16,7 +16,7 @@ import type {
   TableMap,
   TableName,
 } from '@/db/types'
-import { accountBalances } from '@/lib/calc'
+import { accountBalances, countedRecords } from '@/lib/calc'
 import { BASE_ROW_ID, DEFAULT_BASE, setBaseCurrency } from '@/lib/currency'
 import { compareRecords } from '@/lib/order'
 import { useSettings } from './settings'
@@ -86,7 +86,9 @@ export const useData = defineStore('data', () => {
   /** a member's name; '?' for one that has been removed */
   const memberName = (id: string) => memberMap.value.get(id)?.name ?? '?'
 
-  const balances = computed(() => accountBalances(accounts.value, records.value, loans.value))
+  /** the records that count in the accounts: nothing is converted, so the currencies have to match */
+  const counted = computed(() => countedRecords(records.value, ledgers.value, accounts.value))
+  const balances = computed(() => accountBalances(accounts.value, counted.value, loans.value))
 
   /** the ledger being looked at: ledgers are kept apart, so it is always one of them (the first until one is picked) */
   const ledgerId = computed({
@@ -131,6 +133,7 @@ export const useData = defineStore('data', () => {
     sortedLedgers,
     sortedCategories,
     sortedRecords,
+    counted,
     catMap,
     accMap,
     ledgerMap,

@@ -15,7 +15,7 @@ function splitText(r: Rec, who: (id: string) => string): string {
   const names = sp.shares.map((x) => (sp.mode === 'custom' ? `${who(x.memberId)} ${x.amount}` : who(x.memberId))).join('、')
   return `${{ even: '平均分', custom: '自訂', advance: '代墊' }[sp.mode]}：${names}`
 }
-import { accountBalances, accountTwd, amortSchedule, cardCycles, loanOutstanding, spendOn, toEntries } from '../calc'
+import { accountBalances, amortSchedule, cardCycles, countedRecords, isForeignAccount, loanOutstanding, spendOn, toEntries } from '../calc'
 import { WEEKDAYS, parse, today, ym } from '../date'
 import { FREQ_LABEL, nextDue, repeatLabel } from '../recurrence'
 import type { Cell } from './sheets'
@@ -301,22 +301,25 @@ function amortTable(
 }
 
 function accountsTable(s: Snapshot): TableSpec {
-  const bal = accountBalances(s.accounts, s.records, s.loans)
+  const counted = countedRecords(s.records, s.ledgers, s.accounts)
+  const bal = accountBalances(s.accounts, counted, s.loans)
   const day = today()
   const rows: Cell[][] = []
   let assets = 0
   let liabilities = 0
   for (const a of [...s.accounts].sort((x, y) => x.order - y.order)) {
-    // this table is in TWD: a foreign wallet is worth its balance at its rate
-    const b = accountTwd(a, bal.get(a.id) ?? 0)
-    if (b >= 0) assets += b
-    else liabilities += b
+    const b = bal.get(a.id) ?? 0
+    // a wallet in another currency is not converted, so it stays out of the totals
+    if (!isForeignAccount(a)) {
+      if (b >= 0) assets += b
+      else liabilities += b
+    }
     let prev: Cell = ''
     let cur: Cell = ''
     if (a.kind === 'card' && a.statementDay) {
       const cy = cardCycles(a.statementDay, day)
-      prev = spendOn(a.id, s.records, cy.prev.start, cy.prev.end)
-      cur = spendOn(a.id, s.records, cy.cur.start, cy.cur.end)
+      prev = spendOn(a.id, counted, cy.prev.start, cy.prev.end)
+      cur = spendOn(a.id, counted, cy.cur.start, cy.cur.end)
     }
     rows.push([
       a.name,
@@ -327,7 +330,7 @@ function accountsTable(s: Snapshot): TableSpec {
       a.dueDay ?? '',
       prev,
       cur,
-      a.archived ? '已封存' : '',
+      [a.archived ? '已封存' : '', isForeignAccount(a) ? `${a.currency}，不計入合計` : ''].filter(Boolean).join('，'),
     ])
   }
   let receivable = 0

@@ -15,10 +15,6 @@ import { useReminders } from '@/stores/reminders'
 import { useSync } from '@/stores/sync'
 import MonthNav from '@/components/MonthNav.vue'
 import LedgerPickSheet from '@/components/LedgerPickSheet.vue'
-import FxSettleSheet from '@/components/FxSettleSheet.vue'
-import { isPending } from '@/lib/fx'
-import { baseCurrency } from '@/lib/currency'
-import { currencyName } from '@/lib/customCurrency'
 import PillTabs from '@/components/PillTabs.vue'
 import RecordList from '@/components/RecordList.vue'
 
@@ -62,15 +58,6 @@ const selected = ref(ui.selectedDate || today())
 // the + button adds to this day
 watch(selected, (d) => (ui.selectedDate = d), { immediate: true })
 const ledgerSheet = ref(false)
-
-// records in a foreign currency that have no rate yet, of this ledger
-const fxCurrency = ref('')
-const fxOpen = computed({ get: () => Boolean(fxCurrency.value), set: (v: boolean) => !v && (fxCurrency.value = '') })
-const pendingFx = computed(() => {
-  const by = new Map<string, number>()
-  for (const r of data.records) if (!r.deleted && r.ledgerId === data.ledgerId && isPending(r)) by.set(r.currency!, (by.get(r.currency!) ?? 0) + 1)
-  return [...by].map(([currency, count]) => ({ currency, count }))
-})
 
 /** the navigator steps by month, or by year on the monthly report */
 const period = computed({
@@ -239,12 +226,6 @@ onMounted(() => {
 
     <MonthNav v-model="period" :year="tab === 'year'" />
 
-    <!-- foreign spending without a rate: convert it once the trip is over -->
-    <button v-for="p in pendingFx" :key="p.currency" class="mt-1 mb-2 flex w-full items-center gap-2 rounded-2xl bg-primary-soft px-4 py-2.5 text-left text-sm text-primary-strong" @click="fxCurrency = p.currency">
-      <span class="min-w-0 flex-1 truncate">有 {{ p.count }} 筆{{ currencyName(p.currency) }}還沒換算成{{ currencyName(baseCurrency) }}</span>
-      <span class="shrink-0 font-semibold">去換算</span>
-    </button>
-
     <PillTabs
       v-model="tab"
       size="sm"
@@ -395,7 +376,6 @@ onMounted(() => {
       </div>
     </template>
 
-    <FxSettleSheet v-if="fxCurrency" v-model:open="fxOpen" :ledger-id="data.ledgerId" :currency="fxCurrency" />
     <LedgerPickSheet v-model:open="ledgerSheet" :model-value="data.ledgerId" @update:model-value="data.ledgerId = $event" />
   </div>
 </template>

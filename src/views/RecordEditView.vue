@@ -20,7 +20,7 @@ import {
   X,
 } from '@/lib/uiIcons'
 import { remove, save } from '@/db'
-import type { Line, Rec, RecordType, Recurring } from '@/db/types'
+import type { Account, Line, Rec, RecordType, Recurring } from '@/db/types'
 import { useData } from '@/stores/data'
 import { useSettings } from '@/stores/settings'
 import { useSync } from '@/stores/sync'
@@ -28,8 +28,7 @@ import { useUi, type Draft } from '@/stores/ui'
 import { addedAt, relativeLabel, today, weekday, WEEKDAYS } from '@/lib/date'
 import { uid } from '@/lib/id'
 import { baseCurrency } from '@/lib/currency'
-import { currencyName } from '@/lib/customCurrency'
-import { isForeignAccount } from '@/lib/calc'
+import { currencyOf } from '@/lib/calc'
 import {
   addPhoto,
   forgetPhotos,
@@ -39,7 +38,7 @@ import {
   type Photo,
 } from '@/lib/images'
 import { accountIcon } from '@/lib/banks'
-import { evalExpr, fmt, fmtFx } from '@/lib/money'
+import { evalExpr, fmt } from '@/lib/money'
 import { learn, suggest } from '@/lib/merchants'
 import { buildRecord, type Repeat } from '@/lib/recurrence'
 import BottomSheet from '@/components/BottomSheet.vue'
@@ -104,29 +103,25 @@ const split = ref<Rec['split']>()
 const repeat = ref<Repeat>({ kind: 'once' })
 const recurringId = ref<string | undefined>()
 const transferText = ref('')
-/** prices are typed in this currency and saved converted to TWD with this rate */
-const currency = ref(baseCurrency.value)
-const rate = ref(1)
-/** a ledger keeps one currency (and, once known, its rate); a new record takes both from it */
-function useLedgerMoney() {
-  const l = data.ledgerMap.get(ledgerId.value)
-  currency.value = l?.currency ?? baseCurrency.value
-  rate.value = l?.currency && l.currency !== baseCurrency.value ? (l.rate ?? 0) : 1
-}
-/** a wallet kept in its own currency decides the record's currency and rate; an account without one follows the ledger */
-function useAccountMoney() {
-  const a = data.accMap.get(accountId.value)
-  if (!a?.currency) return useLedgerMoney()
-  currency.value = a.currency
-  rate.value = a.currency === baseCurrency.value ? 1 : (a.rate ?? 0)
-}
-watch(ledgerId, () => {
-  if (!editingId.value && !route.query.copy) useAccountMoney()
-})
-watch(accountId, () => {
-  if (!editingId.value && !route.query.copy && type.value !== 'transfer') useAccountMoney()
-})
+/** prices are typed in the currency of the ledger; a ledger in another one only lists spending, nothing is converted */
+const currency = computed(() => data.ledgerMap.get(ledgerId.value)?.currency ?? baseCurrency.value)
 const foreign = computed(() => currency.value !== baseCurrency.value && type.value !== 'transfer')
+// the wallet only moves when it is in the ledger's currency, so a new record starts with one that is
+watch(ledgerId, () => {
+  if (editingId.value || route.query.copy || type.value === 'transfer') return
+  // a record keeps to its ledger's currency, so only an account in that currency fits
+  const cur = currency.value
+  const fits = (a?: Account) => Boolean(a) && !a!.archived && currencyOf(a) === cur
+  // a ledger can say which account its records usually go to
+  const preset = data.accMap.get(data.ledgerMap.get(ledgerId.value)?.accountId ?? '')
+  if (fits(preset)) {
+    accountId.value = preset!.id
+    return
+  }
+  if (fits(data.accMap.get(accountId.value))) return
+  // a ledger in another currency can do without an account
+  accountId.value = data.sortedAccounts.find((a) => fits(a))?.id ?? ''
+})
 
 const sheet = ref<
   | ''
@@ -176,31 +171,12 @@ function blankLine(): LineForm {
 }
 
 const line = computed(() => lines.value[active.value] ?? lines.value[0]!)
-/** what was typed, in the record's currency */
-const amountOf = (l: LineForm) => evalExpr(l.amountText, foreign.value ? 2 : 0) ?? 0
-/** the same price in TWD, which is what gets saved */
-const baseOf = (l: LineForm) => (foreign.value ? Math.round(amountOf(l) * rate.value) : amountOf(l))
-/** a transfer is typed in the source wallet's currency; it is saved as TWD at that wallet's rate */
-const srcAcc = computed(() => data.accMap.get(accountId.value))
-const dstAcc = computed(() => data.accMap.get(toAccountId.value))
-const srcForeign = computed(() => Boolean(srcAcc.value && isForeignAccount(srcAcc.value)))
-const transferSrcCur = computed(() => (srcForeign.value ? srcAcc.value!.currency! : baseCurrency.value))
-const transferSrcRate = computed(() => (srcForeign.value ? (srcAcc.value!.rate ?? 0) : 1))
-const transferDstCur = computed(() =>
-  dstAcc.value && isForeignAccount(dstAcc.value) ? dstAcc.value.currency! : baseCurrency.value,
-)
-/** asks how much arrived when the two wallets are in different currencies */
-const needToAmount = computed(
-  () =>
-    type.value === 'transfer' &&
-    transferDstCur.value !== baseCurrency.value &&
-    transferDstCur.value !== transferSrcCur.value,
-)
-const toTotalText = ref('')
+/** what was typed */
+const amountOf = (l: LineForm) => evalExpr(l.amountText) ?? 0
 const total = computed(() =>
   type.value === 'transfer'
-    ? Math.round((evalExpr(transferText.value) ?? 0) * transferSrcRate.value)
-    : lines.value.reduce((n, l) => n + baseOf(l), 0),
+    ? Math.round(evalExpr(transferText.value) ?? 0)
+    : lines.value.reduce((n, l) => n + amountOf(l), 0),
 )
 
 /** the line on the form: how the bill is shared, with today's total */
@@ -212,12 +188,39 @@ const splitText = computed(() => {
   return `${sp.mode === 'advance' ? '代墊' : '分帳'}：我 $${fmt(total.value - others)}，其他 $${fmt(others)}`
 })
 
-/** the total as shown: in the foreign currency while there is no rate yet */
-const totalText = computed(() =>
-  foreign.value && !(rate.value > 0)
-    ? `${currency.value} ${fmtFx(lines.value.reduce((n, l) => n + amountOf(l), 0))}`
-    : `$${fmt(total.value)}`,
+/** a transfer is in the currency of the wallet it leaves */
+const transferCur = computed(() => currencyOf(data.accMap.get(accountId.value)))
+const toCur = computed(() => currencyOf(data.accMap.get(toAccountId.value)))
+/** money that crosses currencies: say how much arrived. The rate only works one amount out of the other, it is not kept */
+const needToAmount = computed(
+  () => type.value === 'transfer' && Boolean(toAccountId.value) && toCur.value !== transferCur.value,
 )
+const toTotalText = ref('')
+const rateText = ref('')
+/** the amount that left follows what arrived and the rate */
+function fromArrived() {
+  const to = evalExpr(toTotalText.value) ?? 0
+  const r = Number(rateText.value)
+  if (to > 0 && r > 0) transferText.value = String(Math.round(to * r))
+}
+/** a rate typed after one of the amounts works out the other one; what arrived wins when both are there */
+function fromRate() {
+  if ((evalExpr(toTotalText.value) ?? 0) > 0) fromArrived()
+  else fromLeft()
+}
+/** the amount that arrived follows what left, once there is a rate */
+function fromLeft() {
+  const left = evalExpr(transferText.value) ?? 0
+  const r = Number(rateText.value)
+  if (needToAmount.value && left > 0 && r > 0) toTotalText.value = String(Math.round(left / r))
+}
+watch(needToAmount, (v) => {
+  if (!v) {
+    toTotalText.value = ''
+    rateText.value = ''
+  }
+})
+const totalText = computed(() => `$${fmt(total.value)}`)
 
 const merchant = computed(() => data.merchantMap.get(merchantId.value))
 const merchantLabel = computed(() => merchant.value?.name || newMerchantName.value)
@@ -267,26 +270,20 @@ function load() {
     companions.value = [...(r.companions ?? [])]
     split.value = r.split
     recurringId.value = copying ? undefined : r.recurringId
-    currency.value = r.currency ?? baseCurrency.value
-    rate.value = r.rate ?? 1
     if (!copying) void loadPhotos(r.id).then((p) => (photos.value = p))
     const items = r.merchantId ? (data.merchantMap.get(r.merchantId)?.items ?? []) : []
     const remembered = (name: string) => Boolean(name) && items.some((i) => i.name === name)
     if (r.type === 'transfer') {
-      // the saved TWD back in the source wallet's currency
-      transferText.value = String(
-        srcForeign.value && transferSrcRate.value > 0
-          ? Math.round((r.total / transferSrcRate.value) * 100) / 100
-          : r.total,
-      )
+      transferText.value = String(r.total)
       toTotalText.value = r.toTotal != null ? String(r.toTotal) : ''
+      rateText.value = r.toTotal ? String(Math.round((r.total / r.toTotal) * 10000) / 10000) : ''
       lines.value = [blankLine()]
     } else {
       lines.value = r.lines.map((l) => ({
         id: copying ? uid() : l.id,
         name: l.name,
         categoryId: l.categoryId,
-        amountText: String(l.original ?? l.amount),
+        amountText: String(l.amount),
         amortMonths: l.amortMonths ?? 1,
         note: l.note ?? '',
         remember: remembered(l.name),
@@ -315,7 +312,6 @@ function load() {
     ? s.lastAccountId
     : (data.sortedAccounts[0]?.id ?? '')
   ledgerId.value = data.writeLedgerId
-  useLedgerMoney()
   lines.value = [blankLine()]
   if (ui.draft) {
     applyDraft(ui.draft)
@@ -631,7 +627,7 @@ async function removeLine(id: string) {
 
 function commitAmount() {
   const l = line.value
-  const v = evalExpr(l.amountText, foreign.value ? 2 : 0)
+  const v = evalExpr(l.amountText)
   if (v != null && l.amountText.trim()) l.amountText = String(v)
 }
 
@@ -654,14 +650,7 @@ function useSuggestion(sug: ReturnType<typeof suggest>[number]) {
   l.name = sug.name
   l.categoryId = data.catMap.has(sug.categoryId) ? sug.categoryId : l.categoryId
   l.remember = true
-  if (!amountOf(l))
-    l.amountText = String(
-      foreign.value
-        ? rate.value > 0
-          ? Math.round((sug.price / rate.value) * 100) / 100
-          : ''
-        : sug.price,
-    )
+  if (!amountOf(l)) l.amountText = String(sug.price)
 }
 
 watch(merchantId, (id) => {
@@ -671,18 +660,22 @@ watch(merchantId, (id) => {
   }
 })
 
-const accountItems = computed(() =>
-  data.sortedAccounts
-    .filter((a) => !a.archived || a.id === accountId.value)
+const accountItems = computed(() => {
+  const list = data.sortedAccounts
+    // a record keeps to its ledger's currency; a transfer can go between any two
+    .filter((a) => (!a.archived || a.id === accountId.value) && (type.value === 'transfer' || currencyOf(a) === currency.value))
     .map((a) => ({
       value: a.id,
       label: a.name,
-      sub: `餘額 ${isForeignAccount(a) ? `${a.currency} ${fmtFx(data.balances.get(a.id) ?? 0)}` : `$${fmt(data.balances.get(a.id) ?? 0)}`}`,
+      sub: `餘額 $${fmt(data.balances.get(a.id) ?? 0)}`,
       icon: accountIcon(a),
       color: a.color,
-    })),
-)
-const accountName = computed(() => data.accMap.get(accountId.value)?.name ?? '選擇帳戶')
+    }))
+  // a ledger in another currency only lists spending, so it does not need an account
+  return foreign.value ? [{ value: '', label: '不指定帳戶', none: true }, ...list] : list
+})
+const toAccountItems = computed(() => accountItems.value.filter((a) => a.value !== accountId.value))
+const accountName = computed(() => data.accMap.get(accountId.value)?.name ?? (foreign.value ? '不指定帳戶' : '選擇帳戶'))
 const toAccountName = computed(() => data.accMap.get(toAccountId.value)?.name ?? '轉入帳戶')
 const ledgerName = computed(() => data.ledgerMap.get(ledgerId.value)?.name ?? '帳本')
 
@@ -704,7 +697,7 @@ const canInstall = computed(
 
 // ---- the parts of an item (a burger and a tea): names and amounts, no categories
 /** what a part cost, as typed (the quantity is only a count) */
-const subtotalOf = (d: { amountText: string }) => evalExpr(d.amountText, foreign.value ? 2 : 0) ?? 0
+const subtotalOf = (d: { amountText: string }) => evalExpr(d.amountText) ?? 0
 const detailsOf = (l: LineForm) =>
   l.details
     .map((d) => {
@@ -772,6 +765,7 @@ function removeDetail(id: string) {
   line.value.details = line.value.details.filter((d) => d.id !== id)
   syncDetails()
 }
+
 /** the parts added up */
 const detailSum = (l: LineForm) =>
   Math.round(l.details.reduce((n, d) => n + subtotalOf(d), 0) * 100) / 100
@@ -780,7 +774,7 @@ function syncDetails() {
   const l = line.value
   if (!l.details.some((d) => d.amountText.trim())) return
   const sum = detailSum(l)
-  const typed = l.amountText.trim() ? evalExpr(l.amountText, foreign.value ? 2 : 0) : null
+  const typed = l.amountText.trim() ? evalExpr(l.amountText) : null
   if (typed == null || typed === l.autoSum) {
     l.amountText = String(sum)
     l.autoSum = sum
@@ -790,7 +784,7 @@ function syncDetails() {
 const detailGap = computed(() => {
   const l = line.value
   if (!l || !l.details.some((d) => d.amountText.trim())) return 0
-  const typed = evalExpr(l.amountText, foreign.value ? 2 : 0)
+  const typed = evalExpr(l.amountText)
   return typed == null ? 0 : Math.round((detailSum(l) - typed) * 100) / 100
 })
 
@@ -836,35 +830,31 @@ async function submit() {
     if ((evalExpr(transferText.value) ?? 0) <= 0) return ui.toast('請輸入轉帳金額', 'error')
     if (!toAccountId.value || toAccountId.value === accountId.value)
       return ui.toast('請選擇不同的轉入帳戶', 'error')
-    if (srcForeign.value && !(transferSrcRate.value > 0))
-      return ui.toast(`請先到帳戶設定 ${transferSrcCur.value} 的匯率`, 'error')
     if (needToAmount.value && !((evalExpr(toTotalText.value) ?? 0) > 0))
-      return ui.toast(`請輸入轉入的 ${transferDstCur.value} 金額`, 'error')
+      return ui.toast(`請輸入轉入的${toCur.value}金額`, 'error')
     sum = total.value
   } else {
     const used = lines.value.filter((l) => l.name.trim() || amountOf(l) !== 0)
     if (!used.length) return ui.toast('請輸入金額', 'error')
     for (const l of used) {
       if (!l.categoryId) return ui.toast('請選擇分類', 'error')
-      if (evalExpr(l.amountText, foreign.value ? 2 : 0) == null)
+      if (evalExpr(l.amountText) == null)
         return ui.toast(`金額格式不正確：${l.amountText}`, 'error')
     }
     recLines = used.map((l) => ({
       id: l.id,
       name: l.name.trim(),
       categoryId: l.categoryId,
-      amount: baseOf(l),
-      ...(foreign.value ? { original: amountOf(l) } : {}),
+      amount: amountOf(l),
       ...(l.note.trim() ? { note: l.note.trim() } : {}),
       ...(detailsOf(l).length ? { details: detailsOf(l) } : {}),
       // spreading an expense over months is set up under 更多 → 攤提; editing a record keeps what is there
       ...(recType === 'expense' && l.amortMonths > 1 ? { amortMonths: l.amortMonths } : {}),
     }))
     sum = recLines.reduce((n, l) => n + l.amount, 0)
-    if (sum === 0 && !(foreign.value && recLines.some((l) => (l.original ?? 0) !== 0)))
-      return ui.toast('金額合計不能是 0', 'error')
+    if (sum === 0) return ui.toast('金額合計不能是 0', 'error')
   }
-  if (!accountId.value) return ui.toast('請選擇帳戶', 'error')
+  if (!accountId.value && !foreign.value) return ui.toast('請選擇帳戶', 'error')
 
   saving.value = true
   try {
@@ -910,13 +900,10 @@ async function submit() {
       ledgerId: ledgerId.value || data.writeLedgerId,
       accountId: accountId.value,
       ...(recType === 'transfer' ? { toAccountId: toAccountId.value } : {}),
-      ...(recType === 'transfer' && needToAmount.value
-        ? { toTotal: evalExpr(toTotalText.value) ?? 0 }
-        : {}),
+      ...(recType === 'transfer' && needToAmount.value ? { toTotal: evalExpr(toTotalText.value) ?? 0 } : {}),
       ...(mid ? { merchantId: mid } : {}),
       lines: recLines,
       total: sum,
-      ...(foreign.value ? { currency: currency.value, rate: rate.value } : {}),
       ...(note.value.trim() ? { note: note.value.trim() } : {}),
       ...(recType !== 'transfer' && companions.value.length
         ? { companions: [...companions.value] }
@@ -983,7 +970,6 @@ async function submit() {
         time: base.time,
         total: first.total,
         lines: first.lines,
-        ...(foreign.value ? { currency: currency.value, rate: rate.value } : {}),
       })
       await savePhotos(first.id, photos.value)
     } else {
@@ -991,7 +977,7 @@ async function submit() {
       await syncSplitLoans(base)
       await savePhotos(base.id, photos.value)
     }
-    s.lastAccountId = accountId.value
+    if (accountId.value) s.lastAccountId = accountId.value
     void router.replace('/')
   } finally {
     saving.value = false
@@ -1115,9 +1101,9 @@ function cancel() {
                 </span>
                 <span
                   class="text-xs font-medium leading-tight"
-                  :class="baseOf(l) ? 'text-ink/80' : 'text-success'"
+                  :class="amountOf(l) ? 'text-ink/80' : 'text-success'"
                 >
-                  ${{ fmt(baseOf(l)) }}
+                  ${{ fmt(amountOf(l)) }}
                 </span>
               </span>
             </span>
@@ -1144,17 +1130,20 @@ function cancel() {
         <div class="field justify-start gap-3 pr-2">
           <span
             class="inline-flex items-center rounded-lg bg-surface-2 px-2.5 py-1 text-sm font-medium"
-            :aria-label="`幣別 ${type === 'transfer' ? transferSrcCur : currency}`"
+            :aria-label="`幣別 ${type === 'transfer' ? transferCur : currency}`"
           >
-            {{ type === 'transfer' ? transferSrcCur : currency }}
+            {{ type === 'transfer' ? transferCur : currency }}
           </span>
           <input
             v-if="type === 'transfer'"
             v-model="transferText"
             class="min-w-0 flex-1 bg-transparent text-right text-xl outline-none"
+            :class="needToAmount && 'placeholder:text-[15px]'"
             inputmode="decimal"
-            placeholder="0"
+            :placeholder="needToAmount ? '轉出金額' : '0'"
+            :aria-label="needToAmount ? `轉出金額 ${transferCur}` : undefined"
             @focus="($event.target as HTMLInputElement).select()"
+            @input="fromLeft"
           />
           <input
             v-else
@@ -1175,12 +1164,6 @@ function cancel() {
             <Calculator :size="18" />
           </button>
         </div>
-        <p v-if="foreign && rate > 0" class="px-1 text-right text-xs text-muted">
-          約 ${{ fmt(baseOf(line)) }}（1 {{ currency }} = {{ fmtFx(rate) }} {{ baseCurrency }}）
-        </p>
-        <p v-else-if="foreign" class="px-1 text-right text-xs text-muted">
-          還沒有匯率，先照 {{ currency }} 記，之後再換算成{{ currencyName(baseCurrency) }}
-        </p>
 
         <div v-if="type !== 'transfer'" class="field justify-start gap-2 pr-2">
           <input
@@ -1198,20 +1181,6 @@ function cancel() {
             @click="toggleRemember"
           >
             <Star :size="18" :fill="line.remember ? 'currentColor' : 'none'" />
-          </button>
-        </div>
-        <div v-else class="field justify-start gap-2 pr-2">
-          <input
-            v-model="note"
-            class="min-w-0 flex-1 bg-transparent outline-none"
-            placeholder="備註"
-          />
-          <button
-            class="inline-flex size-9 shrink-0 items-center justify-center gap-1 rounded-full bg-surface-2 text-muted"
-            :aria-label="photos.length ? `圖片（${photos.length} 張）` : '附加圖片'"
-            @click="onCamera"
-          >
-            <Camera :size="18" />
           </button>
         </div>
 
@@ -1249,20 +1218,31 @@ function cancel() {
           type === 'transfer' && toAccountId ? `轉入：${toAccountName}` : '選擇轉入帳戶'
         }}</span>
       </button>
-      <div v-if="needToAmount" class="field justify-start gap-3 pr-2">
-        <span
-          class="inline-flex items-center rounded-lg bg-surface-2 px-2.5 py-1 text-sm font-medium"
-          >{{ transferDstCur }}</span
-        >
-        <input
-          v-model="toTotalText"
-          class="min-w-0 flex-1 bg-transparent text-right text-xl outline-none"
-          inputmode="decimal"
-          placeholder="轉入金額"
-          :aria-label="`轉入金額 ${transferDstCur}`"
-        />
+      <div v-if="needToAmount" class="col-span-2 space-y-3">
+        <div class="field justify-start gap-3 pr-3">
+          <span class="whitespace-nowrap text-sm text-muted">1 {{ toCur }} =</span>
+          <input
+            v-model="rateText"
+            class="min-w-0 flex-1 bg-transparent text-right text-lg outline-none placeholder:text-[15px]"
+            inputmode="decimal"
+            placeholder="匯率（選填）"
+            @input="fromRate"
+          />
+          <span class="text-sm text-muted">{{ transferCur }}</span>
+        </div>
+        <div class="field justify-start gap-3 pr-2">
+          <span class="inline-flex items-center rounded-lg bg-surface-2 px-2.5 py-1 text-sm font-medium">{{ toCur }}</span>
+          <input
+            v-model="toTotalText"
+            class="min-w-0 flex-1 bg-transparent text-right text-xl outline-none placeholder:text-[15px]"
+            inputmode="decimal"
+            placeholder="轉入金額"
+            :aria-label="`轉入金額 ${toCur}`"
+            @input="fromArrived"
+          />
+        </div>
       </div>
-      <button v-else class="field justify-start" @click="open('ledger')">
+      <button class="field justify-start" @click="open('ledger')">
         <BookMarked :size="17" class="shrink-0 text-muted" />
         <span class="truncate">{{ ledgerName }}</span>
       </button>
@@ -1300,6 +1280,21 @@ function cancel() {
           clearable
           class="w-full"
         />
+      </div>
+      <!-- a transfer has no item name, so its note sits with the rest below -->
+      <div v-if="type === 'transfer'" class="field col-span-2 justify-start gap-2 pr-2">
+        <input
+          v-model="note"
+          class="min-w-0 flex-1 bg-transparent outline-none"
+          placeholder="備註"
+        />
+        <button
+          class="inline-flex size-9 shrink-0 items-center justify-center gap-1 rounded-full bg-surface-2 text-muted"
+          :aria-label="photos.length ? `圖片（${photos.length} 張）` : '附加圖片'"
+          @click="onCamera"
+        >
+          <Camera :size="18" />
+        </button>
       </div>
       <!-- who the money is spent with, and how it is shared, under one title -->
       <div v-if="type !== 'transfer'" class="col-span-2 mt-2 space-y-2">
@@ -1491,7 +1486,7 @@ function cancel() {
       v-model:open="toAccountSheet"
       v-model="toAccountId"
       title="選擇轉入帳戶"
-      :items="accountItems.filter((a) => a.value !== accountId)"
+      :items="toAccountItems"
     />
     <LedgerPickSheet v-model:open="ledgerSheet" v-model="ledgerId" title="選擇帳本" />
     <RepeatSheet

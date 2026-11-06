@@ -4,11 +4,6 @@ export function fmt(n: number): string {
 
 export const money = (n: number) => `$${fmt(n)}`
 
-/** A price in a foreign currency: keeps cents, drops trailing zeros. */
-export function fmtFx(n: number): string {
-  return n.toLocaleString('en-US', { maximumFractionDigits: 2 })
-}
-
 /** Evaluate "120+35*2" style input. Returns null when it is not a plain arithmetic expression. */
 export function evalExpr(input: string, decimals = 0): number | null {
   const s = input.replace(/[×x]/g, '*').replace(/÷/g, '/').replace(/[,\s]/g, '')
@@ -32,5 +27,3 @@ export function splitEven(total: number, n: number): number[] {
   return out
 }
 
-/** An exchange rate: keeps the digits that matter (0.2105, 31.8), not just two decimals. */
-export const fmtRate = (n: number): string => n.toLocaleString('en-US', { maximumFractionDigits: 4 })

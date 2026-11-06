@@ -6,12 +6,9 @@ import { P } from '@/lib/colors'
 import { remove, save } from '@/db'
 import { forgetPhotos, loadPhotos, releasePhotos, type Photo } from '@/lib/images'
 import { addedAt, weekday, WEEKDAYS } from '@/lib/date'
-import { evalExpr, fmt, fmtFx, fmtRate } from '@/lib/money'
+import { evalExpr, fmt } from '@/lib/money'
 import { loanOutstanding } from '@/lib/calc'
-import { baseCurrency } from '@/lib/currency'
-import { baseName } from '@/lib/customCurrency'
 import { myTotal } from '@/lib/split'
-import { foreignTotal, isPending } from '@/lib/fx'
 import { useData } from '@/stores/data'
 import { useUi } from '@/stores/ui'
 import BottomSheet from './BottomSheet.vue'
@@ -64,12 +61,12 @@ const rule = computed(() => data.recurrings.find((r) => r.id === rec.value?.recu
 const account = (id?: string) => (id ? (data.accMap.get(id)?.name ?? '') : '')
 /** items spread over different categories get the "many kinds" icon; all in one category show that category */
 const mixed = computed(() => (rec.value?.lines ?? []).some((l) => l.categoryId !== rec.value!.lines[0]!.categoryId))
-/** a one-item record has more to show only when it has parts, a note, a spread or a foreign price */
+/** a one-item record has more to show only when it has parts, a note, or a spread */
 const oneItemExtras = computed(() => {
   const r = rec.value
   if (!r || r.type === 'transfer' || r.adjust || r.lines.length !== 1) return false
   const l = r.lines[0]!
-  return Boolean(l.details?.length || l.note || (l.amortMonths ?? 1) > 1 || (l.original != null && r.currency))
+  return Boolean(l.details?.length || l.note || (l.amortMonths ?? 1) > 1)
 })
 const firstCat = computed(() => data.catMap.get(rec.value?.lines[0]?.categoryId ?? ''))
 
@@ -97,7 +94,7 @@ const details = computed(() => {
   const out: { icon: Component; text: string; wide?: boolean; empty?: boolean }[] = [
     r.type === 'transfer'
       ? { icon: ArrowLeftRight, text: `${account(r.accountId)} → ${account(r.toAccountId)}`, wide: true }
-      : { icon: Wallet, text: account(r.accountId) },
+      : { icon: Wallet, text: account(r.accountId), empty: !r.accountId },
   ]
   if (r.type !== 'transfer') out.push({ icon: BookMarked, text: data.ledgerMap.get(r.ledgerId)?.name ?? '' })
   // merchant and companions are always listed for an income or expense; when empty only the greyed icon shows
@@ -106,8 +103,6 @@ const details = computed(() => {
     out.push({ icon: Users, text: r.companions?.length ? `和${r.companions.map(data.memberName).join('、')}` : '', empty: !r.companions?.length })
   }
   if (r.recurringId) out.push({ icon: Repeat, text: rule.value?.name ?? '週期交易' })
-  if (isPending(r)) out.push({ icon: ArrowLeftRight, text: `還沒換算成${baseName()}` })
-  if (r.currency && r.rate) out.push({ icon: ArrowLeftRight, text: `1 ${r.currency} = ${fmtRate(r.rate)} ${baseCurrency.value}` })
   return out
 })
 
@@ -185,16 +180,15 @@ async function destroy() {
           <p v-else-if="catAbove" class="mb-0.5 truncate text-xs text-ink/70">{{ catAbove }}</p>
           <p class="truncate text-lg leading-tight font-bold">{{ title }}</p>
         </div>
-        <p class="text-2xl font-bold" :class="tone">{{ isPending(rec) ? `${rec.currency} ${fmtFx(foreignTotal(rec))}` : `$${fmt(myTotal(rec))}` }}</p>
+        <p class="text-2xl font-bold" :class="tone">${{ fmt(myTotal(rec)) }}</p>
       </div>
 
       <!-- the items -->
       <!-- one item: the header already says what it is and how much, so only what it adds is listed -->
       <div v-if="oneItemExtras" class="space-y-2 rounded-2xl border border-line bg-surface px-4 py-3">
-        <div v-if="rec.lines[0]!.note || (rec.lines[0]!.amortMonths ?? 1) > 1 || (rec.lines[0]!.original != null && rec.currency)" class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted">
+        <div v-if="rec.lines[0]!.note || (rec.lines[0]!.amortMonths ?? 1) > 1" class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted">
           <span v-if="rec.lines[0]!.note">{{ rec.lines[0]!.note }}</span>
           <span v-if="rec.lines[0]!.amortMonths && rec.lines[0]!.amortMonths > 1">分 {{ rec.lines[0]!.amortMonths }} 個月攤提</span>
-          <span v-if="rec.lines[0]!.original != null && rec.currency">{{ rec.currency }} {{ fmtFx(rec.lines[0]!.original!) }}</span>
         </div>
         <ul v-if="rec.lines[0]!.details?.length" class="space-y-1 text-sm">
           <li v-for="(d, i) in rec.lines[0]!.details" :key="i" class="flex justify-between gap-3">
@@ -220,7 +214,6 @@ async function destroy() {
           </div>
           <div class="text-right">
             <p class="text-sm font-semibold">${{ fmt(l.amount) }}</p>
-            <p v-if="l.original != null && rec.currency" class="text-xs text-muted">{{ rec.currency }} {{ fmtFx(l.original) }}</p>
           </div>
         </li>
       </ul>

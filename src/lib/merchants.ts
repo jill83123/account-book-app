@@ -78,7 +78,7 @@ export async function learn(
       if (at >= 0) m.items[at] = item
       else m.items.push(item)
     }
-    if (!m.defaultAccountId) m.defaultAccountId = rec.accountId
+    if (!m.defaultAccountId && rec.accountId) m.defaultAccountId = rec.accountId
     if (items) m.items = m.items.filter((i) => !items.forget.has(i.name))
   }
   await db.merchants.put({ ...m, deleted: false, updatedAt: stamp() })

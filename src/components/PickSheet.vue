@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="T extends string | number">
-import { Check } from '@/lib/uiIcons'
+import { Check, X } from '@/lib/uiIcons'
 import BottomSheet from './BottomSheet.vue'
 import CatIcon from './CatIcon.vue'
 
@@ -9,6 +9,8 @@ export interface PickItem<V> {
   sub?: string
   icon?: string
   color?: string
+  /** the choice of nothing: a grey cross in an outlined tile, no fill */
+  none?: boolean
 }
 
 defineProps<{ title: string; items: PickItem<T>[]; empty?: string }>()
@@ -32,7 +34,8 @@ function choose(v: T, close: () => void) {
           class="flex w-full items-center gap-3 px-4 py-3 text-left"
           @click="choose(it.value, () => (open = false))"
         >
-          <CatIcon v-if="it.icon" :icon="it.icon" :color="it.color" :size="38" />
+          <span v-if="it.none" class="grid size-[38px] shrink-0 place-items-center rounded-[11px] text-muted ring-1 ring-muted/40"><X :size="20" /></span>
+          <CatIcon v-else-if="it.icon" :icon="it.icon" :color="it.color" :size="38" />
           <span class="min-w-0 flex-1">
             <span class="block truncate font-medium">{{ it.label }}</span>
             <span v-if="it.sub" class="block truncate text-xs text-muted">{{ it.sub }}</span>

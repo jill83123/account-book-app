@@ -4,12 +4,13 @@ import {
   amortSchedule,
   byCategory,
   cardCycles,
+  countedRecords,
   loanOutstanding,
   nextDayOfMonth,
   spendOn,
   toEntries,
 } from '@/lib/calc'
-import type { Category, Loan } from '@/db/types'
+import type { Category, Ledger, Loan } from '@/db/types'
 import { account, line, rec } from './helpers'
 
 describe('toEntries', () => {
@@ -100,17 +101,50 @@ describe('accountBalances', () => {
     expect(bal.get('a1')).toBe(5000 - 1000 + 400)
     expect(loanOutstanding(loan({ repayments: [{ id: 'p', date: 'x', amount: 400 }] }))).toBe(600)
   })
-  it('foreign account is kept in its own currency', () => {
-    const jp = account({ id: 'jp', initial: 10000, currency: 'JPY', rate: 0.2 })
-    const bal = accountBalances(
-      [jp],
-      [
-        rec({ accountId: 'jp', currency: 'JPY', rate: 0.2, lines: [line(200, { original: 1000 })] }),
-        rec({ accountId: 'jp', lines: [line(100)] }), // TWD record -> 100 / 0.2 = 500 JPY
-      ],
-      [],
-    )
-    expect(bal.get('jp')).toBe(10000 - 1000 - 500)
+})
+
+describe('countedRecords', () => {
+  const ledger = (id: string, currency?: string): Ledger => ({
+    id,
+    name: id,
+    order: 0,
+    color: '#000',
+    ...(currency ? { currency } : {}),
+    updatedAt: 1,
+  })
+  const ledgers = [ledger('home'), ledger('trip', 'JPY')]
+  const twd = account({ id: 'twd', initial: 1000 })
+  const yen = account({ id: 'yen', initial: 20000, currency: 'JPY' })
+  it('a record only moves a wallet in the same currency as its ledger', () => {
+    const records = [
+      rec({ id: 'a', ledgerId: 'home', accountId: 'twd', lines: [line(100)] }),
+      rec({ id: 'b', ledgerId: 'trip', accountId: 'twd', lines: [line(5000)] }), // yen spending paid from a TWD wallet
+      rec({ id: 'c', ledgerId: 'trip', accountId: 'yen', lines: [line(3000)] }),
+      rec({ id: 'd', ledgerId: 'home', accountId: 'yen', lines: [line(50)] }), // TWD spending from a yen wallet
+    ]
+    const counted = countedRecords(records, ledgers, [twd, yen])
+    expect(counted.map((r) => r.id)).toEqual(['a', 'c'])
+    const bal = accountBalances([twd, yen], counted, [])
+    expect(bal.get('twd')).toBe(900)
+    expect(bal.get('yen')).toBe(17000)
+  })
+  it('a transfer between currencies counts only when it says how much arrived; an adjustment always counts', () => {
+    const twd2 = account({ id: 'twd2', initial: 0 })
+    const records = [
+      rec({ id: 't1', type: 'transfer', accountId: 'twd', toAccountId: 'twd2', lines: [], total: 300 }),
+      rec({ id: 't2', type: 'transfer', accountId: 'twd', toAccountId: 'yen', lines: [], total: 300 }),
+      rec({ id: 't3', type: 'transfer', accountId: 'twd', toAccountId: 'yen', lines: [], total: 300, toTotal: 1400 }),
+      rec({ id: 'j', ledgerId: 'home', accountId: 'yen', adjust: true, lines: [], total: 10 }),
+    ]
+    const counted = countedRecords(records, ledgers, [twd, twd2, yen])
+    expect(counted.map((r) => r.id)).toEqual(['t1', 't3', 'j'])
+    const bal = accountBalances([twd, twd2, yen], counted, [])
+    expect(bal.get('twd')).toBe(1000 - 300 - 300)
+    expect(bal.get('yen')).toBe(20000 + 1400 - 10)
+  })
+  it('keeps every record when everything is in the default currency', () => {
+    const records = [rec({ ledgerId: 'home', accountId: 'twd' })]
+    expect(countedRecords(records, [ledger('home')], [twd]).length).toBe(1)
   })
 })
 

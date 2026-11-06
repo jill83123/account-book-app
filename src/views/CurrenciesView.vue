@@ -101,11 +101,8 @@ async function submit() {
 }
 
 async function destroy(c: CurrencyEntry) {
-  const used =
-    data.accounts.some((a) => a.currency === c.code) ||
-    data.ledgers.some((l) => l.currency === c.code) ||
-    data.records.some((r) => r.currency === c.code)
-  if (used) return ui.toast(`${c.name}已經有帳戶或記錄在使用，不能刪除`, 'error')
+  if (data.accounts.some((a) => a.currency === c.code) || data.ledgers.some((l) => l.currency === c.code))
+    return ui.toast(`${c.name}已經有帳戶或帳本在使用，不能刪除`, 'error')
   if (!(await ui.confirm(`刪除${c.name}？`, { danger: true, confirmText: '刪除' }))) return
   if (c.rowId) await remove('currencies', c.rowId)
 }

@@ -49,8 +49,6 @@ export interface LocalSettings {
   lastAccountId: string
   /** the drag-to-reorder hint has been shown once */
   tipDrag: boolean
-  /** last exchange rate used per currency (1 unit = this many TWD) */
-  rates: Record<string, number>
   /** reminders that were open last time, so we notice when one ends */
   reminderSeen: Record<string, SeenReminder>
   /** ended or archived reminders, kept for 30 days */
@@ -100,7 +98,6 @@ const defaults: LocalSettings = {
   ledgerId: '',
   lastAccountId: '',
   tipDrag: false,
-  rates: {},
   reminderSeen: {},
   reminderArchive: [],
   reminderHidden: [],

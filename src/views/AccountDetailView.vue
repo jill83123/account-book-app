@@ -2,12 +2,12 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Pencil, Scale } from '@/lib/uiIcons'
-import { cardCycles, spendOn } from '@/lib/calc'
-import { isForeignAccount, nextDayOfMonth } from '@/lib/calc'
+import { cardCycles, isForeignAccount, nextDayOfMonth, spendOn } from '@/lib/calc'
+import { currencyName } from '@/lib/customCurrency'
 import { save } from '@/db'
 import { nowTime, today } from '@/lib/date'
 import { uid } from '@/lib/id'
-import { evalExpr, fmt, fmtFx } from '@/lib/money'
+import { evalExpr, fmt } from '@/lib/money'
 import { useData } from '@/stores/data'
 import { useUi } from '@/stores/ui'
 import AccountFormSheet from '@/components/AccountFormSheet.vue'
@@ -22,13 +22,14 @@ const data = useData()
 const editOpen = ref(false)
 
 const account = computed(() => data.accMap.get(String(route.params.id)))
-const records = computed(() =>
-  data.sortedRecords.filter((r) => r.accountId === account.value?.id || r.toAccountId === account.value?.id),
-)
+/** only the records that move this account: the ones in another currency are listed in their own ledger */
+const records = computed(() => {
+  const counted = new Set(data.counted.map((r) => r.id))
+  return data.sortedRecords.filter(
+    (r) => counted.has(r.id) && (r.accountId === account.value?.id || r.toAccountId === account.value?.id),
+  )
+})
 const balance = computed(() => (account.value ? (data.balances.get(account.value.id) ?? 0) : 0))
-const balanceText = computed(() =>
-  account.value && isForeignAccount(account.value) ? `${account.value.currency} ${fmtFx(balance.value)}` : `$${fmt(balance.value)}`,
-)
 
 // 餘額調整: the real balance differs from the book (money went missing, cash was miscounted ...), so a difference is booked
 // that moves the balance but is neither income nor spending
@@ -61,8 +62,7 @@ async function adjust() {
     ledgerId: data.writeLedgerId,
     accountId: a.id,
     lines: [],
-    // a record is kept in TWD: a foreign wallet's difference is turned back with its rate
-    total: Math.round(Math.abs(diff.value) * (isForeignAccount(a) ? a.rate || 0 : 1)),
+    total: Math.round(Math.abs(diff.value)),
     adjust: true,
   })
   adjustOpen.value = false
@@ -74,8 +74,8 @@ const card = computed(() => {
   if (!a || a.kind !== 'card' || !a.statementDay) return null
   const cy = cardCycles(a.statementDay, today())
   return {
-    prev: spendOn(a.id, data.records, cy.prev.start, cy.prev.end),
-    cur: spendOn(a.id, data.records, cy.cur.start, cy.cur.end),
+    prev: spendOn(a.id, data.counted, cy.prev.start, cy.prev.end),
+    cur: spendOn(a.id, data.counted, cy.cur.start, cy.cur.end),
     prevRange: `${cy.prev.start}～${cy.prev.end}`,
     curRange: `${cy.cur.start}～${cy.cur.end}`,
     due: a.dueDay ? nextDayOfMonth(a.dueDay, today()) : '',
@@ -85,7 +85,7 @@ const card = computed(() => {
 
 <template>
   <div v-if="account">
-    <PageHeader :title="account.name">
+    <PageHeader :title="account.name" :subtitle="isForeignAccount(account) ? currencyName(account.currency!) : undefined">
       <template #right>
         <button class="circle-btn" aria-label="編輯帳戶" @click="editOpen = true">
           <Pencil :size="19" />
@@ -95,7 +95,7 @@ const card = computed(() => {
 
     <section class="card mb-4 text-center">
       <p class="text-xs text-muted">{{ account.kind === 'card' ? '目前欠款' : '目前餘額' }}</p>
-      <p class="text-3xl font-bold" :class="balance < 0 ? 'text-expense' : 'text-primary'">{{ balanceText }}</p>
+      <p class="text-3xl font-bold" :class="balance < 0 ? 'text-expense' : 'text-primary'">{{ `$${fmt(balance)}` }}</p>
       <button class="btn btn-soft btn-sm mt-3" @click="openAdjust"><Scale :size="16" />調整餘額</button>
     </section>
 
@@ -143,7 +143,7 @@ const card = computed(() => {
         </p>
         <div class="card flex items-center justify-between">
           <span class="text-sm text-muted">帳面{{ isCard ? '欠款' : '餘額' }}</span>
-          <span class="font-semibold">{{ account && isForeignAccount(account) ? `${account.currency} ${fmtFx(shown)}` : `$${fmt(shown)}` }}</span>
+          <span class="font-semibold">{{ `$${fmt(shown)}` }}</span>
         </div>
         <div>
           <label class="label" for="actual">實際{{ isCard ? '欠款' : '餘額' }}</label>
@@ -151,7 +151,7 @@ const card = computed(() => {
         </div>
         <p v-if="actual != null && diff" class="text-sm">
           差額
-          <b :class="diff > 0 ? 'text-income' : 'text-expense'">{{ diff > 0 ? '+' : '-' }}{{ account && isForeignAccount(account) ? `${account.currency} ${fmtFx(Math.abs(diff))}` : `$${fmt(Math.abs(diff))}` }}</b>
+          <b :class="diff > 0 ? 'text-income' : 'text-expense'">{{ diff > 0 ? '+' : '-' }}{{ `$${fmt(Math.abs(diff))}` }}</b>
           <span class="text-muted">，{{ isCard ? (diff > 0 ? '欠款變少' : '欠款變多') : diff > 0 ? '帳面補上' : '帳面扣掉' }}這筆</span>
         </p>
         <button class="btn btn-primary w-full" :disabled="actual == null || !diff" @click="adjust">確定調整</button>
