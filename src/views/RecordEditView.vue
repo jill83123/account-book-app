@@ -255,6 +255,8 @@ function applyDraft(d: Draft) {
   active.value = 0
 }
 
+/** the form was filled from this version of the record */
+let loadedAt = 0
 function load() {
   // 複製: start from an existing record but save it as a new one, dated now
   const copying = !editing.value ? data.records.find((x) => x.id === route.query.copy) : undefined
@@ -337,8 +339,6 @@ watch(
   { immediate: true },
 )
 
-/** the form was filled from this version of the record */
-let loadedAt = 0
 /** anything typed or tapped since the form opened */
 let touched = false
 const markTouched = () => (touched = true)
@@ -908,6 +908,22 @@ const saving = ref(false)
 async function submit() {
   if (saving.value) return
   commitAmount()
+  if (editingId.value) {
+    // another device may have saved this record since it was opened: pull first, and ask before covering that change
+    saving.value = true
+    try {
+      await sync.refresh(10_000, 5000)
+      await nextTick()
+    } finally {
+      saving.value = false
+    }
+    const cur = editing.value
+    if (cur && cur.updatedAt > loadedAt) {
+      const ok = await ui.confirm('這筆記錄在另一台裝置更新過', { message: '儲存會蓋過那份更新。', confirmText: '仍要儲存' })
+      if (!ok) return
+      loadedAt = cur.updatedAt
+    }
+  }
   const recType = type.value
   let recLines: Line[] = []
   let sum = 0

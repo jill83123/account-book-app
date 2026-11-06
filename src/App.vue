@@ -6,6 +6,7 @@ import BatchBar from '@/components/BatchBar.vue'
 import RecordSheet from '@/components/RecordSheet.vue'
 import UiLayer from '@/components/UiLayer.vue'
 import { usePwa } from '@/stores/pwa'
+import { useSync } from '@/stores/sync'
 import { useReminders } from '@/stores/reminders'
 import { useUi } from '@/stores/ui'
 import { today } from '@/lib/date'
@@ -14,6 +15,7 @@ const route = useRoute()
 const router = useRouter()
 const ui = useUi()
 const pwa = usePwa()
+const sync = useSync()
 // created up here so finished reminders get archived on every page, not only on the reminders page
 useReminders()
 const showNav = computed(() => route.meta.nav === true)
@@ -94,6 +96,14 @@ function add() {
       <span class="flex-1 text-sm font-semibold">有新版本可用</span>
       <button class="text-sm text-muted" @click="pwa.needRefresh = false">稍後</button>
       <button class="btn btn-primary px-4 py-2" @click="pwa.update()">重新整理</button>
+    </div>
+  </div>
+
+  <!-- after a long absence the newest copy is pulled first; the screen waits so nothing is edited on old data -->
+  <div v-if="sync.catchingUp" class="fixed inset-0 z-50 grid place-items-center bg-bg/40 backdrop-blur-[2px]" role="status">
+    <div class="flex flex-col items-center gap-3 text-primary">
+      <RefreshCw :size="32" class="animate-spin" />
+      <span class="text-sm font-semibold text-ink">同步中</span>
     </div>
   </div>
 

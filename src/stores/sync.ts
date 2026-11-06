@@ -23,12 +23,18 @@ const AUTO_DELAY_MS = 15_000
 const CATCH_UP_MS = 60_000
 /** opening a record to edit it: skip the sync if one ran within this long */
 const STALE_MS = 30_000
+/** away from the app this long: another device may have changed things, so catch up before anything is edited */
+const IDLE_MS = 60_000
+/** the longest the screen is held while catching up */
+const CATCH_UP_WAIT_MS = 10_000
 
 export const useSync = defineStore('sync', () => {
   const settings = useSettings()
   const ui = useUi()
 
   const syncing = ref(false)
+  /** true while the app catches up after a long absence; the screen is held so nothing is edited on old data */
+  const catchingUp = ref(false)
   const error = ref('')
   const signedIn = ref(hasRefreshToken() || Boolean(cachedToken()))
   const url = ref('')
@@ -151,7 +157,8 @@ export const useSync = defineStore('sync', () => {
   function schedule() {
     clearTimeout(timer)
     timer = setTimeout(() => {
-      if (canAuto()) void sync()
+      // nothing goes out while the app is in the background; coming back syncs
+      if (document.visibilityState === 'visible' && canAuto()) void sync()
     }, AUTO_DELAY_MS)
   }
 
@@ -164,7 +171,13 @@ export const useSync = defineStore('sync', () => {
    */
   async function refresh(maxAgeMs = STALE_MS, waitMs = 3000) {
     if (!canAuto() || fresh(maxAgeMs)) return
-    await Promise.race([sync(), new Promise((r) => setTimeout(r, waitMs))])
+    // the screen shows a loading card while the pull runs, so nothing is typed before the newest copy is in
+    catchingUp.value = true
+    try {
+      await Promise.race([sync(), new Promise((r) => setTimeout(r, waitMs))])
+    } finally {
+      catchingUp.value = false
+    }
   }
 
   function init() {
@@ -174,13 +187,29 @@ export const useSync = defineStore('sync', () => {
       if (canAuto()) schedule()
     })
     // coming back to the tab or the network returning is not worth a round trip when a sync only just ran
-    const catchUp = () => {
-      if (document.visibilityState === 'visible' && canAuto() && !fresh(CATCH_UP_MS)) void sync()
+    let hiddenAt = 0
+    const catchUp = async () => {
+      if (document.visibilityState !== 'visible' || !canAuto()) return
+      if (hiddenAt && Date.now() - hiddenAt >= IDLE_MS) {
+        hiddenAt = 0
+        catchingUp.value = true
+        try {
+          await Promise.race([sync(), new Promise((r) => setTimeout(r, CATCH_UP_WAIT_MS))])
+        } finally {
+          catchingUp.value = false
+        }
+        return
+      }
+      hiddenAt = 0
+      if (!fresh(CATCH_UP_MS)) void sync()
     }
-    document.addEventListener('visibilitychange', catchUp)
-    window.addEventListener('online', catchUp)
-    catchUp()
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') hiddenAt = Date.now()
+      else void catchUp()
+    })
+    window.addEventListener('online', () => void catchUp())
+    void catchUp()
   }
 
-  return { syncing, error, signedIn, unsynced, url, connect, disconnect, wipeCloud, sync, refresh, init }
+  return { syncing, catchingUp, error, signedIn, unsynced, url, connect, disconnect, wipeCloud, sync, refresh, init }
 })
