@@ -108,7 +108,7 @@ function toggleCat(id: string) {
     }
   }
 }
-const pickedSubs = (n: { subs: { id: string }[] }) => n.subs.filter((c) => selCats.value.includes(c.id)).length
+const pickedSubs =(n: { subs: { id: string }[] }) => n.subs.filter((c) => selCats.value.includes(c.id)).length
 /** names the category chip shows: a whole group by its name, otherwise the sub-categories picked */
 const catLabels = computed(() =>
   catTree.value.flatMap((n) =>
@@ -204,7 +204,7 @@ function clearFilters() {
       <RecordList v-if="results.length" :records="results.slice(0, 200)" show-date :show-ledger="selLedgers.length !== 1" />
     </template>
 
-    <BottomSheet v-model="pickerOpen" :title="picker === 'cat' ? '選擇分類（可多選）' : picker === 'date' ? '選擇日期' : picker === 'ledger' ? '選擇帳本（可多選）' : picker === 'account' ? '選擇帳戶（可多選）' : '選擇商家（可多選）'">
+    <BottomSheet v-model="pickerOpen" :fade="false" :title="picker === 'cat' ? '選擇分類（可多選）' : picker === 'date' ? '選擇日期' : picker === 'ledger' ? '選擇帳本（可多選）' : picker === 'account' ? '選擇帳戶（可多選）' : '選擇商家（可多選）'">
       <template v-if="picker && picker !== 'date'" #search>
       <div class="relative">
         <Search :size="16" class="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-muted" />
@@ -239,26 +239,26 @@ function clearFilters() {
           <DateField v-model="to" title="結束日期" placeholder="結束日期" clearable compact class="min-w-0 flex-1" />
         </div>
       </div>
-      <ul v-if="picker === 'ledger'" class="mb-2 divide-y divide-line">
+      <ul v-if="picker === 'ledger'" class="card mb-2 divide-y divide-line overflow-hidden p-0 shadow-none border border-line">
         <li v-for="l in shownLedgers" :key="l.id">
-          <button class="flex w-full items-center justify-between px-1 py-3.5 text-left" @click="toggle(selLedgers, l.id)">
+          <button class="flex w-full items-center justify-between px-4 py-3.5 text-left" @click="toggle(selLedgers, l.id)">
             <span :class="selLedgers.includes(l.id) && 'font-semibold text-primary'">{{ l.name }}</span>
             <Check v-if="selLedgers.includes(l.id)" :size="18" class="text-primary" />
           </button>
         </li>
       </ul>
-      <ul v-else-if="picker === 'account'" class="mb-2 divide-y divide-line">
+      <ul v-else-if="picker === 'account'" class="card mb-2 divide-y divide-line overflow-hidden p-0 shadow-none border border-line">
         <li v-for="a in shownAccounts" :key="a.id">
-          <button class="flex w-full items-center justify-between px-1 py-3.5 text-left" @click="toggle(selAccounts, a.id)">
+          <button class="flex w-full items-center justify-between px-4 py-3.5 text-left" @click="toggle(selAccounts, a.id)">
             <span :class="selAccounts.includes(a.id) && 'font-semibold text-primary'">{{ a.name }}</span>
             <Check v-if="selAccounts.includes(a.id)" :size="18" class="text-primary" />
           </button>
         </li>
         <li v-if="!shownAccounts.length" class="py-6 text-center text-sm text-muted">找不到帳戶</li>
       </ul>
-      <ul v-else-if="picker === 'merchant'" class="mb-2 divide-y divide-line">
+      <ul v-else-if="picker === 'merchant'" class="card mb-2 divide-y divide-line overflow-hidden p-0 shadow-none border border-line">
         <li v-for="m in shownMerchants" :key="m.id">
-          <button class="flex w-full items-center justify-between px-1 py-3.5 text-left" @click="toggle(selMerchants, m.id)">
+          <button class="flex w-full items-center justify-between px-4 py-3.5 text-left" @click="toggle(selMerchants, m.id)">
             <span :class="selMerchants.includes(m.id) && 'font-semibold text-primary'">{{ m.name }}</span>
             <Check v-if="selMerchants.includes(m.id)" :size="18" class="text-primary" />
           </button>
@@ -266,7 +266,7 @@ function clearFilters() {
         <li v-if="!shownMerchants.length" class="py-6 text-center text-sm text-muted">{{ pq.trim() ? '找不到商家' : '還沒有商家' }}</li>
       </ul>
       <template v-else-if="picker === 'cat'">
-      <ul class="mb-2 divide-y divide-line">
+      <ul class="card mb-2 divide-y divide-line overflow-hidden p-0 shadow-none border border-line">
         <li v-for="n in shownTree" :key="n.top.id">
           <div class="flex items-center">
             <button
@@ -278,23 +278,27 @@ function clearFilters() {
               <ChevronDown :size="16" class="transition-transform" :class="!isOpen(n.top.id) && '-rotate-90'" />
             </button>
             <span v-else class="size-11 shrink-0" />
-            <button class="flex min-w-0 flex-1 items-center justify-between py-3.5 pr-1 text-left font-medium" @click="toggleCat(n.top.id)">
+            <button class="min-w-0 flex-1 py-3.5 text-left font-medium" @click="n.subs.length ? toggle(expanded, n.top.id) : toggleCat(n.top.id)">
               <span :class="selCats.includes(n.top.id) && 'font-semibold text-primary'">{{ n.top.name }}</span>
-              <Check v-if="selCats.includes(n.top.id)" :size="18" class="text-primary" />
-              <span v-else-if="pickedSubs(n)" class="text-xs font-normal text-primary">已選 {{ pickedSubs(n) }}</span>
+            </button>
+            <span v-if="!selCats.includes(n.top.id) && pickedSubs(n)" class="text-xs text-primary">已選 {{ pickedSubs(n) }}</span>
+            <button class="grid size-11 shrink-0 place-items-center" :aria-label="`全選${n.top.name}`" @click="toggleCat(n.top.id)">
+              <span class="grid size-5.5 place-items-center rounded-full" :class="selCats.includes(n.top.id) ? 'bg-primary text-white' : 'ring-1 ring-line'">
+                <Check v-if="selCats.includes(n.top.id)" :size="14" :stroke-width="3" />
+              </span>
             </button>
           </div>
-          <template v-if="isOpen(n.top.id)">
+          <div v-if="isOpen(n.top.id)" class="-mt-1.5 flex flex-wrap gap-2 pr-4 pb-3.5 pl-11">
             <button
               v-for="c in n.subs"
               :key="c.id"
-              class="flex w-full items-center justify-between border-t border-line py-3 pr-1 pl-11 text-left text-sm"
+              class="rounded-full px-3.5 py-1.5 text-sm ring-1"
+              :class="selCats.includes(c.id) ? 'bg-primary-soft text-primary-strong ring-primary/40' : 'bg-surface text-ink ring-line'"
               @click="toggleCat(c.id)"
             >
-              <span :class="selCats.includes(c.id) && 'font-semibold text-primary'">{{ c.name }}</span>
-              <Check v-if="selCats.includes(c.id)" :size="18" class="text-primary" />
+              {{ c.name }}
             </button>
-          </template>
+          </div>
         </li>
       </ul>
       </template>

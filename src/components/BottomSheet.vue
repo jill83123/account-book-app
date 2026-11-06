@@ -2,7 +2,7 @@
 import { onBeforeUnmount, ref } from 'vue'
 import { X } from '@/lib/uiIcons'
 
-defineProps<{ title?: string }>()
+const { fade = true } = defineProps<{ title?: string; fade?: boolean }>()
 const open = defineModel<boolean>({ required: true })
 
 /** the fades above and below the pinned bars only make sense while the list actually scrolls */
@@ -47,14 +47,14 @@ onBeforeUnmount(() => watcher?.disconnect())
           :class="!$slots.footer && 'pb-[max(1.25rem,env(safe-area-inset-bottom))]'"
         >
           <!-- pinned to the top of the scroll area, with a fade under it -->
-          <div v-if="$slots.search" class="sticky top-0 z-10 bg-bg pb-3 "
-            :class="scrolls && 'after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-4 after:bg-gradient-to-b after:from-bg after:to-transparent'">
+          <div v-if="$slots.search" class="sticky top-0 z-10 -mx-5 bg-bg px-5 pb-3"
+            :class="fade && scrolls && 'after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-4 after:bg-gradient-to-b after:from-bg after:to-transparent'">
             <slot name="search" />
           </div>
           <slot />
           <!-- pinned to the bottom, with a fade above it -->
           <div v-if="$slots.footer" class="sticky bottom-0 z-10 -mx-5 bg-bg px-5 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] "
-            :class="scrolls && 'before:pointer-events-none before:absolute before:inset-x-0 before:bottom-full before:h-12 before:bg-gradient-to-t before:from-bg before:from-5% before:via-bg/80 before:via-40% before:to-transparent'"
+            :class="fade && scrolls && 'before:pointer-events-none before:absolute before:inset-x-0 before:bottom-full before:h-12 before:bg-gradient-to-t before:from-bg before:from-5% before:via-bg/80 before:via-40% before:to-transparent'"
           >
             <slot name="footer" />
           </div>
