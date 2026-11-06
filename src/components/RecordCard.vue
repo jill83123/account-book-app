@@ -51,7 +51,12 @@ const pieces = computed<Piece[]>(() => {
   const r = props.rec
   if (r.type === 'transfer') return [{ kind: 'text', text: `${account.value} → ${data.accMap.get(r.toAccountId ?? '')?.name ?? ''}` }]
   if (r.adjust) return [{ kind: 'text', text: r.type === 'income' ? '補上差額' : '扣除差額' }]
-  if (multi.value) return [{ kind: 'text', text: r.lines.map((l) => l.name || data.catName(l.categoryId)).join('、') }]
+  if (multi.value) {
+    const items: Piece = { kind: 'text', text: r.lines.map((l) => l.name || data.catName(l.categoryId)).join('、') }
+    // the category tag sits in the same place as on a single item: the shared category, or that there are several
+    const label = mixed.value ? '多分類' : cat.value?.name
+    return label ? [{ kind: 'cat', text: label }, items] : [items]
+  }
   const out: Piece[] = []
   // the category tag is on every row, except when the category itself is the title
   if (!titleIsCat.value && cat.value) out.push({ kind: 'cat', text: cat.value.name })
