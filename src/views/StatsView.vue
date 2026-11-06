@@ -282,7 +282,7 @@ const barTone = (spent: number, budget: number) =>
 <template>
   <div>
     <!-- one slim header: the ledger being looked at as the title (same as home; tap to switch), then the views and the period on a line each -->
-    <header class="sticky top-0 z-20 -mx-4 bg-bg/85 px-4 backdrop-blur mb-3 grid min-h-14 grid-cols-[1fr_auto_1fr] items-center py-2">
+    <header class="sticky top-0 z-20 -mx-4 bg-bg px-4 mb-3 grid min-h-14 grid-cols-[1fr_auto_1fr] items-center py-2">
       <span />
       <button class="relative justify-self-center text-xl font-bold tracking-tight" aria-label="切換帳本" @click="ledgerSheet = true">
         <span class="block max-w-40 truncate">{{ data.ledgerMap.get(data.ledgerId)?.name ?? '' }}</span>

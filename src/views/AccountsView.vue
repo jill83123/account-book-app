@@ -191,7 +191,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div>
-    <header class="sticky top-0 z-20 -mx-4 bg-bg/85 px-4 backdrop-blur mb-3 grid min-h-14 grid-cols-[1fr_auto_1fr] items-center py-2">
+    <header class="sticky top-0 z-20 -mx-4 bg-bg px-4 mb-3 grid min-h-14 grid-cols-[1fr_auto_1fr] items-center py-2">
       <div class="flex justify-start">
         <button class="circle-btn" aria-label="已封存的帳戶" @click="archivedOpen = true">
           <Archive :size="20" />

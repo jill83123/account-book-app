@@ -116,7 +116,7 @@ const themeLabel = computed(() => ({ system: '跟隨系統', light: '淺色', da
 
 <template>
   <div>
-    <header class="sticky top-0 z-20 -mx-4 bg-bg/85 px-4 backdrop-blur mb-3 flex min-h-14 items-center justify-center py-2">
+    <header class="sticky top-0 z-20 -mx-4 bg-bg px-4 mb-3 flex min-h-14 items-center justify-center py-2">
       <h1 class="text-xl font-bold">更多</h1>
     </header>
     <section v-for="g in groups" :key="g.title" class="mb-5 last:mb-0">

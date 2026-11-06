@@ -107,7 +107,7 @@ const tone = computed(() =>
           <!-- the merchant and the people come after a thin vertical bar, unless they open the line -->
           <span v-else-if="p.kind === 'merchant' || p.kind === 'who'" class="inline-flex shrink-0 items-center gap-1.5">
             <span v-if="i > 0" class="h-3 w-px shrink-0 bg-muted/40" />
-            <span class="max-w-28 truncate">{{ p.kind === 'who' ? `和${p.text}` : p.text }}</span>
+            <span class="max-w-28 truncate">{{ p.text }}</span>
           </span>
           <span v-else class="min-w-0 truncate">{{ p.text }}</span>
         </template>

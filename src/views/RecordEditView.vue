@@ -1085,7 +1085,7 @@ function cancel() {
 <template>
   <div v-if="ready" class="pb-24">
     <header
-      class="sticky top-0 z-20 -mx-4 mb-3 grid grid-cols-[1fr_auto_1fr] items-center bg-bg/85 px-4 py-2 backdrop-blur"
+      class="sticky top-0 z-20 -mx-4 mb-3 grid grid-cols-[1fr_auto_1fr] items-center bg-bg px-4 py-2"
     >
       <button class="circle-btn" aria-label="取消" @click="cancel"><X :size="22" /></button>
       <h1 class="text-xl font-bold">{{ editingId ? '編輯記錄' : '新增記錄' }}</h1>

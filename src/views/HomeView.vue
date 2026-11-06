@@ -187,7 +187,7 @@ onMounted(() => {
 <template>
   <div>
     <!-- the title sits in the middle column, so it is centred whatever the buttons on either side are -->
-    <header class="sticky top-0 z-20 -mx-4 bg-bg/85 px-4 backdrop-blur mb-3 grid grid-cols-[1fr_auto_1fr] min-h-14 items-center gap-1 py-2 sm:gap-2">
+    <header class="sticky top-0 z-20 -mx-4 bg-bg px-4 mb-3 grid grid-cols-[1fr_auto_1fr] min-h-14 items-center gap-1 py-2 sm:gap-2">
       <div class="flex items-center gap-0.5 sm:gap-2">
         <button v-if="syncState" class="circle-btn size-9 sm:size-10" :class="syncState.tone" :aria-label="syncState.label" :title="syncState.label" @click="tapSync">
           <component :is="syncState.icon" :size="20" :class="syncState.spin && 'animate-spin'" />
@@ -203,7 +203,7 @@ onMounted(() => {
         </button>
       </div>
       <!-- the title is the ledger being looked at; tap to switch -->
-      <button class="relative justify-self-center text-xl font-bold tracking-tight" aria-label="切換帳本" @click="ledgerSheet = true">
+      <button class="relative justify-self-center text-base font-semibold tracking-tight" aria-label="切換帳本" @click="ledgerSheet = true">
         <span class="block max-w-40 truncate">{{ ledgerName }}</span>
         <ChevronDown :size="16" class="absolute top-1/2 left-full ml-1.5 -translate-y-1/2 text-muted" />
       </button>
@@ -243,15 +243,15 @@ onMounted(() => {
       <div class="grid grid-cols-3 text-center">
         <div>
           <p class="text-xs text-muted">收入</p>
-          <p class="font-semibold text-income">{{ fmt(summary.income) }}</p>
+          <p class="text-lg font-semibold text-income">{{ fmt(summary.income) }}</p>
         </div>
         <div>
           <p class="text-xs text-muted">支出</p>
-          <p class="font-semibold text-expense">{{ fmt(summary.expense) }}</p>
+          <p class="text-lg font-semibold text-expense">{{ fmt(summary.expense) }}</p>
         </div>
         <div>
           <p class="text-xs text-muted">合計</p>
-          <p class="font-semibold">{{ fmt(summary.balance) }}</p>
+          <p class="text-lg font-semibold">{{ fmt(summary.balance) }}</p>
         </div>
       </div>
     </section>
@@ -305,15 +305,15 @@ onMounted(() => {
         <div class="grid grid-cols-3 text-center">
           <div>
             <p class="text-xs text-muted">收入</p>
-            <p class="font-semibold text-income">{{ fmt(summary.income) }}</p>
+            <p class="text-lg font-semibold text-income">{{ fmt(summary.income) }}</p>
           </div>
           <div>
             <p class="text-xs text-muted">支出</p>
-            <p class="font-semibold text-expense">{{ fmt(summary.expense) }}</p>
+            <p class="text-lg font-semibold text-expense">{{ fmt(summary.expense) }}</p>
           </div>
           <div>
             <p class="text-xs text-muted">合計</p>
-            <p class="font-semibold">{{ fmt(summary.balance) }}</p>
+            <p class="text-lg font-semibold">{{ fmt(summary.balance) }}</p>
           </div>
         </div>
       </section>
@@ -346,15 +346,15 @@ onMounted(() => {
         <div class="grid grid-cols-3 text-center">
           <div>
             <p class="text-xs text-muted">收入</p>
-            <p class="font-semibold text-income">{{ fmt(summary.income) }}</p>
+            <p class="text-lg font-semibold text-income">{{ fmt(summary.income) }}</p>
           </div>
           <div>
             <p class="text-xs text-muted">支出</p>
-            <p class="font-semibold text-expense">{{ fmt(summary.expense) }}</p>
+            <p class="text-lg font-semibold text-expense">{{ fmt(summary.expense) }}</p>
           </div>
           <div>
             <p class="text-xs text-muted">合計</p>
-            <p class="font-semibold">{{ fmt(summary.balance) }}</p>
+            <p class="text-lg font-semibold">{{ fmt(summary.balance) }}</p>
           </div>
         </div>
       </section>
