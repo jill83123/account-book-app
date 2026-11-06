@@ -51,7 +51,7 @@ async function turnOnRemind() {
 }
 
 function tapSync() {
-  if (syncState.value?.go) router.push('/more/sync')
+  if (syncState.value?.go) router.push('/more/data')
   else if (!sync.syncing) void sync.sync({ loud: true })
 }
 

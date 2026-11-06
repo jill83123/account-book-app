@@ -31,7 +31,7 @@ const router = createRouter({
     { path: '/more/recurring', component: () => import('@/views/RecurringView.vue') },
     { path: '/more/loans', component: () => import('@/views/LoansView.vue') },
     { path: '/more/amort', component: () => import('@/views/AmortView.vue') },
-    { path: '/more/sync', component: () => import('@/views/SyncView.vue') },
+    { path: '/more/sync', redirect: '/more/data' },
     { path: '/more/ai', component: () => import('@/views/AiView.vue') },
     { path: '/more/daily', redirect: '/more' },
     { path: '/more/appearance', redirect: '/more' },

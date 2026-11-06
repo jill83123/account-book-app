@@ -10,7 +10,6 @@ import {
   HandCoins,
   Hourglass,
   Layers,
-  DatabaseBackup,
   Download,
   RefreshCw,
   Palette,
@@ -98,8 +97,7 @@ const groups = computed(() => [
   {
     title: '資料與整合',
     rows: [
-      { to: '/more/sync', icon: Cloud, title: 'Google 試算表同步', sub: syncSub.value },
-      { to: '/more/data', icon: DatabaseBackup, title: '備份與資料', sub: '匯出、匯入、範例資料' },
+      { to: '/more/data', icon: Cloud, title: '同步與備份', sub: syncSub.value },
       { to: '/more/ai', icon: ScanLine, title: 'AI 發票辨識', sub: s.geminiKey || s.workerUrl ? `Gemini：${s.geminiModel}` : '設定 Gemini 金鑰，或使用提詞' },
     ],
   },
