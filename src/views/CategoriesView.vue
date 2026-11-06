@@ -6,6 +6,7 @@ import { ChevronLeft, Eye, EyeOff, Pencil, Plus } from '@/lib/uiIcons'
 import { remove, save, saveMany } from '@/db'
 import type { Category, CategoryKind } from '@/db/types'
 import { COLORS, ICON_GROUPS } from '@/lib/icons'
+import { vDragScroll } from '@/lib/dragScroll'
 import { uid } from '@/lib/id'
 import { fmt } from '@/lib/money'
 import { useData } from '@/stores/data'
@@ -45,7 +46,7 @@ function subText(c: Category) {
   if (!c.parentId) parts.push(`${kidCount(c.id)} 個子分類`)
   if (c.budget) parts.push(`預算 $${fmt(c.budget)}`)
   if (c.hidden) parts.push('已隱藏')
-  return parts.join('　')
+  return parts.join('｜')
 }
 
 /** a top-level category opens its sub-categories; a sub-category is edited */
@@ -64,6 +65,7 @@ const icon = ref('tag')
 const color = ref(COLORS[0]!)
 const parentId = ref<string | null>(null)
 const budget = ref('')
+const pickingIcon = ref(false)
 
 function edit(c?: Category, parent: string | null = null) {
   editing.value = c ?? null
@@ -350,10 +352,22 @@ onBeforeUnmount(() => {
       v-model="open"
       :title="editing ? '編輯分類' : parentId ? '新增子分類' : '新增分類'"
     >
-      <div class="space-y-4">
-        <!-- the icon and colour as they will look, large, so choosing below shows its effect at once -->
+      <div class="space-y-4 pb-4">
+        <!-- the icon and colour as they will look; tapping the icon opens the picker -->
         <div class="flex items-end gap-3">
-          <CatIcon :icon="icon" :color="color" :size="64" />
+          <button
+            type="button"
+            class="relative shrink-0 transition active:scale-95"
+            aria-label="更換圖示"
+            @click="pickingIcon = true"
+          >
+            <CatIcon :icon="icon" :color="color" :size="64" />
+            <span
+              class="absolute -right-2 -bottom-2 grid size-6.5 place-items-center rounded-full border border-muted/40 bg-surface text-muted"
+            >
+              <Pencil :size="14" :stroke-width="2.2" />
+            </span>
+          </button>
           <div class="min-w-0 flex-1">
             <label class="label">名稱</label>
             <input v-model="name" class="input" maxlength="16" />
@@ -367,54 +381,16 @@ onBeforeUnmount(() => {
           <label class="label">預設每月預算（選填）</label>
           <input v-model="budget" class="input" inputmode="numeric" placeholder="0" />
           <p class="mt-1.5 px-1 text-xs text-muted">
-            某個月想不一樣，到<b>統計 → 預算</b>，點那個分類，就能只改那個月。
+            若想調整某個月，可到<b>統計 → 預算</b>修改。
           </p>
         </div>
         <div>
-          <label class="label">圖示</label>
-          <!-- the groups wrap inside the sheet's width instead of running off its edge -->
-          <div class="mb-2 flex flex-wrap gap-1.5">
-            <button
-              v-for="g in ICON_GROUPS"
-              :key="g.name"
-              class="chip py-1 text-xs"
-              @click="jumpTo(g.name)"
-            >
-              {{ g.name }}
-            </button>
-          </div>
-          <div ref="iconBox" class="relative max-h-72 overflow-y-auto p-1.5">
-            <section
-              v-for="g in ICON_GROUPS"
-              :key="g.name"
-              :data-group="g.name"
-              class="mb-3 last:mb-0"
-            >
-              <h3 class="mb-1.5 px-1 text-xs font-semibold text-muted">{{ g.name }}</h3>
-              <!-- as many columns as fit at least 50px each, then shared out evenly: no gap left over on the right -->
-              <div class="grid grid-cols-[repeat(auto-fill,minmax(50px,1fr))] gap-y-2.5">
-                <button
-                  v-for="k in g.keys"
-                  :key="k"
-                  class="grid place-items-center"
-                  :aria-label="k"
-                  :aria-pressed="icon === k"
-                  @click="icon = k"
-                >
-                  <!-- the chosen one is ringed along its own outline -->
-                  <CatIcon :icon="k" :color="color" :size="36" :ring="icon === k" />
-                </button>
-              </div>
-            </section>
-          </div>
-        </div>
-        <div>
           <label class="label">顏色</label>
-          <div class="flex flex-wrap gap-2.5 p-1">
+          <div class="grid grid-cols-[repeat(auto-fill,40px)] justify-between gap-x-3 gap-y-3.5">
             <button
               v-for="c in COLORS"
               :key="c"
-              class="size-9 rounded-full ring-offset-2 ring-offset-bg"
+              class="size-10 rounded-full ring-offset-2 ring-offset-bg transition"
               :class="color === c && 'ring-[3px] ring-primary'"
               :style="{ background: c }"
               :aria-label="c"
@@ -422,13 +398,65 @@ onBeforeUnmount(() => {
             />
           </div>
         </div>
+      </div>
+      <template #footer>
         <div class="flex gap-2">
           <button v-if="editing" class="btn btn-ghost text-danger" @click="destroy(editing)">
             刪除
           </button>
           <button class="btn btn-primary flex-1" @click="submit">儲存</button>
         </div>
-      </div>
+      </template>
     </BottomSheet>
+
+    <!-- the icon picker, a centred dialog above the edit sheet -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="pickingIcon"
+          class="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-4"
+          @click.self="pickingIcon = false"
+          @keydown.esc="pickingIcon = false"
+        >
+          <div class="card flex max-h-[80dvh] w-full max-w-sm flex-col gap-4 p-5 shadow-xl">
+            <h2 class="text-lg leading-snug font-bold">選擇圖示</h2>
+            <div v-drag-scroll class="scrollbar-none -mx-5 flex shrink-0 gap-1.5 overflow-x-auto px-5">
+              <button
+                v-for="g in ICON_GROUPS"
+                :key="g.name"
+                class="chip shrink-0 py-1 text-xs"
+                @click="jumpTo(g.name)"
+              >
+                {{ g.name }}
+              </button>
+            </div>
+            <div ref="iconBox" class="scrollbar-none relative -mx-1.5 min-h-0 flex-1 overflow-y-auto p-1.5">
+              <section
+                v-for="g in ICON_GROUPS"
+                :key="g.name"
+                :data-group="g.name"
+                class="mb-3 last:mb-0"
+              >
+                <h3 class="mb-1.5 text-xs font-semibold text-muted">{{ g.name }}</h3>
+                <!-- fixed size icons, as many per row as fit, spread edge to edge -->
+                <div class="grid grid-cols-[repeat(auto-fill,36px)] justify-between gap-x-1.5 gap-y-2.5">
+                  <button
+                    v-for="k in g.keys"
+                    :key="k"
+                    class="grid place-items-center"
+                    :aria-label="k"
+                    :aria-pressed="icon === k"
+                    @click="(icon = k), (pickingIcon = false)"
+                  >
+                    <CatIcon :icon="k" :color="color" :size="36" :ring="icon === k" />
+                  </button>
+                </div>
+              </section>
+            </div>
+            <button type="button" class="btn btn-soft" @click="pickingIcon = false">取消</button>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
