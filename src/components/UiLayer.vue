@@ -58,6 +58,7 @@ function submit() {
             <button
               type="submit"
               class="btn"
+              :disabled="ui.dialog.input ? !ui.dialog.input.value.trim() : false"
               :class="ui.dialog.danger ? 'btn-danger' : 'btn-primary'"
             >
               {{ ui.dialog.confirmText }}

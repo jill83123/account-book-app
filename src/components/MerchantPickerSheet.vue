@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Pencil, Plus, Store, X } from '@/lib/uiIcons'
-import { save } from '@/db'
+import { Pencil, Plus, Store, Trash2, X } from '@/lib/uiIcons'
+import { remove, save } from '@/db'
 import { useData } from '@/stores/data'
 import { useUi } from '@/stores/ui'
 import BottomSheet from './BottomSheet.vue'
@@ -27,6 +27,14 @@ async function rename(id: string) {
   if (!name || name === m.name) return
   if (data.merchants.some((x) => x.id !== m.id && x.name === name)) return ui.toast('已經有同名的商家', 'error')
   await save('merchants', { ...m, name })
+}
+
+async function destroy(id: string) {
+  const m = data.merchantMap.get(id)
+  if (!m) return
+  if (!(await ui.confirm(`刪除商家${m.name}？`, { message: '已記錄的帳目不會被刪除，只是不再顯示商家名稱。', danger: true, confirmText: '刪除' }))) return
+  await remove('merchants', m.id)
+  if (model.value === m.id) model.value = ''
 }
 
 const list = computed(() => {
@@ -76,6 +84,14 @@ function clear() {
             <span class="block truncate font-medium" :class="m.id === model && 'text-primary'">{{ m.name }}</span>
             <span class="block text-xs text-muted">{{ m.items.length }} 個品項</span>
           </span>
+        </button>
+        <button
+          v-if="!m.items.length"
+          class="icon-btn size-9 shrink-0 border-0 bg-transparent text-muted"
+          :aria-label="`刪除 ${m.name}`"
+          @click="destroy(m.id)"
+        >
+          <Trash2 :size="18" />
         </button>
         <button class="icon-btn size-9 shrink-0 border-0 bg-transparent text-muted" :aria-label="`重新命名 ${m.name}`" @click="rename(m.id)">
           <Pencil :size="18" />
