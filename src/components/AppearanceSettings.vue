@@ -40,7 +40,7 @@ const modes = [
         <button
           v-for="t in THEMES"
           :key="t.id"
-          class="flex min-w-14 flex-col items-center gap-2 rounded-2xl px-2 py-2"
+          class="flex min-w-14 flex-col items-center gap-2 rounded-2xl px-2 pt-1 pb-0"
           :aria-label="`主題色 ${t.name}`"
           :aria-pressed="s.themeColor === t.id"
           @click="s.themeColor = t.id"
