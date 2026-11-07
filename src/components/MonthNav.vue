@@ -21,17 +21,36 @@ const current = computed(() => Number(month.value.slice(0, 4)))
 const thisYear = Number(today().slice(0, 4))
 const thisMonth = ym(today())
 
+/** month mode: tapping the year in the picker switches to a grid of years */
+const pickingYear = ref(false)
+const showYears = computed(() => props.year || pickingYear.value)
+const shownYear = ref(0)
+
 watch(open, (o) => {
-  if (o) view.value = props.year ? current.value - 4 : current.value
+  if (o) {
+    pickingYear.value = false
+    view.value = props.year ? current.value - 4 : current.value
+  }
 })
 
 const years = computed(() => Array.from({ length: 12 }, (_, i) => view.value + i))
+
+function openYears() {
+  shownYear.value = view.value
+  view.value -= 4
+  pickingYear.value = true
+}
 
 function pickMonth(m: number) {
   month.value = `${view.value}-${String(m).padStart(2, '0')}`
   open.value = false
 }
 function pickYear(y: number) {
+  if (!props.year) {
+    view.value = y
+    pickingYear.value = false
+    return
+  }
   month.value = String(y)
   open.value = false
 }
@@ -69,17 +88,24 @@ function jumpNow() {
 
   <BottomSheet v-model="open" :title="year ? '選擇年份' : '選擇月份'">
     <div class="mb-3 flex items-center justify-between">
-      <button class="icon-btn" aria-label="往前" @click="view -= year ? 12 : 1"><ChevronLeft :size="20" /></button>
-      <span class="font-semibold">{{ year ? `${view}～${view + 11}` : `${view} 年` }}</span>
-      <button class="icon-btn" aria-label="往後" @click="view += year ? 12 : 1"><ChevronRight :size="20" /></button>
+      <button class="icon-btn" aria-label="往前" @click="view -= showYears ? 12 : 1"><ChevronLeft :size="20" /></button>
+      <span v-if="showYears" class="font-semibold">{{ `${view}～${view + 11}` }}</span>
+      <button v-else class="rounded-xl px-3 py-1.5 font-semibold" aria-label="選擇年份" @click="openYears">{{ view }} 年</button>
+      <button class="icon-btn" aria-label="往後" @click="view += showYears ? 12 : 1"><ChevronRight :size="20" /></button>
     </div>
     <div class="grid grid-cols-4 gap-2">
-      <template v-if="year">
+      <template v-if="showYears">
         <button
           v-for="y in years"
           :key="y"
           class="rounded-2xl py-3.5 font-medium transition"
-          :class="y === current ? 'bg-primary text-white' : y === thisYear ? 'bg-primary-soft text-primary' : 'bg-surface'"
+          :class="
+            y === (year ? current : shownYear)
+              ? 'bg-primary text-white'
+              : y === thisYear
+                ? 'bg-primary-soft text-primary'
+                : 'bg-surface'
+          "
           @click="pickYear(y)"
         >
           {{ y }}
