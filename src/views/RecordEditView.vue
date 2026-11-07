@@ -1676,11 +1676,13 @@ function cancel() {
               <span class="relative block">
                 <span class="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-sm text-muted">{{ foreign ? currency : '$' }}</span>
                 <input
-                  v-model="partEdit.amountText"
                   class="input w-full !pr-3 text-right"
                   :class="foreign ? '!pl-11' : '!pl-7'"
-                  inputmode="decimal"
+                  type="number"
+                  step="any"
+                  :value="partEdit.amountText"
                   placeholder="小計"
+                  @input="partEdit.amountText = ($event.target as HTMLInputElement).value"
                 />
               </span>
             </div>
