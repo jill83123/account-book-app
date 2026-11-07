@@ -24,7 +24,7 @@ const CATCH_UP_MS = 60_000
 /** opening a record to edit it: skip the sync if one ran within this long */
 const STALE_MS = 120_000
 /** away from the app this long: another device may have changed things, so catch up before anything is edited */
-const IDLE_MS = 60_000
+const IDLE_MS = 180_000
 /** the longest the screen is held while catching up */
 const CATCH_UP_WAIT_MS = 10_000
 
@@ -172,13 +172,8 @@ export const useSync = defineStore('sync', () => {
   async function refresh(maxAgeMs = STALE_MS, waitMs = 3000) {
     // an edit made here a moment ago means the user is busy on this device, so a pull before the next edit is not needed
     if (!canAuto() || Date.now() - Math.max(settings.s.lastSyncAt, lastLocalChange()) < maxAgeMs) return
-    // the screen shows a loading card while the pull runs, so nothing is typed before the newest copy is in
-    catchingUp.value = true
-    try {
-      await Promise.race([sync(), new Promise((r) => setTimeout(r, waitMs))])
-    } finally {
-      catchingUp.value = false
-    }
+    // no full screen cover here: the caller handles a newer copy arriving late (form reload, or a toast once touched)
+    await Promise.race([sync(), new Promise((r) => setTimeout(r, waitMs))])
   }
 
   function init() {
