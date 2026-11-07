@@ -9,7 +9,7 @@
  *   /push/*                           -> reminders, see push.js (the only thing stored here)
  */
 
-import { handlePush, sendDue } from './push.js'
+import { handlePush } from './push.js'
 import { handleAi } from './ai.js'
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
@@ -35,6 +35,8 @@ async function exchange(env, params) {
   const data = await res.json().catch(() => ({}))
   return { ok: res.ok, status: res.status, data }
 }
+
+export { PushDevice } from './push.js'
 
 export default {
   async fetch(request, env) {
@@ -104,9 +106,5 @@ export default {
     }
 
     return json({ error: 'not_found' }, 404, cors)
-  },
-
-  async scheduled(_event, env, ctx) {
-    ctx.waitUntil(sendDue(env))
   },
 }

@@ -100,19 +100,13 @@ cd worker
 npm install
 ```
 
-1. 建立 KV（存推播訂閱），把印出的 id 填進 `wrangler.local.toml` 的 `[[kv_namespaces]]`：
-
-   ```bash
-   npx wrangler kv namespace create account-book-push
-   ```
-
-2. 產生推播金鑰。公鑰與私鑰會直接寫進 `wrangler.local.toml`，不會印在畫面上：
+1. 產生推播金鑰。公鑰與私鑰會直接寫進 `wrangler.local.toml`，不會印在畫面上：
 
    ```bash
    node scripts/gen-vapid.mjs
    ```
 
-3. 填好 `wrangler.local.toml` 的其他欄位：
+2. 填好 `wrangler.local.toml` 的其他欄位：
 
    | 欄位               | 說明                                                                                      |
    | ------------------ | ----------------------------------------------------------------------------------------- |
@@ -120,23 +114,23 @@ npm install
    | `ALLOWED_ORIGINS`  | 允許呼叫 Worker 的來源，以逗號分隔（GitHub Pages 網址，開發時加 `http://localhost:5173`） |
    | `VAPID_SUBJECT`    | 推播服務有狀況時的聯絡方式，格式為 `mailto:你的信箱` 或網站網址，不可留空；不會真的寄信   |
 
-4. 設定 Google 用戶端密鑰：
+3. 設定 Google 用戶端密鑰：
 
    ```bash
    npx wrangler secret put GOOGLE_CLIENT_SECRET
    ```
 
-5. 部署。有欄位沒填會停下來並列出；部署時會把推播私鑰改存成 Cloudflare 的加密密鑰：
+4. 部署。有欄位沒填會停下來並列出；部署時會把推播私鑰改存成 Cloudflare 的加密密鑰：
 
    ```bash
    npm run deploy
    ```
 
-> `npm run deploy` 會檢查 KV 與推播金鑰都已填好，所以即使只想用試算表同步，也要先完成步驟 1、2。
+> `npm run deploy` 會檢查推播金鑰都已填好，所以即使只想用試算表同步，也要先完成步驟 1、2。
 
 ## 推播提醒
 
-選配，讓 App 關閉時也能收到提醒。App 會把這台裝置的推播訂閱，加上未來 14 天的每日提醒內容上傳；Worker 用 cron 每 5 分鐘檢查，到時間就發送。Worker 只存訂閱和簡短的提醒文字（例如：今天還沒有記帳），不存金額、對象、分類或任何帳目內容。
+選配，讓 App 關閉時也能收到提醒。App 會把這台裝置的推播訂閱，加上未來 14 天的每日提醒內容上傳；Worker 為每台裝置設一個 Durable Object 鬧鐘，到時間就準時發送，不用定期輪詢。Worker 只存訂閱和簡短的提醒文字（例如：今天還沒有記帳），不存金額、對象、分類或任何帳目內容。
 
 會提醒的事：
 

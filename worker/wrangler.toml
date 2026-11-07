@@ -21,12 +21,12 @@ VAPID_PRIVATE_JWK = ""
 # The Gemini API key for AI 發票辨識 is not stored here either. Set it with:  npx wrangler secret put GEMINI_API_KEY
 
 # --- 推播提醒（Web Push）---
-# 推播訂閱與提醒時間存在這個 KV。用這個指令建立，再把印出的 id 貼到下面：
-# npx wrangler kv namespace create account-book-push
-[[kv_namespaces]]
-binding = "PUSH"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+# 每台裝置一個 Durable Object，存訂閱與提醒時間，到時間自己醒來發送，不用排程輪詢。
+# 不需要另外建立任何東西，部署時會自動建好。
+[[durable_objects.bindings]]
+name = "PUSH_DEVICE"
+class_name = "PushDevice"
 
-# 每 5 分鐘檢查一次有沒有到時間的提醒
-[triggers]
-crons = ["*/5 * * * *"]
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["PushDevice"]

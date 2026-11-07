@@ -34,7 +34,7 @@ async function call<T>(
   const data = (await res.json().catch(() => ({}))) as { error?: string } & T
   if (!res.ok) {
     if (data.error === 'push_not_configured')
-      throw new Error('Worker 尚未設定推播（VAPID 金鑰或 KV）')
+      throw new Error('Worker 尚未設定推播（VAPID 金鑰）')
     if (data.error === 'subscription_expired')
       throw new Error('這台裝置的推播訂閱已失效，請關閉再重新開啟背景推播')
     throw new Error(data.error ?? `Worker 回應 ${res.status}`)

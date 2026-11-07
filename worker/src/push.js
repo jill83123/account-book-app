@@ -2,7 +2,7 @@
  * Bookkeeping reminders over Web Push.
  *
  * The app uploads its push subscription together with the reminder slots it worked out
- * (a time plus a short text); a cron trigger sends each slot when its time has come.
+ * (a time plus a short text); its Durable Object sends each slot when its time has come.
  * Only subscriptions and those short texts are stored, never amounts or records.
  *
  *   GET  /push/key                              -> { publicKey }
@@ -13,12 +13,11 @@
  * slot = { t: epoch ms, title: string, body: string }
  */
 
-const KEY_PREFIX = 'sub:'
 /** a slot this long past its time is dropped instead of sent (the phone was unreachable) */
 const SLOT_GRACE_MS = 6 * 60 * 60 * 1000
 const MAX_SLOTS = 14
-/** records are dropped after this long without an upload from the device */
-const RECORD_TTL = 60 * 60 * 24 * 30
+/** a device that never syncs again is forgotten after this long */
+const RECORD_TTL = 30 * 24 * 60 * 60 * 1000
 /** only the push services of the browsers are sent to, never an address a client made up */
 const PUSH_HOSTS = [
   'fcm.googleapis.com',
@@ -155,17 +154,6 @@ const validSub = (s) =>
   typeof s.keys?.auth === 'string' &&
   s.keys.auth.length <= 100
 
-/**
- * Save a record. Its slots and sent time are also kept as the key's metadata, which the cron job
- * gets for every key in one list call, so only the devices that are due have to be read.
- */
-function store(env, key, rec) {
-  return env.PUSH.put(key, JSON.stringify(rec), {
-    expirationTtl: RECORD_TTL,
-    metadata: { s: rec.slots.map((x) => x.t), sent: rec.sent },
-  })
-}
-
 const dueSlot = (slots, sent, now) =>
   slots.filter((s) => s.t <= now && s.t > sent && now - s.t < SLOT_GRACE_MS).at(-1)
 
@@ -179,84 +167,116 @@ const validSlot = (s) =>
 
 const cleanSlot = (s) => ({ t: s.t, title: s.title, body: s.body })
 
+/**
+ * One Durable Object per device. It keeps that device's subscription and slots and wakes itself
+ * with an alarm exactly when the next slot is due, so nothing has to poll on a schedule.
+ */
+export class PushDevice {
+  constructor(state, env) {
+    this.state = state
+    this.env = env
+  }
+
+  /** Alarm at the next slot that can still be sent; with none left, at the time the record expires. */
+  async plan(rec) {
+    const now = Date.now()
+    const next = rec.slots.filter((s) => s.t > rec.sent && now - s.t < SLOT_GRACE_MS).map((s) => s.t)
+    await this.state.storage.setAlarm(next.length ? Math.max(Math.min(...next), now) : now + RECORD_TTL)
+  }
+
+  async fetch(request) {
+    const body = await request.json()
+    const reply = (b, status) => Response.json(b, { status })
+    const rec = await this.state.storage.get('rec')
+
+    if (body.op === 'sync') {
+      const sent = rec?.sent ?? 0
+      const slots = body.slots.filter((x) => x.t > sent)
+      const next = { sub: body.sub, slots, sent }
+      // an upload that changes nothing costs no write
+      if (!rec || JSON.stringify(rec) !== JSON.stringify(next)) await this.state.storage.put('rec', next)
+      await this.plan(next)
+      return reply({}, 200)
+    }
+    if (body.op === 'unsubscribe') {
+      await this.state.storage.deleteAll()
+      return reply({}, 200)
+    }
+    if (body.op === 'test') {
+      if (!rec) return reply({ error: 'not_subscribed' }, 404)
+      try {
+        const ok = await send(this.env, rec.sub, {
+          title: '測試通知',
+          body: '收到這則通知，記帳提醒就能正常運作。',
+          url: './',
+        })
+        if (!ok) {
+          await this.state.storage.deleteAll()
+          return reply({ error: 'subscription_expired' }, 410)
+        }
+        return reply({}, 200)
+      } catch {
+        return reply({ error: 'push_failed' }, 502)
+      }
+    }
+    return reply({ error: 'bad_request' }, 400)
+  }
+
+  /** Send the slot whose time has come, then set the alarm for the next one. */
+  async alarm() {
+    const rec = await this.state.storage.get('rec')
+    if (!rec) return
+    const now = Date.now()
+    const slot = dueSlot(rec.slots, rec.sent, now)
+    if (slot) {
+      const message = messageOf(slot)
+      try {
+        const ok = message ? await send(this.env, rec.sub, message) : true
+        if (!ok) return await this.state.storage.deleteAll()
+      } catch {
+        // temporary failure: try again soon, until the grace time is over
+        await this.state.storage.setAlarm(now + 5 * 60 * 1000)
+        return
+      }
+      rec.sent = slot.t
+    }
+    rec.slots = rec.slots.filter((s) => s.t > now)
+    // nothing left and nobody synced for a long time: the device is gone
+    if (!slot && !rec.slots.length) return await this.state.storage.deleteAll()
+    await this.state.storage.put('rec', rec)
+    await this.plan(rec)
+  }
+}
+
 /** Returns a Response for a /push route, or null when the path is not one. */
 export async function handlePush(request, env, path, body, reply) {
   if (!path.startsWith('/push/')) return null
-  if (!env.PUSH || !env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_JWK)
+  if (!env.PUSH_DEVICE || !env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_JWK)
     return reply({ error: 'push_not_configured' }, 500)
 
   if (path === '/push/key' && request.method === 'GET')
     return reply({ publicKey: env.VAPID_PUBLIC_KEY }, 200)
   if (request.method !== 'POST') return reply({ error: 'method_not_allowed' }, 405)
 
+  const call = async (endpoint, payload) => {
+    const device = env.PUSH_DEVICE.get(env.PUSH_DEVICE.idFromName(await sha256Hex(endpoint)))
+    const res = await device.fetch('https://device/', { method: 'POST', body: JSON.stringify(payload) })
+    return reply(await res.json(), res.status)
+  }
+
   if (path === '/push/sync') {
     if (!validSub(body.subscription) || !Array.isArray(body.slots))
       return reply({ error: 'bad_request' }, 400)
     const slots = body.slots.filter(validSlot).slice(0, MAX_SLOTS).map(cleanSlot)
-    const key = KEY_PREFIX + (await sha256Hex(body.subscription.endpoint))
-    const old = await env.PUSH.get(key, 'json')
     const { endpoint, keys } = body.subscription
-    // a device that stops syncing falls silent after a while; its record is dropped then
-    await store(env, key, {
-      sub: { endpoint, keys: { p256dh: keys.p256dh, auth: keys.auth } },
-      slots,
-      sent: old?.sent ?? 0,
-    })
-    return reply({}, 200)
+    const sub = { endpoint, keys: { p256dh: keys.p256dh, auth: keys.auth } }
+    return call(endpoint, { op: 'sync', sub, slots })
   }
 
   if (path === '/push/unsubscribe' || path === '/push/test') {
     if (typeof body.endpoint !== 'string') return reply({ error: 'bad_request' }, 400)
-    const key = KEY_PREFIX + (await sha256Hex(body.endpoint))
-    if (path === '/push/unsubscribe') {
-      await env.PUSH.delete(key)
-      return reply({}, 200)
-    }
-    const rec = await env.PUSH.get(key, 'json')
-    if (!rec) return reply({ error: 'not_subscribed' }, 404)
-    try {
-      const ok = await send(env, rec.sub, { title: '測試通知', body: '收到這則通知，記帳提醒就能正常運作。', url: './' })
-      if (!ok) await env.PUSH.delete(key)
-      return ok ? reply({}, 200) : reply({ error: 'subscription_expired' }, 410)
-    } catch {
-      return reply({ error: 'push_failed' }, 502)
-    }
+    return call(body.endpoint, { op: path === '/push/unsubscribe' ? 'unsubscribe' : 'test' })
   }
 
   return reply({ error: 'not_found' }, 404)
-}
-
-/** Cron: send every slot whose time has come and that was not sent yet. */
-export async function sendDue(env) {
-  if (!env.PUSH || !env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_JWK) return
-  const now = Date.now()
-  let cursor
-  do {
-    const page = await env.PUSH.list({ prefix: KEY_PREFIX, cursor })
-    cursor = page.list_complete ? undefined : page.cursor
-    for (const { name, metadata } of page.keys) {
-      // the list already says when each device is due, so only those are read
-      if (metadata?.s) {
-        const slots = metadata.s.map((t) => ({ t }))
-        if (!dueSlot(slots, metadata.sent ?? 0, now)) continue
-      }
-      const rec = await env.PUSH.get(name, 'json')
-      if (!rec) continue
-      const slot = dueSlot(rec.slots, rec.sent, now)
-      if (!slot) continue
-      const message = messageOf(slot)
-      try {
-        const ok = message ? await send(env, rec.sub, message) : true
-        if (!ok) {
-          await env.PUSH.delete(name)
-          continue
-        }
-      } catch {
-        continue // temporary failure: try again on the next run, until the grace time is over
-      }
-      rec.sent = slot.t
-      rec.slots = rec.slots.filter((s) => s.t > now)
-      await store(env, name, rec)
-    }
-  } while (cursor)
 }
