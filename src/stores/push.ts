@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
+import { markLocalChange } from '@/db'
 import { pushSlots } from '@/lib/pushSlots'
 import {
   currentSubscription,
@@ -44,7 +45,7 @@ export const usePush = defineStore('push', () => {
   /** Send the plan to the Worker unless nothing changed since the last time. */
   async function upload(force = false, keepalive = false) {
     clearTimeout(timer)
-    if (!s.pushEnabled || !data.ready || !navigator.onLine) return
+    if (!s.remindEnabled || !data.ready || !navigator.onLine) return
     const sub = await currentSubscription()
     if (!sub) return
     const planned = plan()
@@ -70,10 +71,12 @@ export const usePush = defineStore('push', () => {
     busy.value = true
     try {
       await subscribePush(s.workerUrl)
-      s.pushEnabled = true
+      s.remindEnabled = true
+      markLocalChange()
       await upload(true)
     } catch (e) {
-      s.pushEnabled = false
+      s.remindEnabled = false
+      markLocalChange()
       await unsubscribePush(s.workerUrl).catch(() => {})
       error.value = e instanceof Error ? e.message : String(e)
       throw e
@@ -85,9 +88,12 @@ export const usePush = defineStore('push', () => {
   async function disable() {
     busy.value = true
     clearTimeout(timer)
-    s.pushEnabled = false
+    s.remindEnabled = false
+    // turned off on purpose: do not offer it again
+    s.remindHintDismissed = true
+    markLocalChange()
     try {
-      await unsubscribePush(s.workerUrl)
+      if (supported) await unsubscribePush(s.workerUrl)
       error.value = ''
     } finally {
       busy.value = false
@@ -120,7 +126,6 @@ export const usePush = defineStore('push', () => {
         () => data.recurrings,
         () => s.remindTime,
         () => s.remindEnabled,
-        () => s.pushEnabled,
       ],
       later,
     )

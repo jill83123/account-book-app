@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { markLocalChange } from '@/db'
-import { notify } from '@/lib/reminders'
 import { LoaderCircle } from '@/lib/uiIcons'
 import { usePush } from '@/stores/push'
 import { useSettings } from '@/stores/settings'
@@ -12,36 +12,36 @@ import ToggleSwitch from '@/components/ToggleSwitch.vue'
 const { s } = useSettings()
 const ui = useUi()
 const push = usePush()
+const router = useRouter()
 
-// the reminder switch and time are shared through the sheet, so changing them counts as a change to sync
-const remindOn = computed({
-  get: () => s.remindEnabled,
-  set: (on: boolean) => {
-    s.remindEnabled = on
-    // turning it off on purpose: do not offer it again
-    if (!on) s.remindHintDismissed = true
-    markLocalChange()
-  },
-})
+const permissionDenied = ref('Notification' in window && Notification.permission === 'denied')
+
+// the reminder is a background push, so turning it on subscribes this device
+async function toggle(on: boolean) {
+  if (on && !s.workerUrl.trim()) {
+    const go = await ui.confirm('尚未設定同步服務網址', {
+      message: '每日提醒由同步服務（Cloudflare Worker）送出，請先到 Google 試算表同步頁填入網址。',
+      confirmText: '前往設定',
+    })
+    if (go) router.push('/more/data')
+    return
+  }
+  try {
+    if (on) await push.enable()
+    else await push.disable()
+  } catch (e) {
+    ui.toast(e instanceof Error ? e.message : String(e), 'error')
+  }
+  permissionDenied.value = 'Notification' in window && Notification.permission === 'denied'
+}
+
+// the reminder time is shared through the sheet, so changing it counts as a change to sync
 const remindTime = computed({
   get: () => s.remindTime,
   set: (t: string) => {
     s.remindTime = t
     s.remindTimeAt = Date.now()
     markLocalChange()
-  },
-})
-
-// background push needs the Worker address, the same one the sheet sync uses
-const pushOn = computed({
-  get: () => s.pushEnabled,
-  set: (on: boolean) => {
-    if (on && !s.workerUrl.trim()) return ui.toast('請先到 Google 試算表同步區塊填入同步服務網址', 'error')
-    const job = on ? push.enable() : push.disable()
-    job.then(
-      () => ui.toast(on ? '已開啟背景推播' : '已關閉背景推播'),
-      (e: unknown) => ui.toast(e instanceof Error ? e.message : String(e), 'error'),
-    )
   },
 })
 
@@ -53,43 +53,26 @@ async function sendTest() {
     ui.toast(e instanceof Error ? e.message : String(e), 'error')
   }
 }
-
-const permission = ref('Notification' in window ? Notification.permission : 'unsupported')
-
-async function allow() {
-  if (!('Notification' in window)) return ui.toast('這個瀏覽器不支援通知', 'error')
-  permission.value = await Notification.requestPermission()
-  if (permission.value === 'granted') void notify('通知已開啟', '到了每日提醒時間，打開 App 時會提醒你記帳')
-}
 </script>
 
 <template>
-  <div class="space-y-3 pb-4">
+  <div class="space-y-4 pb-4">
     <div class="mx-4 h-px bg-line" />
+    <p v-if="!push.supported" class="px-4 text-xs text-danger">這個瀏覽器不支援推播通知，iPhone 請先加入主畫面再開啟</p>
     <div class="flex items-center justify-between gap-3 px-4">
-      <span class="text-sm">每日提醒</span>
-      <ToggleSwitch v-model="remindOn" label="每日提醒" />
+      <div class="min-w-0">
+        <p class="text-sm">每日提醒</p>
+        <p v-if="permissionDenied" class="text-xs text-danger">通知已被封鎖，請到瀏覽器設定開啟</p>
+        <p v-else-if="push.error" class="text-xs text-danger">{{ push.error }}</p>
+      </div>
+      <ToggleSwitch :model-value="s.remindEnabled" label="每日提醒" :disabled="push.busy" @update:model-value="toggle" />
     </div>
     <div class="flex items-center justify-between gap-3 px-4">
       <span class="text-sm">提醒時間</span>
       <TimeField v-model="remindTime" class="w-28 disabled:opacity-50" title="提醒時間" :disabled="!s.remindEnabled" />
     </div>
-    <div v-if="push.supported" class="flex items-center justify-between gap-3 px-4">
-      <div class="min-w-0">
-        <p class="text-sm">背景推播</p>
-        <p v-if="push.busy" class="text-xs text-muted">處理中…</p>
-      </div>
-      <ToggleSwitch v-model="pushOn" label="背景推播" :disabled="push.busy || !s.remindEnabled" />
+    <div v-if="s.remindEnabled" class="px-4">
+      <button class="btn btn-soft w-full" :disabled="push.busy" @click="sendTest"><LoaderCircle v-if="push.busy" :size="16" class="animate-spin" />傳一則測試通知</button>
     </div>
-    <p v-if="permission === 'denied' || permission === 'unsupported'" class="px-4 text-xs text-danger">
-      {{ permission === 'denied' ? '通知已被封鎖，請到瀏覽器設定開啟' : '這個瀏覽器不支援通知' }}
-    </p>
-    <div v-else-if="permission !== 'granted'" class="px-4">
-      <button class="btn btn-soft w-full" :disabled="!s.remindEnabled" @click="allow">允許通知</button>
-    </div>
-    <div v-if="s.pushEnabled" class="px-4">
-      <button class="btn btn-soft w-full" :disabled="push.busy || !s.remindEnabled" @click="sendTest"><LoaderCircle v-if="push.busy" :size="16" class="animate-spin" />傳一則測試通知</button>
-    </div>
-    <p v-if="push.error" class="px-4 text-xs text-danger">{{ push.error }}</p>
   </div>
 </template>

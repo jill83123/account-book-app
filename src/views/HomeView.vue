@@ -2,7 +2,6 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Bell, ChevronDown, Cloud, CloudCheck, CloudOff, ListChecks, Plus, RefreshCw, Search, X } from '@/lib/uiIcons'
-import { markLocalChange } from '@/db'
 import { useData } from '@/stores/data'
 import { useSettings } from '@/stores/settings'
 import type { Rec } from '@/db/types'
@@ -11,6 +10,7 @@ import { useUi } from '@/stores/ui'
 import { addYm, monthGrid, parse, today, weekday, WEEKDAYS, ym } from '@/lib/date'
 import { fmt } from '@/lib/money'
 import { notify } from '@/lib/reminders'
+import { usePush } from '@/stores/push'
 import { useReminders } from '@/stores/reminders'
 import { useSync } from '@/stores/sync'
 import MonthNav from '@/components/MonthNav.vue'
@@ -23,6 +23,7 @@ const data = useData()
 const ui = useUi()
 const { s } = useSettings()
 const sync = useSync()
+const push = usePush()
 
 /** where the Google Sheets sync stands; hidden until sync has been set up.
  *  `go`: a tap opens the sync settings, `sync`: a tap syncs right away */
@@ -39,11 +40,13 @@ const syncState = computed(() => {
 const remindHint = computed(() => s.remindOnElsewhere && !s.remindEnabled && !s.remindHintDismissed && sync.signedIn)
 
 async function turnOnRemind() {
-  s.remindEnabled = true
   s.remindHintDismissed = true
-  markLocalChange()
-  if ('Notification' in window && Notification.permission === 'default') await Notification.requestPermission().catch(() => {})
-  ui.toast('已開啟每日提醒', 'success')
+  try {
+    await push.enable()
+    ui.toast('已開啟每日提醒', 'success')
+  } catch (e) {
+    ui.toast(e instanceof Error ? e.message : String(e), 'error')
+  }
 }
 
 function tapSync() {

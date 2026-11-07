@@ -28,9 +28,8 @@ export interface LocalSettings {
   geminiModel: string
   /** how a scanned receipt is written down */
   scanMode: 'split' | 'merge'
+  /** this device gets the reminders as push notifications, even when the app is closed */
   remindEnabled: boolean
-  /** this device gets the reminders as push notifications even when the app is closed */
-  pushEnabled: boolean
   /** HH:mm */
   remindTime: string
   /** when remindTime was last changed on any device (the newest change wins when devices sync) */
@@ -87,7 +86,6 @@ const defaults: LocalSettings = {
   geminiModel: DEFAULT_GEMINI_MODEL,
   scanMode: 'split',
   remindEnabled: false,
-  pushEnabled: false,
   remindTime: '21:00',
   remindTimeAt: 0,
   deviceId: '',
