@@ -849,10 +849,12 @@ function removeDetail(id: string) {
   line.value.details = line.value.details.filter((d) => d.id !== id)
   syncDetails()
 }
-function dropPart() {
+async function dropPart() {
   const p = partEdit.value
+  if (!p) return
+  if (!(await ui.confirm('刪除這個細項？', { danger: true, confirmText: '刪除' }))) return
   partEdit.value = null
-  if (p) removeDetail(p.id)
+  removeDetail(p.id)
 }
 
 // ---- reordering the parts: the bar on a row is dragged ----
@@ -1653,7 +1655,18 @@ function cancel() {
           @keydown.esc="partEdit = null"
         >
           <form class="card w-full max-w-[21rem] space-y-5 p-5 shadow-xl" @submit.prevent="savePart">
-            <h2 class="text-lg leading-snug font-bold">{{ partEdit.isNew ? '新增細項' : '編輯細項' }}</h2>
+            <div class="flex items-center justify-between gap-2">
+              <h2 class="text-lg leading-snug font-bold">{{ partEdit.isNew ? '新增細項' : '編輯細項' }}</h2>
+              <button
+                v-if="!partEdit.isNew"
+                type="button"
+                class="icon-btn -my-1.5 -mr-2 size-9 border-0 bg-transparent text-danger"
+                aria-label="刪除這個細項"
+                @click="dropPart"
+              >
+                <Trash2 :size="18" />
+              </button>
+            </div>
             <div class="space-y-3">
               <input ref="partNameEl" v-model="partEdit.name" class="input" placeholder="名稱，例如 漢堡" />
               <div class="grid grid-cols-2 gap-3">
@@ -1686,12 +1699,9 @@ function cancel() {
                 />
               </span>
             </div>
-            <div class="space-y-2">
-              <div class="grid grid-cols-2 gap-2">
-                <button type="button" class="btn btn-soft" @click="partEdit = null">取消</button>
-                <button type="submit" class="btn btn-primary">確認</button>
-              </div>
-              <button v-if="!partEdit.isNew" type="button" class="btn btn-ghost w-full text-danger" @click="dropPart">刪除這個細項</button>
+            <div class="grid grid-cols-2 gap-2">
+              <button type="button" class="btn btn-soft" @click="partEdit = null">取消</button>
+              <button type="submit" class="btn btn-primary">確認</button>
             </div>
           </form>
         </div>
