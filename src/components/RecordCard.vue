@@ -7,6 +7,7 @@ import { useData } from '@/stores/data'
 import { fmt } from '@/lib/money'
 import { P } from '@/lib/colors'
 import CatIcon from './CatIcon.vue'
+import { lineName } from '@/lib/recurrence'
 
 const props = defineProps<{ rec: Rec; showDate?: boolean; shortDate?: boolean; showLedger?: boolean; selecting?: boolean; checked?: boolean; dense?: boolean }>()
 const data = useData()
@@ -35,9 +36,9 @@ const title = computed(() => {
   const r = props.rec
   if (r.type === 'transfer') return '轉帳'
   if (r.adjust) return '餘額調整'
-  if (multi.value) return merchant.value || first.value?.name || '多項目'
+  if (multi.value) return merchant.value || (first.value && lineName(first.value)) || '多項目'
   // an item is called by its name, else by what it holds (蛋餅、奶茶), else by its category; the category tag sits below
-  return first.value?.name || parts.value || cat.value?.name || '未命名'
+  return (first.value && lineName(first.value)) || parts.value || cat.value?.name || '未命名'
 })
 /** the title already is the category only when nothing else could name the item */
 const titleIsCat = computed(() => !first.value?.name && !parts.value)
@@ -59,7 +60,7 @@ function basePieces(): Piece[] {
   if (r.type === 'transfer') return [{ kind: 'text', text: `${account.value} → ${data.accMap.get(r.toAccountId ?? '')?.name ?? ''}` }]
   if (r.adjust) return [{ kind: 'text', text: r.type === 'income' ? '補上差額' : '扣除差額' }]
   if (multi.value) {
-    const items: Piece = { kind: 'text', text: r.lines.map((l) => l.name || data.catName(l.categoryId)).join('、') }
+    const items: Piece = { kind: 'text', text: r.lines.map((l) => lineName(l) || data.catName(l.categoryId)).join('、') }
     // the category tag sits in the same place as on a single item: the shared category, or that there are several
     const label = mixed.value ? '多分類' : cat.value?.name
     return label ? [{ kind: 'cat', text: label }, items] : [items]

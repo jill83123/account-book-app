@@ -17,7 +17,7 @@ function splitText(r: Rec, who: (id: string) => string): string {
 }
 import { accountBalances, amortSchedule, cardCycles, countedRecords, isForeignAccount, loanOutstanding, spendOn, toEntries } from '../calc'
 import { WEEKDAYS, parse, today, ym } from '../date'
-import { FREQ_LABEL, nextDue, repeatLabel } from '../recurrence'
+import { FREQ_LABEL, nextDue, repeatLabel, lineName } from '../recurrence'
 import type { Cell } from './sheets'
 
 export interface Snapshot {
@@ -157,7 +157,7 @@ function detail(
       rows.push([
         ...base,
         merchant,
-        l.name,
+        lineName(l),
         top,
         sub,
         l.amount,
@@ -270,7 +270,7 @@ function amortTable(
           text(p.ym),
           r.date,
           c.ledgers.get(r.ledgerId)?.name ?? '',
-          l.name,
+          lineName(l),
           sub ? `${top} › ${sub}` : top,
           p.amount,
           l.amount,

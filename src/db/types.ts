@@ -77,6 +77,8 @@ export interface Line {
   details?: { name: string; amount: number; /** how many, when it was noted */ qty?: number }[]
   /** spread this expense over this many months in reports (the cash still leaves on the date) */
   amortMonths?: number
+  /** made by an installment plan: which period this is; the name stays the plan's own and the period is added when shown */
+  period?: { n: number; of: number }
 }
 
 export type RecordType = 'expense' | 'income' | 'transfer'

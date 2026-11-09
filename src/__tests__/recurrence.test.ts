@@ -5,11 +5,13 @@ import {
   autoPostDue,
   buildRecord,
   isFinished,
+  lineName,
   nextDue,
   occurrenceDate,
   pendingOccurrences,
   repeatLabel,
   resolveOccurrence,
+  splitInstallmentPeriods,
 } from '@/lib/recurrence'
 import { addDays, today } from '@/lib/date'
 import { line } from './helpers'
@@ -68,7 +70,9 @@ describe('buildRecord', () => {
     const r = rule({ kind: 'installment', installment: { total: 1000, periods: 3, fee: 15 } })
     const last = buildRecord(r, 2)
     expect(last.lines[0]!.amount).toBe(334)
-    expect(last.lines[0]!.name).toContain('(3/3)')
+    expect(last.lines[0]!.name).toBe('rent')
+    expect(last.lines[0]!.period).toEqual({ n: 3, of: 3 })
+    expect(lineName(last.lines[0]!)).toBe('rent (3/3)')
     expect(last.lines[1]!.amount).toBe(15)
     expect(last.total).toBe(349)
     const sum = [0, 1, 2].reduce((s, n) => s + buildRecord(r, n).lines[0]!.amount, 0)
@@ -135,5 +139,19 @@ describe('db-backed posting', () => {
     // a stale pending (already handled) is ignored
     await resolveOccurrence(p0!, true)
     expect((await db.recurrings.get('rule1'))!.generated).toBe(2)
+  })
+})
+
+describe('splitInstallmentPeriods', () => {
+  it('moves the period out of an old installment name, once', async () => {
+    await Promise.all([db.recurrings.clear(), db.records.clear()])
+    await db.recurrings.add(rule({ id: 'p1', name: '手機分期', kind: 'installment', installment: { total: 1200, periods: 12, fee: 0 } }))
+    await db.records.add({ ...buildRecord(rule({ id: 'p1' }), 0), id: 'r1', recurringId: 'p1', lines: [{ ...line(100), name: '手機分期（3 / 12）' }] })
+    await splitInstallmentPeriods()
+    const once = (await db.records.get('r1'))!
+    expect(once.lines[0]!.name).toBe('手機分期')
+    expect(once.lines[0]!.period).toEqual({ n: 3, of: 12 })
+    await splitInstallmentPeriods()
+    expect((await db.records.get('r1'))!.updatedAt).toBe(once.updatedAt)
   })
 })

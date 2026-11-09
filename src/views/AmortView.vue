@@ -12,6 +12,7 @@ import BottomSheet from '@/components/BottomSheet.vue'
 import CatIcon from '@/components/CatIcon.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import ToggleSwitch from '@/components/ToggleSwitch.vue'
+import { lineName } from '@/lib/recurrence'
 
 interface Item {
   rec: Rec
@@ -30,7 +31,7 @@ const all = computed<Item[]>(() =>
 )
 const running = computed(() => all.value.filter((i) => (i.line.amortMonths ?? 1) > 1))
 
-const title = (i: Item) => i.line.name || data.catName(i.line.categoryId)
+const title = (i: Item) => lineName(i.line) || data.catName(i.line.categoryId)
 const shop = (i: Item) => (i.rec.merchantId ? (data.merchantMap.get(i.rec.merchantId)?.name ?? '') : '')
 const perMonth = (amount: number, months: number) => Math.round(amount / months)
 const lastMonth = (i: Item, months: number) => addYm(ym(i.rec.date), months - 1)

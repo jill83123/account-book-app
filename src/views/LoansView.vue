@@ -19,6 +19,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import PillTabs from '@/components/PillTabs.vue'
 import SelectField from '@/components/SelectField.vue'
 import MoneyInput from '@/components/MoneyInput.vue'
+import { lineName } from '@/lib/recurrence'
 
 const data = useData()
 const ui = useUi()
@@ -169,7 +170,7 @@ const sourceTitle = computed(() => {
   const r = source.value
   if (!r) return ''
   const l = r.lines[0]
-  return (r.lines.length === 1 && (l?.name || data.catName(l?.categoryId ?? ''))) || (r.merchantId && data.merchantMap.get(r.merchantId)?.name) || '這筆消費'
+  return (r.lines.length === 1 && ((l && lineName(l)) || data.catName(l?.categoryId ?? ''))) || (r.merchantId && data.merchantMap.get(r.merchantId)?.name) || '這筆消費'
 })
 function openSource() {
   const id = cur.value?.recordId

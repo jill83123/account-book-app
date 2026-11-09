@@ -7,7 +7,7 @@ import App from './App.vue'
 import router from './router'
 import { groupStarterIncome, moveOtherLast, recolorStarterLedger, refreshStarterCategories, seedIfEmpty, splitInterestIncome, STARTER_VERSION } from './lib/seed'
 import { migratePalette, PALETTE_VERSION } from './lib/palette'
-import { autoPostDue } from './lib/recurrence'
+import { autoPostDue, splitInstallmentPeriods } from './lib/recurrence'
 import { useSettings } from './stores/settings'
 import { useData } from './stores/data'
 import { useSync } from './stores/sync'
@@ -43,6 +43,7 @@ if (!settings.s.incomeInterest) {
   await splitInterestIncome()
   settings.s.incomeInterest = true
 }
+await splitInstallmentPeriods()
 await autoPostDue()
 useData().start()
 useSync().init()

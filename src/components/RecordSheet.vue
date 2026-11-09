@@ -17,6 +17,7 @@ import CatIcon from './CatIcon.vue'
 import CatPath from './CatPath.vue'
 import DateField from './DateField.vue'
 import MoneyInput from './MoneyInput.vue'
+import { lineName } from '@/lib/recurrence'
 
 const router = useRouter()
 const data = useData()
@@ -78,7 +79,7 @@ const title = computed(() => {
   if (r.adjust) return '餘額調整'
   if (r.lines.length > 1) return merchant.value || `${r.lines.length} 個品項`
   const l = r.lines[0]
-  return l?.name || data.catName(l?.categoryId ?? '') || '未命名'
+  return (l && lineName(l)) || data.catName(l?.categoryId ?? '') || '未命名'
 })
 
 const when = computed(() => {
@@ -206,7 +207,7 @@ async function destroy() {
           <CatIcon :icon="data.catMap.get(l.categoryId)?.icon" :color="data.catMap.get(l.categoryId)?.color" :size="36" />
           <div class="min-w-0 flex-1">
             <p class="mb-0.5 flex min-w-0 items-center text-xs text-ink/70"><CatPath :id="l.categoryId" /></p>
-            <p class="truncate text-sm font-medium">{{ l.name || data.catName(l.categoryId) }}</p>
+            <p class="truncate text-sm font-medium">{{ lineName(l) || data.catName(l.categoryId) }}</p>
             <p v-if="l.note || (l.amortMonths && l.amortMonths > 1)" class="flex items-center gap-2 truncate text-xs text-muted">
               <span v-if="l.note" class="truncate">{{ l.note }}</span>
               <span v-if="l.amortMonths && l.amortMonths > 1" class="shrink-0">分 {{ l.amortMonths }} 個月攤提</span>

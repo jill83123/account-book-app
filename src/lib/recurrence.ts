@@ -43,6 +43,35 @@ export function nextDue(r: Recurring): string | null {
   return d
 }
 
+/** an item's name as shown: an installment adds which period it is */
+export const lineName = (l: Pick<Line, 'name' | 'period'>) =>
+  l.period && l.name ? `${l.name} (${l.period.n}/${l.period.of})` : l.name
+
+/**
+ * Records made by an installment plan used to carry the period inside their name (手機分期 (3/12)):
+ * move it into the item's own field so the way it is written can change.
+ */
+export async function splitInstallmentPeriods(): Promise<void> {
+  const plans = new Set((await db.recurrings.filter((r) => !r.deleted && Boolean(r.installment)).toArray()).map((r) => r.id))
+  if (!plans.size) return
+  const pattern = /^(.*?)\s*[（(]\s*(\d+)\s*\/\s*(\d+)\s*[）)]$/
+  const rows = await db.records.filter((r) => !r.deleted && Boolean(r.recurringId && plans.has(r.recurringId))).toArray()
+  const fixed: Rec[] = []
+  for (const r of rows) {
+    let changed = false
+    const lines = r.lines.map((l) => {
+      const m = l.period ? null : pattern.exec(l.name)
+      if (!m) return l
+      changed = true
+      return { ...l, name: m[1]!, period: { n: Number(m[2]), of: Number(m[3]) } }
+    })
+    if (changed) fixed.push({ ...r, lines, updatedAt: stamp() })
+  }
+  if (!fixed.length) return
+  await db.records.bulkPut(fixed)
+  markLocalChange()
+}
+
 export function isFinished(r: Recurring): boolean {
   if (r.count != null && r.generated >= r.count) return true
   const d = occurrenceDate(r, r.generated)
@@ -59,7 +88,8 @@ export function buildRecord(r: Recurring, n: number): Rec {
     lines = [
       {
         id: uid(),
-        name: `${r.name} (${n + 1}/${periods})`,
+        name: r.name,
+        period: { n: n + 1, of: periods },
         categoryId: base.categoryId,
         amount: splitEven(total, periods)[n] ?? 0,
       },

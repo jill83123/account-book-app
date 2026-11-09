@@ -68,6 +68,8 @@ interface LineForm {
   categoryId: string
   amountText: string
   amortMonths: number
+  /** kept as it was: the period of an installment's item */
+  period?: { n: number; of: number }
   note: string
   /** starred: remember this item under the merchant */
   remember: boolean
@@ -291,6 +293,7 @@ function load() {
         categoryId: l.categoryId,
         amountText: String(l.amount),
         amortMonths: l.amortMonths ?? 1,
+        period: l.period,
         note: l.note ?? '',
         remember: remembered(l.name),
         wasRemembered: !copying && remembered(l.name),
@@ -1048,6 +1051,7 @@ async function submit() {
       name: l.name.trim(),
       categoryId: l.categoryId,
       amount: amountOf(l),
+      ...(l.period ? { period: l.period } : {}),
       ...(l.note.trim() ? { note: l.note.trim() } : {}),
       ...(detailsOf(l).length ? { details: detailsOf(l) } : {}),
       // spreading an expense over months is set up under 更多 → 攤提; editing a record keeps what is there
