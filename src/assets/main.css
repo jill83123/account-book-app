@@ -36,9 +36,19 @@
   color-scheme: dark;
 }
 
+/* every symbol (not letters or digits) comes from Chiron Hei HK, to sit with the Chinese text */
+@font-face {
+  font-family: 'Slash';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('@fontsource-variable/chiron-hei-hk/files/chiron-hei-hk-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0021-002B, U+002D-002F, U+003A-0040, U+005B-0060, U+007B-007E, U+00B7, U+00D7, U+00F7;
+}
+
 @theme inline {
   --font-sans:
-    'Inter Variable', 'Chiron Hei HK Variable', 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei',
+    'Slash', 'Inter Variable', 'Chiron Hei HK Variable', 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei',
     system-ui, sans-serif;
   --color-primary: var(--primary);
   --color-primary-soft: color-mix(in oklab, var(--primary) 14%, var(--surface));

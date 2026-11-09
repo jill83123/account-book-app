@@ -18,6 +18,7 @@ import DateField from '@/components/DateField.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import PillTabs from '@/components/PillTabs.vue'
 import SelectField from '@/components/SelectField.vue'
+import MoneyInput from '@/components/MoneyInput.vue'
 
 const data = useData()
 const ui = useUi()
@@ -259,7 +260,7 @@ const accountItems = computed(() => [
             <label class="label">金額</label>
             <span class="relative block">
               <span class="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-muted">$</span>
-              <input v-model="principal" class="input !pl-7" inputmode="decimal" placeholder="0" />
+              <MoneyInput v-model="principal" class="input !pl-7" inputmode="decimal" placeholder="0" />
             </span>
           </div>
         </div>
@@ -324,7 +325,7 @@ const accountItems = computed(() => [
               <label class="label">{{ repayWord }}金額</label>
               <span class="relative block">
                 <span class="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-muted">$</span>
-                <input v-model="repayAmount" class="input !pl-7" inputmode="decimal" placeholder="0" />
+                <MoneyInput v-model="repayAmount" class="input !pl-7" inputmode="decimal" placeholder="0" />
               </span>
             </div>
             <div>

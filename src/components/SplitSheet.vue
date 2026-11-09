@@ -6,6 +6,7 @@ import { sharesFor } from '@/lib/split'
 import { useMembers } from '@/stores/members'
 import BottomSheet from './BottomSheet.vue'
 import PillTabs from './PillTabs.vue'
+import MoneyInput from './MoneyInput.vue'
 
 type Split = NonNullable<Rec['split']>
 type Mode = Split['mode'] | 'none'
@@ -86,7 +87,7 @@ function done() {
         </div>
         <div>
           <label class="label" for="split-mine">我的部分（這筆一共 ${{ fmt(total) }}）</label>
-          <input id="split-mine" v-model="mineText" class="input" inputmode="decimal" placeholder="0" />
+          <MoneyInput id="split-mine" v-model="mineText" class="input" inputmode="decimal" placeholder="0" />
           <p v-if="payer && mineOther > 0 && !tooMuch" class="mt-1.5 px-1 text-xs text-muted">你欠{{ members.nameOf(payer) }} ${{ fmt(mineOther) }}，之後在<b>借款</b>頁還給他。</p>
         </div>
       </template>
@@ -106,7 +107,7 @@ function done() {
           <span class="shrink-0 text-xs text-muted">欠我</span>
           <span v-if="mode === 'custom'" class="relative w-28 shrink-0">
             <span class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-muted">$</span>
-            <input v-model="typed[p]" class="input w-full !min-h-0 !py-2 !pl-6 text-right" inputmode="decimal" placeholder="0" />
+            <MoneyInput v-model="typed[p]" class="input w-full !min-h-0 !py-2 !pl-6 text-right" inputmode="decimal" placeholder="0" />
           </span>
           <span v-else class="text-lg font-semibold tabular-nums">{{ total > 0 ? `$${fmt(amountOf(p))}` : '—' }}</span>
         </div>

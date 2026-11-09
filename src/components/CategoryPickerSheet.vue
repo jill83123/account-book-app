@@ -46,7 +46,7 @@ function isCurrent(id: string) {
 <template>
   <BottomSheet v-model="open" :title="parent ? parent.name : '選擇分類'">
     <Transition name="fade" mode="out-in">
-      <div :key="level" class="grid grid-cols-4 gap-x-2 gap-y-4">
+      <div :key="level" class="-mx-1 grid grid-cols-4 gap-x-2 gap-y-4 p-1">
         <template v-if="parent">
           <button class="flex flex-col items-center gap-1.5" @click="level = ''">
             <span class="grid size-[52px] place-items-center rounded-[16px] bg-surface-2 text-muted">

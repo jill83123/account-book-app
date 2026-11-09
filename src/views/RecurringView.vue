@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Plus, Repeat } from '@/lib/uiIcons'
+import { Plus, Repeat, Trash2 } from '@/lib/uiIcons'
 import { remove, save } from '@/db'
 import type { Recurring } from '@/db/types'
 import { fmt } from '@/lib/money'
@@ -114,6 +114,9 @@ const catOf = (r: Recurring) => data.catMap.get(r.template.lines[0]?.categoryId 
     <p v-else class="card py-12 text-center text-sm text-muted">還沒有{{ tab === 'recurring' ? '週期交易' : '分期付款' }}</p>
 
     <BottomSheet v-model="open" title="編輯排程">
+      <template v-if="cur" #actions>
+        <button class="icon-btn border-0 bg-transparent text-danger" aria-label="刪除" @click="destroy"><Trash2 :size="18" /></button>
+      </template>
       <div v-if="cur" class="space-y-4">
         <div>
           <label class="label">名稱</label>
@@ -135,10 +138,7 @@ const catOf = (r: Recurring) => data.catMap.get(r.template.lines[0]?.categoryId 
           <DateField v-model="endDate" title="結束日期" placeholder="不設定" clearable />
         </div>
         <p class="text-xs text-muted">開始於 {{ cur.startDate }}，已處理 {{ cur.generated }} 次。</p>
-        <div class="flex gap-2">
-          <button class="btn btn-ghost text-danger" @click="destroy">刪除</button>
-          <button class="btn btn-primary flex-1" @click="submit">儲存</button>
-        </div>
+        <button class="btn btn-primary w-full" @click="submit">儲存</button>
       </div>
     </BottomSheet>
   </div>

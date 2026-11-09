@@ -15,6 +15,7 @@ import CatIcon from './CatIcon.vue'
 import PillTabs from './PillTabs.vue'
 import SelectField from './SelectField.vue'
 import ToggleSwitch from './ToggleSwitch.vue'
+import MoneyInput from './MoneyInput.vue'
 
 const props = defineProps<{ account?: Account }>()
 const open = defineModel<boolean>({ required: true })
@@ -140,7 +141,7 @@ async function destroy() {
         <label class="label">{{
           kind === 'card' ? '目前已欠金額（填負數，沒有就留空）' : '目前餘額'
         }}</label>
-        <input v-model="initial" class="input" inputmode="decimal" placeholder="0" />
+        <MoneyInput v-model="initial" class="input" inputmode="decimal" placeholder="0" />
       </div>
       <div v-if="kind === 'card'" class="grid grid-cols-2 gap-3">
         <div>

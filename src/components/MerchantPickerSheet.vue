@@ -75,6 +75,11 @@ function clear() {
 <template>
   <BottomSheet v-model="open" title="商家">
     <input v-model="q" class="input mb-3" placeholder="搜尋或輸入新商家名稱" />
+    <!-- leaving the merchant empty is at the top, so it needs no scrolling past a long list -->
+    <button v-if="model || newName" class="card mb-3 flex w-full items-center gap-3 text-left" @click="clear">
+      <X :size="20" class="text-muted" />
+      <span>不指定商家</span>
+    </button>
     <button
       v-if="canCreate"
       class="card mb-3 flex w-full items-center gap-3 text-left"
@@ -108,8 +113,5 @@ function clear() {
     <p v-else-if="!canCreate" class="py-6 text-center text-sm text-muted">
       還沒有商家，輸入名稱就能新增，下次會自動記住。
     </p>
-    <button v-if="model || newName" class="btn btn-ghost mt-3 w-full" @click="clear">
-      <X :size="16" />不指定商家
-    </button>
   </BottomSheet>
 </template>

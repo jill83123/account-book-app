@@ -58,6 +58,7 @@ import LedgerPickSheet from '@/components/LedgerPickSheet.vue'
 import PillTabs from '@/components/PillTabs.vue'
 import RepeatSheet from '@/components/RepeatSheet.vue'
 import ScanSheet from '@/components/ScanSheet.vue'
+import MoneyInput from '@/components/MoneyInput.vue'
 
 interface LineForm {
   id: string
@@ -328,7 +329,7 @@ function load() {
   }
 }
 
-const amountEl = ref<HTMLInputElement>()
+const amountEl = ref<{ focus: () => void }>()
 // 手機只靠手指，金額直接用內建計算機，不開系統鍵盤
 const touchOnly = matchMedia('(pointer: coarse)').matches && !matchMedia('(pointer: fine)').matches
 const ready = ref(false)
@@ -1182,7 +1183,7 @@ function cancel() {
 </script>
 
 <template>
-  <div v-if="ready" class="pb-8">
+  <div v-if="ready" class="pb-12">
     <header
       class="sticky top-0 z-20 -mx-4 mb-3 grid grid-cols-[1fr_auto_1fr] items-center bg-bg px-4 py-2"
     >
@@ -1318,7 +1319,7 @@ function cancel() {
           >
             {{ type === 'transfer' ? transferCur : currency }}
           </span>
-          <input
+          <MoneyInput
             v-if="type === 'transfer'"
             v-model="transferText"
             class="min-w-0 flex-1 bg-transparent text-right text-xl outline-none"
@@ -1331,7 +1332,7 @@ function cancel() {
             @click="touchOnly && open('keypad')"
             @input="fromLeft"
           />
-          <input
+          <MoneyInput
             v-else
             ref="amountEl"
             v-model="line.amountText"
@@ -1463,6 +1464,7 @@ function cancel() {
           title="時間"
           placeholder="時間（選填）"
           clearable
+          lead
           class="w-full"
         />
       </div>
@@ -1503,7 +1505,7 @@ function cancel() {
 
     <!-- the parts of this item: names and amounts, not categories -->
     <div v-if="type !== 'transfer'" class="mb-5">
-      <p class="label !mb-2 pb-1">細項（選填）</p>
+      <p class="label !mb-0.5 pb-1">細項（選填）</p>
       <div v-if="line.details.length" ref="detailListEl" class="relative">
         <!-- the parts only slide aside while one is being carried -->
         <TransitionGroup tag="ul" :name="partDrag ? 'rows' : 'still'" class="space-y-2">
@@ -1673,7 +1675,7 @@ function cancel() {
                 </span>
                 <span class="relative">
                   <span class="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-sm text-muted">{{ foreign ? currency : '$' }}</span>
-                  <input
+                  <MoneyInput
                     v-model="partEdit.priceText"
                     class="input w-full !pr-3 text-right"
                     :class="foreign ? '!pl-11' : '!pl-7'"

@@ -16,6 +16,7 @@ import ImageViewer from './ImageViewer.vue'
 import CatIcon from './CatIcon.vue'
 import CatPath from './CatPath.vue'
 import DateField from './DateField.vue'
+import MoneyInput from './MoneyInput.vue'
 
 const router = useRouter()
 const data = useData()
@@ -84,7 +85,7 @@ const when = computed(() => {
   const r = rec.value
   if (!r) return ''
   const [y, m, d] = r.date.split('-')
-  return `${y}/${m}/${d}（週${WEEKDAYS[weekday(r.date)]}）${r.time ? ` ${r.time}` : ''}`
+  return `${y}/${m}/${d}（週${WEEKDAYS[weekday(r.date)]}）${r.time || ''}`
 })
 
 /** the small facts about the record, each with its own icon, two to a row */
@@ -296,7 +297,7 @@ async function destroy() {
     <div class="space-y-4">
       <div>
         <label class="label" for="adj-amount">調整金額</label>
-        <input id="adj-amount" v-model="adjText" class="input" inputmode="decimal" placeholder="正數增加餘額，負數減少" @keyup.enter="saveAdjust" />
+        <MoneyInput id="adj-amount" v-model="adjText" class="input" inputmode="decimal" placeholder="正數增加餘額，負數減少" @keyup.enter="saveAdjust" />
         <p class="mt-1.5 px-1 text-xs text-muted">正數會讓帳戶餘額增加，負數會減少。這筆不算收入或支出。</p>
       </div>
       <div>

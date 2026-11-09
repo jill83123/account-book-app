@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { defaultBudget } from '@/lib/budget'
 import { today, ym } from '@/lib/date'
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { ChevronLeft, Eye, EyeOff, Pencil, Plus } from '@/lib/uiIcons'
 import { remove, save, saveMany } from '@/db'
 import type { Category, CategoryKind } from '@/db/types'
@@ -86,6 +86,18 @@ function jumpTo(name: string) {
   const sec = box?.querySelector<HTMLElement>(`[data-group="${name}"]`)
   if (box && sec) box.scrollTo({ top: sec.offsetTop - 6, behavior: 'smooth' })
 }
+
+// open on the chosen icon: scroll it to the middle of the list
+watch(pickingIcon, async (o) => {
+  if (!o) return
+  await nextTick()
+  const box = iconBox.value
+  const cur = box?.querySelector<HTMLElement>('[aria-pressed="true"]')
+  if (!box || !cur) return
+  const b = box.getBoundingClientRect()
+  const c = cur.getBoundingClientRect()
+  box.scrollTop += c.top - b.top - (b.height - c.height) / 2
+})
 
 // the picker works on strings, so "no parent" is the empty string here
 const parentSel = computed({

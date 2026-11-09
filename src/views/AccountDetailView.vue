@@ -14,6 +14,7 @@ import AccountFormSheet from '@/components/AccountFormSheet.vue'
 import BottomSheet from '@/components/BottomSheet.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import RecordCard from '@/components/RecordCard.vue'
+import MoneyInput from '@/components/MoneyInput.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -147,7 +148,7 @@ const card = computed(() => {
         </div>
         <div>
           <label class="label" for="actual">實際{{ isCard ? '欠款' : '餘額' }}</label>
-          <input id="actual" v-model="actualText" class="input" inputmode="decimal" placeholder="0" @keyup.enter="adjust" />
+          <MoneyInput id="actual" v-model="actualText" class="input" inputmode="decimal" placeholder="0" @keyup.enter="adjust" />
         </div>
         <p v-if="actual != null && diff" class="text-sm">
           差額
