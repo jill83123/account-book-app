@@ -39,7 +39,7 @@ import {
   type Photo,
 } from '@/lib/images'
 import { accountIcon } from '@/lib/banks'
-import { evalExpr, fmt } from '@/lib/money'
+import { evalExpr, fmt, groupDigits } from '@/lib/money'
 import { learn, suggest } from '@/lib/merchants'
 import { buildRecord, type Repeat } from '@/lib/recurrence'
 import BottomSheet from '@/components/BottomSheet.vue'
@@ -849,12 +849,12 @@ function removeDetail(id: string) {
   line.value.details = line.value.details.filter((d) => d.id !== id)
   syncDetails()
 }
-async function dropPart() {
-  const p = partEdit.value
-  if (!p) return
-  if (!(await ui.confirm('刪除這個細項？', { danger: true, confirmText: '刪除' }))) return
-  partEdit.value = null
-  removeDetail(p.id)
+async function dropPart(id: string) {
+  const d = line.value.details.find((x) => x.id === id)
+  if (!d) return
+  const message = d.name.trim() || '未命名'
+  if (!(await ui.confirm('刪除這個細項？', { message, danger: true, confirmText: '刪除' }))) return
+  removeDetail(id)
 }
 
 // ---- reordering the parts: the bar on a row is dragged ----
@@ -1524,7 +1524,15 @@ function cancel() {
               <button class="flex min-w-0 flex-1 items-center gap-2.5 py-1.5 text-left" @click="editDetail(d)">
                 <span class="min-w-0 flex-1 truncate" :class="!d.name.trim() && 'text-muted'">{{ d.name.trim() || '未命名' }}</span>
                 <span class="shrink-0 text-sm text-muted">×{{ d.qtyText || 1 }}</span>
-                <span class="shrink-0 text-sm font-medium tabular-nums">{{ foreign ? currency : '$' }}{{ d.amountText || 0 }}</span>
+                <span class="shrink-0 text-sm font-medium tabular-nums">{{ foreign ? currency : '$' }}{{ groupDigits(d.amountText) || 0 }}</span>
+              </button>
+              <button
+                type="button"
+                class="icon-btn -mr-3 size-9 shrink-0 border-0 bg-transparent text-danger"
+                aria-label="刪除這個細項"
+                @click="dropPart(d.id)"
+              >
+                <Trash2 :size="18" />
               </button>
               <span
                 class="grid size-9 shrink-0 cursor-grab touch-none place-items-center rounded-full text-muted active:cursor-grabbing"
@@ -1655,18 +1663,7 @@ function cancel() {
           @keydown.esc="partEdit = null"
         >
           <form class="card w-full max-w-[21rem] space-y-5 p-5 shadow-xl" @submit.prevent="savePart">
-            <div class="flex items-center justify-between gap-2">
-              <h2 class="text-lg leading-snug font-bold">{{ partEdit.isNew ? '新增細項' : '編輯細項' }}</h2>
-              <button
-                v-if="!partEdit.isNew"
-                type="button"
-                class="icon-btn -my-1.5 -mr-2 size-9 border-0 bg-transparent text-danger"
-                aria-label="刪除這個細項"
-                @click="dropPart"
-              >
-                <Trash2 :size="18" />
-              </button>
-            </div>
+            <h2 class="text-lg leading-snug font-bold">{{ partEdit.isNew ? '新增細項' : '編輯細項' }}</h2>
             <div class="space-y-3">
               <input ref="partNameEl" v-model="partEdit.name" class="input" placeholder="名稱，例如 漢堡" />
               <div class="grid grid-cols-2 gap-3">

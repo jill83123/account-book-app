@@ -4,6 +4,11 @@ export function fmt(n: number): string {
 
 export const money = (n: number) => `$${fmt(n)}`
 
+/** 把文字裡每段數字的整數部分加上千分號，小數與運算符號照舊 */
+export function groupDigits(s: string): string {
+  return s.replace(/\d+/g, (m, off: number) => (s[off - 1] === '.' ? m : m.replace(/\B(?=(\d{3})+$)/g, ',')))
+}
+
 /** Evaluate "120+35*2" style input. Returns null when it is not a plain arithmetic expression. */
 export function evalExpr(input: string, decimals = 0): number | null {
   const s = input.replace(/[×x]/g, '*').replace(/÷/g, '/').replace(/[,\s]/g, '')

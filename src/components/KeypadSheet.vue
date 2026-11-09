@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { Delete } from '@/lib/uiIcons'
-import { evalExpr } from '@/lib/money'
+import { evalExpr, fmt, groupDigits } from '@/lib/money'
 import BottomSheet from './BottomSheet.vue'
 
 const open = defineModel<boolean>('open', { required: true })
@@ -32,9 +32,9 @@ function done() {
 <template>
   <BottomSheet v-model="open" title="輸入金額">
     <div class="card mb-3 flex min-h-16 flex-col items-end justify-center">
-      <span class="text-3xl font-semibold break-all">{{ expr || '0' }}</span>
+      <span class="text-3xl font-semibold break-all">{{ groupDigits(expr) || '0' }}</span>
       <span v-if="expr && /[+\-×÷]/.test(expr)" class="text-sm text-muted">
-        = {{ preview() ?? '格式不正確' }}
+        = {{ preview() == null ? '格式不正確' : fmt(preview()!) }}
       </span>
     </div>
     <div class="grid grid-cols-4 gap-2">
