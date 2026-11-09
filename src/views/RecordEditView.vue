@@ -12,6 +12,7 @@ import {
   Plus,
   History,
   Pin,
+  Eye,
   Repeat as RepeatIcon,
   Store,
   Wallet,
@@ -43,7 +44,7 @@ import {
 import { accountIcon } from '@/lib/banks'
 import { evalExpr, fmt, groupDigits } from '@/lib/money'
 import { learn, suggest } from '@/lib/merchants'
-import { buildRecord, type Repeat } from '@/lib/recurrence'
+import { buildRecord, type Repeat, lineName } from '@/lib/recurrence'
 import BottomSheet from '@/components/BottomSheet.vue'
 import ImageViewer from '@/components/ImageViewer.vue'
 import CatIcon from '@/components/CatIcon.vue'
@@ -108,6 +109,10 @@ const companions = ref<string[]>([])
 const split = ref<Rec['split']>()
 const repeat = ref<Repeat>({ kind: 'once' })
 const recurringId = ref<string | undefined>()
+/** a record made by an installment plan: its name carries the plan and the period, so it is not typed over */
+const nameLocked = computed(
+  () => Boolean(recurringId.value && data.recurrings.find((r) => r.id === recurringId.value)?.installment),
+)
 const transferText = ref('')
 /** prices are typed in the currency of the ledger; a ledger in another one only lists spending, nothing is converted */
 const currency = computed(() => data.ledgerMap.get(ledgerId.value)?.currency ?? baseCurrency.value)
@@ -1379,13 +1384,17 @@ function cancel() {
 
         <div v-if="type !== 'transfer'" class="field justify-start gap-2 pr-2">
           <input
-            v-model="line.name"
+            :value="nameLocked ? lineName(line) : line.name"
             class="min-w-0 flex-1 bg-transparent outline-none"
+            :class="nameLocked && 'text-muted'"
             placeholder="品項名稱"
             maxlength="60"
+            :readonly="nameLocked"
+            @input="!nameLocked && (line.name = ($event.target as HTMLInputElement).value)"
           />
           <!-- a starred item is remembered under the merchant -->
           <button
+            v-if="!nameLocked"
             class="grid size-9 shrink-0 place-items-center rounded-full bg-surface-2 transition"
             :class="line.remember ? 'text-primary' : 'text-muted'"
             :aria-pressed="line.remember"
@@ -1397,7 +1406,7 @@ function cancel() {
         </div>
 
         <!-- right under the name: the starred items, one tap to fill one in -->
-        <div v-if="type !== 'transfer' && suggestions.length" class="-mt-1">
+        <div v-if="type !== 'transfer' && !nameLocked && suggestions.length" class="-mt-1">
           <div class="flex flex-wrap gap-2">
             <button
               v-for="sug in suggestions"
@@ -1463,14 +1472,28 @@ function cancel() {
             merchantLabel || '商家'
           }}</span>
         </button>
+        <!-- a record made by a rule: the rule can be looked at but not changed from here -->
+        <div v-if="editingId && recurringId" class="field justify-start gap-2 pr-2">
+          <RepeatIcon :size="17" class="shrink-0 text-muted" />
+          <span class="min-w-0 flex-1 truncate text-left">週期交易</span>
+          <button
+            type="button"
+            class="grid size-9 shrink-0 place-items-center rounded-full bg-surface-2 text-muted"
+            aria-label="查看週期設定"
+            @click="router.push({ path: '/more/recurring', query: { id: recurringId } })"
+          >
+            <Eye :size="18" />
+          </button>
+        </div>
         <button
+          v-else
           class="field justify-start disabled:cursor-not-allowed disabled:opacity-45"
           :class="repeat.kind !== 'once' && 'border-primary text-primary-strong'"
           :disabled="!!editingId"
           @click="open('repeat')"
         >
           <RepeatIcon :size="17" class="shrink-0" :class="repeat.kind === 'once' && 'text-muted'" />
-          <span class="truncate">{{ editingId && recurringId ? '週期交易' : repeatLabel }}</span>
+          <span class="truncate">{{ repeatLabel }}</span>
         </button>
       </template>
 

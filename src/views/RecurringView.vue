@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { Plus, Repeat, Trash2 } from '@/lib/uiIcons'
 import { remove, save } from '@/db'
 import type { Recurring } from '@/db/types'
@@ -16,6 +16,7 @@ import PillTabs from '@/components/PillTabs.vue'
 import ToggleSwitch from '@/components/ToggleSwitch.vue'
 
 const router = useRouter()
+const route = useRoute()
 const data = useData()
 const ui = useUi()
 
@@ -64,6 +65,20 @@ async function destroy() {
   await remove('recurrings', r.id)
   open.value = false
 }
+
+// coming from a record: show the tab it belongs to and open it (once)
+let shownFromRecord = ''
+watch(
+  [() => route.query.id, () => data.recurrings],
+  ([id]) => {
+    const r = typeof id === 'string' ? data.recurrings.find((x) => x.id === id) : undefined
+    if (!r || shownFromRecord === r.id) return
+    shownFromRecord = r.id
+    tab.value = r.kind
+    edit(r)
+  },
+  { immediate: true },
+)
 
 const status = (r: Recurring) => (isFinished(r) ? '已完成' : r.active ? `下次 ${nextDue(r) ?? '—'}` : '已暫停')
 const catOf = (r: Recurring) => data.catMap.get(r.template.lines[0]?.categoryId ?? '')
