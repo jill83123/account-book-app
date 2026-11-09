@@ -70,6 +70,7 @@ import {
   Tag as LTag,
   Sparkles as LSparkles,
   History as LHistory,
+  Pin as LPin,
 } from '@lucide/vue'
 
 /**
@@ -157,6 +158,7 @@ export const CircleCheck = light(LCircleCheck, 'CircleCheck')
 export const Tag = light(LTag, 'Tag')
 export const Sparkles = light(LSparkles, 'Sparkles')
 export const History = light(LHistory, 'History')
+export const Pin = light(LPin, 'Pin')
 
 // bottom navigation
 export const NavBills = light(LWalletCards, 'NavBills')

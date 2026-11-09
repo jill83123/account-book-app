@@ -14,6 +14,7 @@ import type {
   Rec,
   Recurring,
   TableMap,
+  PinnedPart,
   TableName,
 } from '@/db/types'
 import { accountBalances, countedRecords } from '@/lib/calc'
@@ -34,6 +35,7 @@ export const useData = defineStore('data', () => {
   const loans = shallowRef<Loan[]>([])
   const members = shallowRef<Member[]>([])
   const currencies = shallowRef<CustomCurrency[]>([])
+  const pinnedParts = shallowRef<PinnedPart[]>([])
 
   function live<K extends TableName>(name: K, target: { value: TableMap[K][] }, pending: Set<K>) {
     pending.add(name)
@@ -67,6 +69,7 @@ export const useData = defineStore('data', () => {
     live('loans', loans, pending)
     live('members', members, pending)
     live('currencies', currencies, pending)
+    live('pinnedParts', pinnedParts, pending)
   }
 
   const byOrder = <T extends { order: number }>(a: T[]) => [...a].sort((x, y) => x.order - y.order)
@@ -129,6 +132,7 @@ export const useData = defineStore('data', () => {
     loans,
     members,
     currencies,
+    pinnedParts,
     sortedAccounts,
     sortedLedgers,
     sortedCategories,

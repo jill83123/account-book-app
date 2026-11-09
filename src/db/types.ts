@@ -224,7 +224,13 @@ export interface CustomCurrency extends Base {
   base?: boolean
 }
 
+/** A part name pinned to the top of the history list; the id comes from the name so devices never make two. */
+export interface PinnedPart extends Base {
+  name: string
+}
+
 export type TableName =
+  | 'pinnedParts'
   | 'currencies'
   | 'members'
   | 'accounts'
@@ -236,6 +242,7 @@ export type TableName =
   | 'loans'
 
 export const TABLES: TableName[] = [
+  'pinnedParts',
   'currencies',
   'members',
   'accounts',
@@ -248,6 +255,7 @@ export const TABLES: TableName[] = [
 ]
 
 export interface TableMap {
+  pinnedParts: PinnedPart
   currencies: CustomCurrency
   members: Member
   accounts: Account

@@ -10,6 +10,7 @@ import type {
   Loan,
   Member,
   Merchant,
+  PinnedPart,
   Rec,
   Recurring,
   TableMap,
@@ -28,6 +29,7 @@ export class AppDB extends Dexie {
   currencies!: EntityTable<CustomCurrency, 'id'>
   images!: EntityTable<ImageRow, 'id'>
   imageTrash!: EntityTable<ImageTrash, 'id'>
+  pinnedParts!: EntityTable<PinnedPart, 'id'>
 
   constructor() {
     super('account-book')
@@ -48,6 +50,8 @@ export class AppDB extends Dexie {
     this.version(4).stores({ imageTrash: 'id' })
     // currencies added by hand, shared between devices like everything else
     this.version(5).stores({ currencies: 'id, updatedAt' })
+    // part names pinned to the top of the history list
+    this.version(6).stores({ pinnedParts: 'id, updatedAt' })
   }
 }
 

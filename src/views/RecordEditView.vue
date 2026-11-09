@@ -10,6 +10,8 @@ import {
   Info,
   GripVertical,
   Plus,
+  History,
+  Pin,
   Repeat as RepeatIcon,
   Store,
   Wallet,
@@ -784,11 +786,28 @@ const detailSuggestions = computed(() => {
   const taken = new Set((line.value?.details ?? []).map((d) => d.name.trim()))
   return list
     .filter((d) => !taken.has(d.name))
-    .sort((a, b) => b.uses - a.uses || b.at.localeCompare(a.at))
-    .slice(0, 8)
+    .sort(
+      (a, b) =>
+        Number(pinned.value.has(b.name)) - Number(pinned.value.has(a.name)) ||
+        b.uses - a.uses ||
+        b.at.localeCompare(a.at),
+    )
+    .slice(0, 40)
 })
 
+/** part names pinned to the top of the list */
+const pinned = computed(() => new Set(data.pinnedParts.map((p) => p.name)))
+async function togglePin(name: string) {
+  const id = `pin:${name}`
+  if (pinned.value.has(name)) await remove('pinnedParts', id)
+  else await save('pinnedParts', { id, name })
+}
+
+/** the small window listing parts used before */
+const historyOpen = ref(false)
+
 function useDetail(sug: { name: string; amount: number }) {
+  historyOpen.value = false
   const l = line.value
   // fill the empty row that is waiting, else add one
   const empty = l.details.find((d) => !d.name.trim() && !d.amountText.trim() && !d.qtyText.trim())
@@ -1548,12 +1567,21 @@ function cancel() {
         </TransitionGroup>
       </div>
       <!-- new parts go at the bottom, under the ones already there -->
-      <button
-        class="mt-2 flex w-full items-center justify-center gap-1.5 rounded-2xl bg-primary-soft py-2.5 text-sm font-semibold text-primary-strong transition active:scale-[0.99]"
-        @click="addDetail"
-      >
-        <Plus :size="16" />新增細項
-      </button>
+      <div class="flex gap-2.5" :class="line.details.length > 0 && 'mt-2.5'">
+        <button
+          v-if="detailSuggestions.length"
+          class="flex shrink-0 items-center justify-center gap-1.5 rounded-2xl bg-primary-soft px-4 py-2.5 text-sm font-semibold text-primary-strong transition active:scale-[0.99]"
+          @click="historyOpen = true"
+        >
+          <History :size="16" />歷史細項
+        </button>
+        <button
+          class="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-primary-soft py-2.5 text-sm font-semibold text-primary-strong transition active:scale-[0.99]"
+          @click="addDetail"
+        >
+          <Plus :size="16" />新增細項
+        </button>
+      </div>
       <p v-if="detailGap" class="mt-2 flex items-start gap-1.5 text-xs text-muted">
         <Info :size="14" class="mt-px shrink-0" />
         <span
@@ -1563,21 +1591,9 @@ function cancel() {
           {{ foreign ? `${currency} ` : '$' }}{{ fmt(Math.abs(detailGap)) }}。</span
         >
       </p>
-      <p v-if="!line.details.length && !detailSuggestions.length" class="mt-2 text-xs text-muted">
+      <p v-if="!line.details.length" class="mt-2 text-xs text-muted">
         同一個分類裡想分開記，例如早餐的漢堡和紅茶。
       </p>
-      <!-- used before: one tap adds it with its last amount -->
-      <div v-if="detailSuggestions.length" class="mt-3 flex flex-wrap gap-1.5">
-        <button
-          v-for="sug in detailSuggestions"
-          :key="sug.name"
-          class="chip text-ink/85"
-          @click="useDetail(sug)"
-        >
-          <span>{{ sug.name }}</span>
-          <span v-if="sug.amount" class="text-xs text-muted">${{ fmt(sug.amount) }}</span>
-        </button>
-      </div>
     </div>
 
     <div v-if="type !== 'transfer' && lines.length > 1" class="mb-3">
@@ -1703,6 +1719,52 @@ function cancel() {
               <button type="submit" class="btn btn-primary">確認</button>
             </div>
           </form>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- parts used before: tap one to add it with its last amount -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="historyOpen"
+          class="fixed inset-0 z-40 flex items-center justify-center bg-black/30 p-4"
+          @click.self="historyOpen = false"
+          @keydown.esc="historyOpen = false"
+        >
+          <div class="card w-full max-w-[21rem] space-y-5 p-5 shadow-xl">
+            <div class="flex items-center justify-between">
+              <h2 class="text-lg leading-snug font-bold">歷史細項</h2>
+              <button
+                type="button"
+                class="icon-btn -my-2 -mr-2 size-9 border-0 bg-transparent text-muted"
+                aria-label="關閉"
+                @click="historyOpen = false"
+              >
+                <X :size="18" />
+              </button>
+            </div>
+            <div class="-mt-2 -mr-2 max-h-[50dvh] overflow-hidden">
+              <ul class="max-h-[50dvh] divide-y divide-line overflow-y-auto overscroll-contain">
+                <li v-for="sug in detailSuggestions" :key="sug.name" class="flex items-center gap-2">
+                  <button class="flex min-w-0 flex-1 items-center gap-2 py-2 text-left" @click="useDetail(sug)">
+                    <span class="min-w-0 flex-1 truncate text-sm">{{ sug.name }}</span>
+                    <span v-if="sug.amount" class="shrink-0 text-xs text-muted tabular-nums">${{ fmt(sug.amount) }}</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="icon-btn size-9 shrink-0 border-0 bg-transparent"
+                    :class="pinned.has(sug.name) ? 'text-primary' : 'text-muted'"
+                    :aria-pressed="pinned.has(sug.name)"
+                    :aria-label="pinned.has(sug.name) ? '取消釘選' : '釘選'"
+                    @click="togglePin(sug.name)"
+                  >
+                    <Pin :size="18" :fill="pinned.has(sug.name) ? 'currentColor' : 'none'" />
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
       </Transition>
     </Teleport>
