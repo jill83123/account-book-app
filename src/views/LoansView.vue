@@ -245,7 +245,7 @@ const accountItems = computed(() => [
     <p v-else class="card py-12 text-center text-sm text-muted">還沒有借款記錄</p>
 
     <BottomSheet v-model="formOpen" :title="editId ? '編輯借款' : '新增借款'">
-      <div class="space-y-4">
+      <div class="space-y-4 pb-4">
         <PillTabs
           v-model="direction"
           :options="[
@@ -253,7 +253,7 @@ const accountItems = computed(() => [
             { value: 'borrow', label: '我向別人借' },
           ]"
         />
-        <div class="grid grid-cols-[3fr_2fr] gap-3">
+        <div class="grid grid-cols-2 gap-3">
           <div class="min-w-0">
             <label class="label">對象</label>
             <input v-model="person" class="input" maxlength="20" />
@@ -286,9 +286,13 @@ const accountItems = computed(() => [
           <label class="label">備註</label>
           <input v-model="note" class="input" />
         </div>
-        <button class="btn btn-primary w-full" @click="submit">儲存</button>
-        <button v-if="editId" class="btn btn-ghost -mt-2 w-full text-danger" @click="destroy">刪除這筆借款</button>
       </div>
+      <template #footer>
+        <div class="flex gap-2">
+          <button v-if="editId" class="btn btn-ghost text-danger" @click="destroy">刪除</button>
+          <button class="btn btn-primary flex-1" @click="submit">儲存</button>
+        </div>
+      </template>
     </BottomSheet>
 
     <BottomSheet v-model="detailOpen" :title="cur ? `${members.nameOf(cur.personId)}` : ''">
@@ -296,7 +300,7 @@ const accountItems = computed(() => [
         <div class="card text-center">
           <p class="text-xs text-muted">{{ cur.direction === 'lend' ? '對方還欠我' : '我還欠對方' }}</p>
           <p class="text-3xl font-bold"><MoneyText :n="Math.max(0, loanOutstanding(cur))" /></p>
-          <p class="mt-1 text-xs text-muted">總額 <MoneyText :n="cur.principal" />，{{ cur.date }}{{ cur.accountId ? `，${accName(cur.accountId)}` : '' }}</p>
+          <p class="mt-1 text-xs text-muted">總額 <MoneyText :n="cur.principal" /> ｜ {{ cur.date }}{{ cur.accountId ? ` ｜ ${accName(cur.accountId)}` : '' }}</p>
           <p v-if="cur.note && !source" class="mt-1 text-xs text-muted">{{ cur.note }}</p>
         </div>
 
@@ -313,7 +317,7 @@ const accountItems = computed(() => [
           <li v-for="r in cur.repayments" :key="r.id" class="flex items-center gap-3 px-4 py-3 text-sm">
             <span class="flex-1">{{ r.date }}{{ r.accountId ? `　${accName(r.accountId)}` : '' }}</span>
             <span class="font-semibold"><MoneyText :n="r.amount" /></span>
-            <button class="icon-btn size-8 text-muted" aria-label="移除這筆還款" @click="dropRepayment(r.id)"><Trash2 :size="15" /></button>
+            <button class="icon-btn size-8 border-0 bg-transparent text-muted" aria-label="移除這筆還款" @click="dropRepayment(r.id)"><Trash2 :size="15" /></button>
           </li>
         </ul>
 
@@ -322,18 +326,16 @@ const accountItems = computed(() => [
             <p class="text-sm font-semibold">{{ cur.direction === 'lend' ? '收款' : '還款' }}</p>
             <button class="chip" @click="repayAmount = String(loanOutstanding(cur))">全額 <MoneyText :n="loanOutstanding(cur)" /></button>
           </div>
-          <div class="grid grid-cols-[2fr_3fr] gap-3">
-            <div>
-              <label class="label">{{ repayWord }}金額</label>
-              <span class="relative block">
-                <span class="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-muted">$</span>
-                <MoneyInput v-model="repayAmount" class="input !pl-7" inputmode="decimal" placeholder="0" />
-              </span>
-            </div>
-            <div>
-              <label class="label">日期</label>
-              <DateField v-model="repayDate" title="還款日期" />
-            </div>
+          <div>
+            <label class="label">{{ repayWord }}金額</label>
+            <span class="relative block">
+              <span class="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-muted">$</span>
+              <MoneyInput v-model="repayAmount" class="input !pl-7" inputmode="decimal" placeholder="0" />
+            </span>
+          </div>
+          <div>
+            <label class="label">日期</label>
+            <DateField v-model="repayDate" title="還款日期" />
           </div>
           <div>
             <label class="label">{{ cur.direction === 'lend' ? '存進哪個帳戶' : '從哪個帳戶付' }}</label>
