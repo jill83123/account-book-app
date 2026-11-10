@@ -63,7 +63,7 @@ function submit() {
         <form class="card w-full max-w-[21rem] space-y-5 p-5 shadow-xl" @submit.prevent="submit">
           <div class="space-y-2">
             <h2 class="text-lg leading-snug font-bold">{{ ui.dialog.title }}</h2>
-            <div v-if="ui.dialog.message" class="space-y-1.5 text-sm leading-relaxed text-muted">
+            <div v-if="ui.dialog.message" class="text-sm leading-relaxed text-muted">
               <p v-for="(line, i) in ui.dialog.message.split('\n')" :key="i">{{ line }}</p>
             </div>
           </div>

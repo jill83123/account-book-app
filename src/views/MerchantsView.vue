@@ -123,6 +123,8 @@ const nameChange = computed(() => {
   const to = itemName.value.trim()
   return detailItem.value && to && to !== detailItem.value ? to : ''
 })
+/** 改了幾項：品名加上細項 */
+const changeCount = computed(() => changes.value.size + (nameChange.value ? 1 : 0))
 /** 分期產生的品項名稱不能改 */
 const nameLocked = computed(() =>
   data.records.some(
@@ -172,7 +174,7 @@ async function save() {
     changes.value.size ? `修改 ${changes.value.size} 個細項名稱` : '',
   ].filter(Boolean)
   const ok = await ui.confirm(`${parts.join('，')}？`, {
-    message: `共會改到 ${recs.length} 筆記錄。只改這個商家，其他商家的同名品項不受影響。`,
+    message: `共會改到 ${recs.length} 筆記錄。\n只改這個商家，其他商家的同名品項不受影響。`,
     confirmText: '修改',
   })
   if (!ok) return
@@ -427,7 +429,7 @@ async function destroy() {
                 :disabled="!changes.size && !nameChange"
                 @click="save"
               >
-                儲存
+                儲存<template v-if="changeCount"> ({{ changeCount }})</template>
               </button>
             </div>
           </div>
