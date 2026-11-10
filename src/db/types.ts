@@ -127,6 +127,8 @@ export interface MerchantItem {
   price: number
   count: number
   lastUsed: string
+  /** the star was taken off: kept in the list, but no longer offered when recording */
+  off?: boolean
 }
 
 export interface Merchant extends Base {

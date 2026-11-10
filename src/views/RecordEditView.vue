@@ -285,7 +285,7 @@ function load() {
     recurringId.value = copying ? undefined : r.recurringId
     if (!copying) void loadPhotos(r.id).then((p) => (photos.value = p))
     const items = r.merchantId ? (data.merchantMap.get(r.merchantId)?.items ?? []) : []
-    const remembered = (name: string) => Boolean(name) && items.some((i) => i.name === name)
+    const remembered = (name: string) => Boolean(name) && items.some((i) => i.name === name && !i.off)
     if (r.type === 'transfer') {
       transferText.value = String(r.total)
       toTotalText.value = r.toTotal != null ? String(r.toTotal) : ''

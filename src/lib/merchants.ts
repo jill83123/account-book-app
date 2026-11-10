@@ -27,6 +27,7 @@ export function suggest(merchants: Merchant[], merchantId: string | undefined, q
   const out: Suggestion[] = []
   const take = (m: Merchant) => {
     for (const i of m.items) {
+      if (i.off) continue
       if (q && !i.name.toLowerCase().includes(q)) continue
       if (q && i.name.toLowerCase() === q) continue
       out.push({ ...i, merchant: m.name })
