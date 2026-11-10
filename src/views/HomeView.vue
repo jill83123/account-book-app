@@ -333,8 +333,8 @@ onMounted(() => {
             {{ weekLabel(day.date) }}
           </span>
           <span class="flex-1" />
-          <span v-if="day.income" class="text-sm font-medium text-income">${{ fmt(day.income) }}</span>
-          <span class="min-w-14 text-right text-sm font-medium text-expense">${{ fmt(day.expense) }}</span>
+          <span v-if="day.income" class="text-sm font-medium text-income">{{ fmt(day.income) }}</span>
+          <span class="min-w-14 text-right text-sm font-medium text-expense">{{ fmt(day.expense) }}</span>
         </div>
         <RecordList :records="day.records" reorder />
       </div>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MoneyText from '@/components/MoneyText.vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import {
@@ -1316,7 +1317,7 @@ function cancel() {
                   class="text-xs font-medium leading-tight"
                   :class="amountOf(l) ? 'text-ink/80' : 'text-success'"
                 >
-                  ${{ fmt(amountOf(l)) }}
+                  <MoneyText :n="amountOf(l)" />
                 </span>
               </span>
             </span>
@@ -1415,7 +1416,7 @@ function cancel() {
               @click="useSuggestion(sug)"
             >
               <span>{{ sug.name }}</span>
-              <span class="text-xs text-muted">${{ fmt(sug.price) }}</span>
+              <span class="text-xs text-muted"><MoneyText :n="sug.price" /></span>
             </button>
           </div>
         </div>
@@ -1572,7 +1573,7 @@ function cancel() {
               <button class="flex min-w-0 flex-1 items-center gap-2.5 py-1.5 text-left" @click="editDetail(d)">
                 <span class="min-w-0 flex-1 truncate" :class="!d.name.trim() && 'text-muted'">{{ d.name.trim() || '未命名' }}</span>
                 <span class="shrink-0 text-sm text-muted">×{{ d.qtyText || 1 }}</span>
-                <span class="shrink-0 text-sm font-medium tabular-nums">{{ foreign ? currency : '$' }}{{ groupDigits(d.amountText) || 0 }}</span>
+                <span class="shrink-0 text-sm font-medium tabular-nums"><template v-if="foreign">{{ currency }}</template><span v-else class="mr-px">$</span>{{ groupDigits(d.amountText) || 0 }}</span>
               </button>
               <button
                 type="button"
@@ -1612,10 +1613,10 @@ function cancel() {
       <p v-if="detailGap" class="mt-2 flex items-start gap-1.5 text-xs text-muted">
         <Info :size="14" class="mt-px shrink-0" />
         <span
-          >細項加起來 {{ foreign ? `${currency} ` : '$' }}{{ fmt(detailSum(line)) }}，比上面的金額{{
+          >細項加起來 <template v-if="foreign">{{ currency }} </template><span v-else class="mr-px">$</span>{{ fmt(detailSum(line)) }}，比上面的金額{{
             detailGap > 0 ? '多' : '少'
           }}
-          {{ foreign ? `${currency} ` : '$' }}{{ fmt(Math.abs(detailGap)) }}。</span
+          <template v-if="foreign">{{ currency }} </template><span v-else class="mr-px">$</span>{{ fmt(Math.abs(detailGap)) }}。</span
         >
       </p>
       <p v-if="!line.details.length" class="mt-2 text-xs text-muted">
@@ -1776,7 +1777,7 @@ function cancel() {
                 <li v-for="sug in detailSuggestions" :key="sug.name" class="flex items-center gap-2">
                   <button class="flex min-w-0 flex-1 items-center gap-2 py-2 text-left" @click="useDetail(sug)">
                     <span class="min-w-0 flex-1 truncate text-sm">{{ sug.name }}</span>
-                    <span v-if="sug.amount" class="shrink-0 text-xs text-muted tabular-nums">${{ fmt(sug.amount) }}</span>
+                    <span v-if="sug.amount" class="shrink-0 text-xs text-muted tabular-nums"><MoneyText :n="sug.amount" /></span>
                   </button>
                   <button
                     type="button"

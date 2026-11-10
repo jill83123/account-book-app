@@ -15,6 +15,7 @@ const remembered = {
 </script>
 
 <script setup lang="ts">
+import MoneyText from '@/components/MoneyText.vue'
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { byCategory, toEntries, type CatTotal, type Entry } from '@/lib/calc'
@@ -337,14 +338,14 @@ const barTone = (spent: number, budget: number) =>
         :class="flow === 'income' ? 'border-income text-ink' : 'border-transparent text-muted'"
         @click="flow = 'income'"
       >
-        收入 ${{ fmt(incomeTotal) }}
+        收入 <MoneyText :n="incomeTotal" />
       </button>
       <button
         class="-mb-px border-b-[3px] py-3 text-[15px] font-medium"
         :class="flow === 'expense' ? 'border-expense text-ink' : 'border-transparent text-muted'"
         @click="flow = 'expense'"
       >
-        支出 ${{ fmt(expenseTotal) }}
+        支出 <MoneyText :n="expenseTotal" />
       </button>
     </div>
 
@@ -353,7 +354,7 @@ const barTone = (spent: number, budget: number) =>
       <section class="card px-7 py-7">
         <DonutChart :slices="slices" :active-id="picked?.id" :size="176" :thickness="28" @pick="pickSlice">
           <span class="max-w-full truncate text-[clamp(0.65rem,6cqw,0.8rem)] text-muted">{{ picked ? picked.name : flow === 'income' ? '總收入' : '總支出' }}</span>
-          <span class="text-[clamp(1rem,10cqw,1.5rem)] leading-tight font-bold">${{ fmt(picked ? picked.total : shownTotal) }}</span>
+          <span class="text-[clamp(1rem,10cqw,1.5rem)] leading-tight font-bold"><MoneyText :n="picked ? picked.total : shownTotal" /></span>
           <span v-if="picked" class="text-[clamp(0.65rem,6cqw,0.8rem)] text-muted">占整體 {{ pct(picked.total) }}%</span>
         </DonutChart>
       </section>
@@ -367,7 +368,7 @@ const barTone = (spent: number, budget: number) =>
             <CatIcon :icon="t.icon" :color="t.color" :size="34" />
             <span class="min-w-0 flex-1 truncate font-medium">{{ t.name }}</span>
             <span class="w-10 text-right text-xs text-muted">{{ pct(t.total) }}%</span>
-            <span class="font-semibold">${{ fmt(t.total) }}</span>
+            <span class="font-semibold"><MoneyText :n="t.total" /></span>
             <ChevronDown :size="16" class="shrink-0 text-muted transition-transform" :class="expandedId === t.id && 'rotate-180'" />
           </button>
           <ul v-if="expandedId === t.id" class="space-y-3 bg-surface-2/60 px-4 pt-3">
@@ -375,7 +376,7 @@ const barTone = (spent: number, budget: number) =>
             <li class="pb-1">
               <div class="mb-2 flex items-baseline justify-between text-xs text-muted">
                 <span>{{ mode === 'range' ? '這段期間' : `${trendMonths[0]!.slice(0, 4)} 年` }}</span>
-                <span>平均每月 ${{ fmt(trendOf(t.id).avg) }}</span>
+                <span>平均每月 <MoneyText :n="trendOf(t.id).avg" /></span>
               </div>
               <div class="flex h-24 touch-pan-y items-end gap-1" @pointerdown="swipeDown" @pointerup="swipeUp" @pointercancel="swipeX = null">
                 <button
@@ -403,7 +404,7 @@ const barTone = (spent: number, budget: number) =>
             <!-- sub-categories: tap one to read the records of just that one below (tap again to see all); it stays on this list -->
             <li v-if="recordsOf(t.id).length" class="mb-1 flex items-baseline justify-between pt-2 text-xs text-muted">
               <span>{{ pickLabel }}的分類</span>
-              <span class="tabular-nums">${{ fmt(subSum(t.id)) }}</span>
+              <span class="tabular-nums"><MoneyText :n="subSum(t.id)" /></span>
             </li>
             <li v-for="sub in subsOf(t.id)" :key="sub.id" class="text-sm">
               <button
@@ -416,7 +417,7 @@ const barTone = (spent: number, budget: number) =>
                   <span class="min-w-0 flex-1 truncate" :class="subId === sub.id && 'font-semibold'">{{ sub.id === t.id ? '未細分' : sub.name }}</span>
                   <span class="text-xs text-muted">{{ sub.count }} 項</span>
                   <span class="w-8 text-right text-xs text-muted tabular-nums">{{ Math.round((sub.total / (subSum(t.id) || 1)) * 100) }}%</span>
-                  <span class="w-14 text-right text-[13px] tabular-nums">${{ fmt(sub.total) }}</span>
+                  <span class="w-14 text-right text-[13px] tabular-nums"><MoneyText :n="sub.total" /></span>
                 </div>
                 <div class="mt-1 h-1 overflow-hidden rounded-full bg-line">
                   <div class="h-full rounded-full" :style="{ width: `${Math.max(3, (sub.total / (subSum(t.id) || 1)) * 100)}%`, background: t.color }" />
@@ -449,13 +450,13 @@ const barTone = (spent: number, budget: number) =>
         <template v-if="totalBudget > 0">
           <p class="text-xs text-muted">剩餘</p>
           <p class="mb-2 text-3xl font-bold" :class="totalBudget - expenseTotal < 0 && 'text-expense'">
-            ${{ fmt(totalBudget - expenseTotal) }}
+            <MoneyText :n="totalBudget - expenseTotal" />
           </p>
           <div class="h-2.5 overflow-hidden rounded-full bg-surface-2">
             <div class="h-full rounded-full" :class="barTone(expenseTotal, totalBudget)" :style="{ width: `${Math.min(100, (expenseTotal / totalBudget) * 100)}%` }" />
           </div>
           <div class="mt-1.5 flex justify-between text-xs text-muted">
-            <span>已花 ${{ fmt(expenseTotal) }}</span><span>預算 ${{ fmt(totalBudget) }}</span>
+            <span>已花 <MoneyText :n="expenseTotal" /></span><span>預算 <MoneyText :n="totalBudget" /></span>
           </div>
         </template>
         <div v-else class="space-y-1 py-3 text-sm text-muted">
@@ -473,7 +474,7 @@ const barTone = (spent: number, budget: number) =>
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-3 leading-5">
               <span class="flex-1 truncate font-medium">{{ r.c.name }}</span>
-              <span class="font-semibold" :class="r.budget > 0 && r.spent > r.budget && 'text-expense'">${{ fmt(r.spent) }}</span>
+              <span class="font-semibold" :class="r.budget > 0 && r.spent > r.budget && 'text-expense'"><MoneyText :n="r.spent" /></span>
               <span v-if="r.budget" class="text-xs text-muted">/ {{ fmt(r.budget) }}</span>
             </div>
             <div v-if="r.budget" class="mt-1 h-2 overflow-hidden rounded-full bg-surface-2">
@@ -514,7 +515,7 @@ const barTone = (spent: number, budget: number) =>
             <button class="flex w-full items-center px-4 py-3.5 text-left" @click="openItem = openItem === r.name ? '' : r.name">
               <span class="min-w-0 flex-1 truncate">{{ r.name }}</span>
               <span class="w-14 text-center text-sm text-muted">{{ r.count }}</span>
-              <span class="w-24 text-right font-medium">${{ fmt(r.total) }}</span>
+              <span class="w-24 text-right font-medium"><MoneyText :n="r.total" /></span>
             </button>
             <!-- the records behind this row; a fixed height, scroll for more -->
             <div v-if="openItem === r.name" class="border-t border-line px-4">

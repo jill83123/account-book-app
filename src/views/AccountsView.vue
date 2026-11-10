@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MoneyText from '@/components/MoneyText.vue'
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Archive, ArrowLeftRight, ChevronRight, Plus } from '@/lib/uiIcons'
@@ -37,7 +38,6 @@ const payable = computed(() =>
 const active = computed(() => data.sortedAccounts.filter((a) => !a.archived))
 const bal = (a: Account) => data.balances.get(a.id) ?? 0
 /** a wallet in another currency shows its own currency in front */
-const balText = (a: Account) => `$${fmt(bal(a))}`
 
 const totals = computed(() => {
   let assets = receivable.value
@@ -229,7 +229,7 @@ onBeforeUnmount(() => {
         <div v-if="g.title === 'card'" class="flex gap-3 pr-10 text-xs text-muted">
           <span class="w-16 text-right">上期帳單</span><span class="w-16 text-right">本期累計</span>
         </div>
-        <span v-else class="text-sm font-semibold" :class="tone(groupSum(g.list))">${{ fmt(groupSum(g.list)) }}</span>
+        <span v-else class="text-sm font-semibold" :class="tone(groupSum(g.list))"><MoneyText :n="groupSum(g.list)" /></span>
       </div>
       <TransitionGroup
         v-if="g.list.length"
@@ -266,10 +266,10 @@ onBeforeUnmount(() => {
               <span v-if="isForeignAccount(a)" class="block text-xs text-muted">{{ currencyName(a.currency!) }}</span>
             </span>
             <template v-if="a.kind === 'card'">
-              <span class="w-16 text-right text-sm font-semibold">${{ fmt(cardInfo(a).prev) }}</span>
-              <span class="w-16 text-right text-sm font-semibold">${{ fmt(cardInfo(a).cur) }}</span>
+              <span class="w-16 text-right text-sm font-semibold"><MoneyText :n="cardInfo(a).prev" /></span>
+              <span class="w-16 text-right text-sm font-semibold"><MoneyText :n="cardInfo(a).cur" /></span>
             </template>
-            <span v-else class="font-semibold" :class="tone(bal(a))">{{ balText(a) }}</span>
+            <span v-else class="font-semibold" :class="tone(bal(a))"><MoneyText :n="bal(a)" /></span>
             <ChevronRight :size="16" class="text-muted" />
           </button>
         </div>
@@ -288,8 +288,8 @@ onBeforeUnmount(() => {
         <button class="flex w-full items-center gap-3 px-4 py-3.5 text-left" @click="router.push('/more/loans')">
           <CatIcon icon="handcoins" color="#f59e0b" :size="40" />
           <span class="min-w-0 flex-1 truncate font-medium">借款</span>
-          <span class="w-16 text-right text-sm font-semibold text-expense">${{ fmt(payable) }}</span>
-          <span class="w-16 text-right text-sm font-semibold text-primary">${{ fmt(receivable) }}</span>
+          <span class="w-16 text-right text-sm font-semibold text-expense"><MoneyText :n="payable" /></span>
+          <span class="w-16 text-right text-sm font-semibold text-primary"><MoneyText :n="receivable" /></span>
           <ChevronRight :size="16" class="text-muted" />
         </button>
       </div>
@@ -302,7 +302,7 @@ onBeforeUnmount(() => {
           <button class="flex min-w-0 flex-1 items-center gap-3 text-left" @click="archivedOpen = false; router.push(`/account/${a.id}`)">
             <CatIcon :icon="accountIcon(a)" :color="a.color" :size="36" />
             <span class="min-w-0 flex-1 truncate font-medium">{{ a.name }}</span>
-            <span class="text-sm text-muted">{{ balText(a) }}</span>
+            <span class="text-sm text-muted"><MoneyText :n="bal(a)" /></span>
           </button>
           <button class="btn btn-soft btn-sm shrink-0" @click="unarchive(a)">取消封存</button>
         </li>

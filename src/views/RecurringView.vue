@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MoneyText from '@/components/MoneyText.vue'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Plus, Repeat, Trash2 } from '@/lib/uiIcons'
@@ -118,9 +119,9 @@ const catOf = (r: Recurring) => data.catMap.get(r.template.lines[0]?.categoryId 
           </span>
         </span>
         <span class="text-right">
-          <span class="block font-semibold">${{ fmt(per(r)) }}</span>
+          <span class="block font-semibold"><MoneyText :n="per(r)" /></span>
           <span v-if="r.kind === 'installment' && r.installment" class="block text-xs text-muted">
-            剩 ${{ fmt(r.installment.total - Math.round((r.installment.total / r.installment.periods) * r.generated)) }}
+            剩 <MoneyText :n="r.installment.total - Math.round((r.installment.total / r.installment.periods) * r.generated)" />
           </span>
           <Repeat v-else :size="13" class="ml-auto text-muted" />
         </span>

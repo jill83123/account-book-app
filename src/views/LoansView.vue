@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MoneyText from '@/components/MoneyText.vue'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ChevronDown, ChevronRight, Plus, Trash2 } from '@/lib/uiIcons'
@@ -200,11 +201,11 @@ const accountItems = computed(() => [
     <section class="card mb-4 grid grid-cols-2 text-center">
       <div>
         <p class="text-xs text-muted">應付（我欠別人）</p>
-        <p class="text-xl font-semibold text-expense">${{ fmt(payable) }}</p>
+        <p class="text-xl font-semibold text-expense"><MoneyText :n="payable" /></p>
       </div>
       <div>
         <p class="text-xs text-muted">應收（別人欠我）</p>
-        <p class="text-xl font-semibold text-primary">${{ fmt(receivable) }}</p>
+        <p class="text-xl font-semibold text-primary"><MoneyText :n="receivable" /></p>
       </div>
     </section>
 
@@ -212,7 +213,7 @@ const accountItems = computed(() => [
       <section v-for="g in groups" :key="g.key" class="mb-6">
         <div class="mb-2 flex items-baseline justify-between px-2">
           <h2 class="text-sm font-semibold text-ink/70">{{ g.title }}</h2>
-          <span v-if="g.sum" class="text-sm font-semibold" :class="g.key === 'lend' ? 'text-primary' : 'text-expense'">${{ fmt(g.sum) }}</span>
+          <span v-if="g.sum" class="text-sm font-semibold" :class="g.key === 'lend' ? 'text-primary' : 'text-expense'"><MoneyText :n="g.sum" /></span>
         </div>
         <div class="card divide-y divide-line p-0">
           <button v-for="l in shownRows(g)" :key="l.id" class="flex w-full items-center gap-3 px-4 py-3.5 text-left" @click="openDetail(l)">
@@ -225,7 +226,7 @@ const accountItems = computed(() => [
             </span>
             <span class="text-right">
               <span class="block font-semibold" :class="g.key === 'done' ? 'text-muted' : l.direction === 'lend' ? 'text-primary' : 'text-expense'">
-                {{ g.key === 'done' ? '已結清' : `$${fmt(loanOutstanding(l))}` }}
+                <template v-if="g.key === 'done'">已結清</template><MoneyText v-else :n="loanOutstanding(l)" />
               </span>
               <span v-if="g.key !== 'done' && l.dueDate && l.dueDate < today()" class="block text-xs text-danger">已逾期</span>
             </span>
@@ -294,8 +295,8 @@ const accountItems = computed(() => [
       <div v-if="cur" class="space-y-4">
         <div class="card text-center">
           <p class="text-xs text-muted">{{ cur.direction === 'lend' ? '對方還欠我' : '我還欠對方' }}</p>
-          <p class="text-3xl font-bold">${{ fmt(Math.max(0, loanOutstanding(cur))) }}</p>
-          <p class="mt-1 text-xs text-muted">總額 ${{ fmt(cur.principal) }}，{{ cur.date }}{{ cur.accountId ? `，${accName(cur.accountId)}` : '' }}</p>
+          <p class="text-3xl font-bold"><MoneyText :n="Math.max(0, loanOutstanding(cur))" /></p>
+          <p class="mt-1 text-xs text-muted">總額 <MoneyText :n="cur.principal" />，{{ cur.date }}{{ cur.accountId ? `，${accName(cur.accountId)}` : '' }}</p>
           <p v-if="cur.note && !source" class="mt-1 text-xs text-muted">{{ cur.note }}</p>
         </div>
 
@@ -303,7 +304,7 @@ const accountItems = computed(() => [
         <button v-if="source" class="card flex w-full items-center gap-3 text-left" @click="openSource">
           <span class="min-w-0 flex-1">
             <span class="block text-xs text-muted">來自這筆分帳</span>
-            <span class="block truncate font-medium">{{ sourceTitle }}<span class="font-normal text-muted">　{{ source.date }}｜共 ${{ fmt(source.total) }}</span></span>
+            <span class="block truncate font-medium">{{ sourceTitle }}<span class="font-normal text-muted">　{{ source.date }}｜共 <MoneyText :n="source.total" /></span></span>
           </span>
           <ChevronRight :size="16" class="shrink-0 text-muted" />
         </button>
@@ -311,7 +312,7 @@ const accountItems = computed(() => [
         <ul v-if="cur.repayments.length" class="card divide-y divide-line p-0">
           <li v-for="r in cur.repayments" :key="r.id" class="flex items-center gap-3 px-4 py-3 text-sm">
             <span class="flex-1">{{ r.date }}{{ r.accountId ? `　${accName(r.accountId)}` : '' }}</span>
-            <span class="font-semibold">${{ fmt(r.amount) }}</span>
+            <span class="font-semibold"><MoneyText :n="r.amount" /></span>
             <button class="icon-btn size-8 text-muted" aria-label="移除這筆還款" @click="dropRepayment(r.id)"><Trash2 :size="15" /></button>
           </li>
         </ul>
@@ -319,7 +320,7 @@ const accountItems = computed(() => [
         <div v-if="loanOutstanding(cur) > 0" class="card space-y-3">
           <div class="flex items-center justify-between">
             <p class="text-sm font-semibold">{{ cur.direction === 'lend' ? '收款' : '還款' }}</p>
-            <button class="chip" @click="repayAmount = String(loanOutstanding(cur))">全額 ${{ fmt(loanOutstanding(cur)) }}</button>
+            <button class="chip" @click="repayAmount = String(loanOutstanding(cur))">全額 <MoneyText :n="loanOutstanding(cur)" /></button>
           </div>
           <div class="grid grid-cols-[2fr_3fr] gap-3">
             <div>

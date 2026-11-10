@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MoneyText from '@/components/MoneyText.vue'
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Pencil, Scale } from '@/lib/uiIcons'
@@ -96,7 +97,7 @@ const card = computed(() => {
 
     <section class="card mb-4 text-center">
       <p class="text-xs text-muted">{{ account.kind === 'card' ? '目前欠款' : '目前餘額' }}</p>
-      <p class="text-3xl font-bold" :class="balance < 0 ? 'text-expense' : 'text-primary'">{{ `$${fmt(balance)}` }}</p>
+      <p class="text-3xl font-bold" :class="balance < 0 ? 'text-expense' : 'text-primary'"><MoneyText :n="balance" /></p>
       <button class="btn btn-soft btn-sm mt-3" @click="openAdjust"><Scale :size="16" />調整餘額</button>
     </section>
 
@@ -106,14 +107,14 @@ const card = computed(() => {
           上期帳單
           <span class="block text-xs text-muted">{{ card.prevRange }}</span>
         </span>
-        <span class="text-lg font-semibold">${{ fmt(card.prev) }}</span>
+        <span class="text-lg font-semibold"><MoneyText :n="card.prev" /></span>
       </div>
       <div class="flex justify-between">
         <span>
           本期累計（尚未出帳）
           <span class="block text-xs text-muted">{{ card.curRange }}</span>
         </span>
-        <span class="text-lg font-semibold">${{ fmt(card.cur) }}</span>
+        <span class="text-lg font-semibold"><MoneyText :n="card.cur" /></span>
       </div>
       <p v-if="card.due" class="text-xs text-muted">下次繳款日：{{ card.due }}</p>
       <button
@@ -144,7 +145,7 @@ const card = computed(() => {
         </p>
         <div class="card flex items-center justify-between">
           <span class="text-sm text-muted">帳面{{ isCard ? '欠款' : '餘額' }}</span>
-          <span class="font-semibold">{{ `$${fmt(shown)}` }}</span>
+          <span class="font-semibold"><MoneyText :n="shown" /></span>
         </div>
         <div>
           <label class="label" for="actual">實際{{ isCard ? '欠款' : '餘額' }}</label>
@@ -152,7 +153,7 @@ const card = computed(() => {
         </div>
         <p v-if="actual != null && diff" class="text-sm">
           差額
-          <b :class="diff > 0 ? 'text-income' : 'text-expense'">{{ diff > 0 ? '+' : '-' }}{{ `$${fmt(Math.abs(diff))}` }}</b>
+          <b :class="diff > 0 ? 'text-income' : 'text-expense'">{{ diff > 0 ? '+' : '-' }}<MoneyText :n="Math.abs(diff)" /></b>
           <span class="text-muted">，{{ isCard ? (diff > 0 ? '欠款變少' : '欠款變多') : diff > 0 ? '帳面補上' : '帳面扣掉' }}這筆</span>
         </p>
         <button class="btn btn-primary w-full" :disabled="actual == null || !diff" @click="adjust">確定調整</button>

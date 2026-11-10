@@ -79,7 +79,6 @@ function basePieces(): Piece[] {
 const catPiece = computed(() => pieces.value.find((p) => p.kind === 'cat'))
 const restPieces = computed(() => pieces.value.filter((p) => p.kind !== 'cat'))
 
-const sign = computed(() => (props.rec.type === 'income' ? '+' : props.rec.type === 'expense' ? '' : ''))
 const tone = computed(() =>
   props.rec.type === 'income' ? 'text-income' : props.rec.type === 'expense' ? 'text-expense' : 'text-muted',
 )
@@ -126,7 +125,7 @@ const tone = computed(() =>
       </div>
     </div>
     <div class="flex shrink-0 flex-col items-end">
-      <span class="text-base leading-6 font-semibold" :class="tone">{{ sign }}${{ fmt(myTotal(rec)) }}</span>
+      <span class="text-base leading-6 font-semibold" :class="tone">{{ fmt(myTotal(rec)) }}</span>
       <span v-if="(account || ledger) && rec.type !== 'transfer'" class="mt-0.5 flex h-[18px] max-w-full items-center gap-1">
         <span v-if="ledger" class="tag truncate" :style="ledgerStyle">{{ ledger }}</span>
         <span v-if="account" class="tag shrink-0" :style="accountStyle">{{ account }}</span>

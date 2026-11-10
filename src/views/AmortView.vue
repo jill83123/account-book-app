@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MoneyText from '@/components/MoneyText.vue'
 import { computed, ref } from 'vue'
 import { Plus } from '@/lib/uiIcons'
 import { save } from '@/db'
@@ -109,11 +110,11 @@ async function apply(n: number) {
         <span class="min-w-0 flex-1">
           <span class="block truncate font-medium">{{ title(i) }}</span>
           <span class="block truncate text-xs text-muted">
-            每月 ${{ fmt(perMonth(i.line.amount, i.line.amortMonths!)) }}，到 {{ lastMonth(i, i.line.amortMonths!) }}
+            每月 <MoneyText :n="perMonth(i.line.amount, i.line.amortMonths!)" />，到 {{ lastMonth(i, i.line.amortMonths!) }}
           </span>
         </span>
         <span class="text-right">
-          <span class="block font-semibold">${{ fmt(i.line.amount) }}</span>
+          <span class="block font-semibold"><MoneyText :n="i.line.amount" /></span>
           <span class="block text-xs text-muted">分 {{ i.line.amortMonths }} 個月</span>
         </span>
       </button>
@@ -134,7 +135,7 @@ async function apply(n: number) {
               <span class="block truncate font-medium">{{ title(i) }}</span>
               <span class="block truncate text-xs text-muted">{{ i.rec.date }}{{ shop(i) ? `　${shop(i)}` : '' }}</span>
             </span>
-            <span class="font-semibold">${{ fmt(i.line.amount) }}</span>
+            <span class="font-semibold"><MoneyText :n="i.line.amount" /></span>
           </button>
         </li>
       </ul>
@@ -144,9 +145,9 @@ async function apply(n: number) {
       <div v-if="target" class="space-y-4">
         <div class="card text-center">
           <p class="text-xs text-muted">{{ target.rec.date }} 付款</p>
-          <p class="text-3xl font-bold">${{ fmt(target.line.amount) }}</p>
+          <p class="text-3xl font-bold"><MoneyText :n="target.line.amount" /></p>
           <p class="mt-2 text-sm">
-            分 {{ months }} 個月，每月 <b>${{ fmt(perMonth(target.line.amount, months)) }}</b>
+            分 {{ months }} 個月，每月 <b><MoneyText :n="perMonth(target.line.amount, months)" /></b>
           </p>
           <p class="text-xs text-muted">{{ ym(target.rec.date) }} 到 {{ lastMonth(target, months) }}</p>
         </div>

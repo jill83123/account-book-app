@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MoneyText from '@/components/MoneyText.vue'
 import { computed, ref, watch } from 'vue'
 import type { Freq } from '@/db/types'
 import { FREQ_LABEL, type Repeat } from '@/lib/recurrence'
@@ -154,8 +155,8 @@ function save() {
         </div>
         <div class="rounded-2xl bg-primary-soft px-4 py-3 text-center">
           <p class="text-xs text-primary-strong">每期約</p>
-          <p class="text-2xl font-bold text-primary-strong">${{ fmt(perPeriod) }}</p>
-          <p class="mt-0.5 text-xs text-muted">總額 ${{ fmt(total) }} ÷ {{ periods || 0 }} 期 + 手續費 ${{ fmt(fee || 0) }}</p>
+          <p class="text-2xl font-bold text-primary-strong"><MoneyText :n="perPeriod" /></p>
+          <p class="mt-0.5 text-xs text-muted">總額 <MoneyText :n="total" /> ÷ {{ periods || 0 }} 期 + 手續費 <MoneyText :n="fee || 0" /></p>
         </div>
       </template>
 

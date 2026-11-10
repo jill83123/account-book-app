@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MoneyText from '@/components/MoneyText.vue'
 import { computed, ref, watch } from 'vue'
 import type { Rec } from '@/db/types'
 import { evalExpr, fmt } from '@/lib/money'
@@ -86,9 +87,9 @@ function done() {
           </div>
         </div>
         <div>
-          <label class="label" for="split-mine">我的部分（這筆一共 ${{ fmt(total) }}）</label>
+          <label class="label" for="split-mine">我的部分（這筆一共 <MoneyText :n="total" />）</label>
           <MoneyInput id="split-mine" v-model="mineText" class="input" inputmode="decimal" placeholder="0" />
-          <p v-if="payer && mineOther > 0 && !tooMuch" class="mt-1.5 px-1 text-xs text-muted">你欠{{ members.nameOf(payer) }} ${{ fmt(mineOther) }}，之後在<b>借款</b>頁還給他。</p>
+          <p v-if="payer && mineOther > 0 && !tooMuch" class="mt-1.5 px-1 text-xs text-muted">你欠{{ members.nameOf(payer) }} <MoneyText :n="mineOther" />，之後在<b>借款</b>頁還給他。</p>
         </div>
       </template>
 
@@ -99,7 +100,7 @@ function done() {
           <span class="min-w-0 flex-1">
             <span class="block font-medium">我的花費</span>
           </span>
-          <span class="text-lg font-bold text-primary-strong tabular-nums">{{ total > 0 ? `$${fmt(mine)}` : '—' }}</span>
+          <span class="text-lg font-bold text-primary-strong tabular-nums"><MoneyText v-if="total > 0" :n="mine" /><template v-else>—</template></span>
         </div>
         <div v-for="p in people" :key="p" class="flex items-center gap-3 rounded-2xl bg-surface-2 px-4 py-2.5">
           <span class="grid size-9 shrink-0 place-items-center rounded-full bg-line text-sm font-semibold text-ink">{{ members.nameOf(p).slice(0, 1) }}</span>
@@ -109,10 +110,10 @@ function done() {
             <span class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-muted">$</span>
             <MoneyInput v-model="typed[p]" class="input w-full !min-h-0 !py-2 !pl-6 text-right" inputmode="decimal" placeholder="0" />
           </span>
-          <span v-else class="text-lg font-semibold tabular-nums">{{ total > 0 ? `$${fmt(amountOf(p))}` : '—' }}</span>
+          <span v-else class="text-lg font-semibold tabular-nums"><MoneyText v-if="total > 0" :n="amountOf(p)" /><template v-else>—</template></span>
         </div>
       </div>
-      <p v-if="tooMuch" class="text-sm text-danger">金額超過這筆的總額 ${{ fmt(total) }}。</p>
+      <p v-if="tooMuch" class="text-sm text-danger">金額超過這筆的總額 <MoneyText :n="total" />。</p>
 
       <button class="btn btn-primary w-full" :disabled="tooMuch" @click="done">完成</button>
     </div>

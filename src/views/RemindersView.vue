@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MoneyText from '@/components/MoneyText.vue'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { BellRing, CalendarClock, ChevronDown, CreditCard, HandCoins, PencilLine, X } from '@/lib/uiIcons'
@@ -51,7 +52,7 @@ const dayLabel =(ms: number) => {
             <p class="truncate font-semibold">{{ r.title }}</p>
             <p class="truncate text-xs text-muted">{{ r.detail }}</p>
           </div>
-          <span v-if="r.amount != null" class="font-semibold">${{ fmt(r.amount) }}</span>
+          <span v-if="r.amount != null" class="font-semibold"><MoneyText :n="r.amount" /></span>
           <button v-if="r.kind === 'upcoming'" class="icon-btn size-9" aria-label="封存" title="封存" @click="archive(r)">
             <X :size="16" />
           </button>
@@ -93,7 +94,7 @@ const dayLabel =(ms: number) => {
                 {{ dayLabel(a.endedAt) }} {{ a.how === 'archived' ? '封存' : '已結束' }}，還保留 {{ daysLeft(a) }} 天
               </p>
             </div>
-            <span v-if="a.amount != null" class="text-sm text-muted">${{ fmt(a.amount) }}</span>
+            <span v-if="a.amount != null" class="text-sm text-muted"><MoneyText :n="a.amount" /></span>
             <button v-if="a.how === 'archived'" class="text-xs font-medium text-primary" @click="reminders.restore(a)">復原</button>
             <button class="text-xs text-muted" @click="reminders.forget(a.endedAt, a.key)">刪除</button>
           </li>

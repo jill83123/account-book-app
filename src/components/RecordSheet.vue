@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MoneyText from '@/components/MoneyText.vue'
 import { computed, ref, watch, type Component } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowLeftRight, BookMarked, Clock, Copy, Pencil, Repeat, Scale, Store, Trash2, Users, Wallet } from '@/lib/uiIcons'
@@ -182,7 +183,7 @@ async function destroy() {
           <p v-else-if="catAbove" class="mb-0.5 truncate text-xs text-ink/70">{{ catAbove }}</p>
           <p class="truncate text-lg leading-tight font-bold">{{ title }}</p>
         </div>
-        <p class="text-2xl font-bold" :class="tone">${{ fmt(myTotal(rec)) }}</p>
+        <p class="text-2xl font-bold" :class="tone"><MoneyText :n="myTotal(rec)" /></p>
       </div>
 
       <!-- the items -->
@@ -197,7 +198,7 @@ async function destroy() {
           <li v-for="(d, i) in rec.lines[0]!.details" :key="i" class="contents">
             <span class="min-w-0 truncate">{{ d.name }}</span>
             <span class="text-right text-muted">×{{ d.qty || 1 }}</span>
-            <span class="text-left">{{ d.amount ? `$${fmt(d.amount)}` : '' }}</span>
+            <span class="text-left"><MoneyText v-if="d.amount" :n="d.amount" /></span>
           </li>
         </ul>
       </div>
@@ -217,7 +218,7 @@ async function destroy() {
             </p>
           </div>
           <div class="text-right">
-            <p class="text-sm font-semibold">${{ fmt(l.amount) }}</p>
+            <p class="text-sm font-semibold"><MoneyText :n="l.amount" /></p>
           </div>
         </li>
       </ul>
@@ -226,7 +227,7 @@ async function destroy() {
       <div v-if="rec.split" class="rounded-2xl border border-line bg-surface px-4 text-sm">
         <div class="flex items-center justify-between pt-3 pb-1 text-xs text-muted">
           <span>{{ rec.split.mode === 'advance' ? '代墊' : rec.split.mode === 'other' ? '別人付' : '分帳' }}</span>
-          <span class="tabular-nums">{{ rec.split.mode === 'other' ? `${data.memberName(rec.split.payer ?? '')} 先付了` : '共付' }} ${{ fmt(rec.total) }}</span>
+          <span class="tabular-nums">{{ rec.split.mode === 'other' ? `${data.memberName(rec.split.payer ?? '')} 先付了` : '共付' }} <MoneyText :n="rec.total" /></span>
         </div>
         <ul class="pb-2">
           <li class="flex items-center gap-2 py-1.5">
@@ -236,12 +237,12 @@ async function destroy() {
               class="shrink-0 rounded-full px-2 py-0.5 text-xs"
               :class="shareLeft(rec.split.payer) > 0 ? 'bg-primary-soft text-primary-strong' : 'bg-surface-2 text-muted'"
             >{{ shareStatus(rec.split.payer) }}</span>
-            <span class="text-right font-medium tabular-nums">${{ fmt(myTotal(rec)) }}</span>
+            <span class="text-right font-medium tabular-nums"><MoneyText :n="myTotal(rec)" /></span>
           </li>
           <li v-for="p in rec.split.shares" :key="p.memberId" class="flex items-center gap-2 py-1.5">
             <span class="min-w-0 flex-1 truncate">{{ data.memberName(p.memberId) }}</span>
             <span v-if="shareStatus(p.memberId)" class="shrink-0 rounded-full px-2 py-0.5 text-xs" :class="shareLeft(p.memberId) > 0 ? 'bg-primary-soft text-primary-strong' : 'bg-surface-2 text-muted'">{{ shareStatus(p.memberId) }}</span>
-            <span class="text-right font-medium tabular-nums">${{ fmt(p.amount) }}</span>
+            <span class="text-right font-medium tabular-nums"><MoneyText :n="p.amount" /></span>
           </li>
         </ul>
       </div>
