@@ -10,7 +10,7 @@
 - 帳戶列表、按住拖曳：看 `AccountsView.vue`
 - 簡單的新增、改名：看 `MembersView.vue`
 - 置中小視窗：看 `LedgerPickSheet.vue` 的新增帳本視窗、`UiLayer.vue`
-- 抽屜表單：看 `AccountFormSheet.vue`
+- 選擇或查看用的抽屜：看 `PickSheet.vue`
 
 做完拿現成畫面並排比對，再交給使用者。
 
@@ -36,11 +36,14 @@
 
 - **新增**：頁面右上角用 `PageHeader` 的 `right` 插槽放 `circle-btn` 加號，點了開**置中小視窗**。視窗規格：`card w-full max-w-[21rem] space-y-5 p-5 shadow-xl`，標題 `text-lg font-bold`，輸入框之間 `space-y-3`，按鈕 `grid grid-cols-2 gap-2`（取消用 `btn-soft`，確認用 `btn-primary`）。
 - **顯示或隱藏**：用眼睛 `Eye` 和 `EyeOff` 圖示，不要用開關。被隱藏的內容整列變淡。
-- **分頁**：用 `PillTabs`。
+- **分頁**：用 `PillTabs`。分頁只用來切換不同內容；表單裡二選一的選項不要用分頁，用左邊文字、右邊 `ToggleSwitch` 的一列（看 `AccountFormSheet.vue` 的封存）。
 - **拖曳排序**：長按整列（約 0.4 秒）開始，不要放拖曳把手圖示。被拖的那一列只加邊框和浮起，不要把背景變藍：`rounded-2xl bg-surface shadow-xl ring-2 ring-primary`（首頁記錄列、分類、資產、幣別都一樣），加 `translateY` 跟著手指，其他列即時換位並有滑動動畫（`TransitionGroup` 的 `rows` 與 `still`）。手指拖曳時要擋住頁面捲動（`touchmove` 的 `preventDefault`）。程式照 `CategoriesView.vue` 的 `press`、`startDrag`、`frame` 寫。放列的卡片要加 `relative`，不然列的 `offsetTop` 會相對於 body，位置算錯。
 - **可編輯的列**：右邊放鉛筆圖示按鈕（`Pencil`，跟分類頁一樣）開編輯，不要用點整列；內建項目沒有鉛筆。
 - **下拉選擇**：不要用原生 `select`。用 `SelectField`；選項不多的欄位（例如幣別）加 `inline`，選項直接懸浮展開。放在抽屜裡面的一定要加，不要再開一層抽屜。
-- **抽屜**（`BottomSheet`）：儲存按鈕放 `footer` 插槽，會固定在底部並有漸層。內容底部要多留空間，不然最後一列會被漸層蓋住。
+- **抽屜或置中視窗要想過再選，不要預設用抽屜**：
+  - 置中小視窗：輸入東西用這個，例如新增、改名、改幾個名稱、確認。看 `LedgerPickSheet.vue` 的新增帳本視窗。內容多時，只讓中間的區域在視窗內捲動，標題和按鈕固定。
+  - 抽屜：只用來選擇或查看，例如選項清單、詳細內容、很長要捲動的內容。不要拿來放輸入欄位。現有的帳戶、分類編輯還是抽屜，是舊做法，新畫面不要照抄。
+  - 抽屜的細節（`BottomSheet`）：按鈕放 `footer` 插槽，會固定在底部並有漸層。內容底部要多留空間，不然最後一列會被漸層蓋住。
 - 同一個畫面不要抽屜疊抽屜。
 
 ## 圖示與資料
