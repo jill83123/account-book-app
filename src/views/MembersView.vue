@@ -49,7 +49,7 @@ async function destroy() {
   <div>
     <PageHeader title="成員" />
 
-    <p class="mb-3 px-1 text-sm text-muted">新增常一起花錢的人，記帳時就能用<b>和誰一起</b>欄位選他們。</p>
+    <p class="mb-3 px-1 text-sm text-muted">新增常一起花錢的人，記帳時就能用「和誰一起」欄位選他們。</p>
 
     <div class="mb-4 flex gap-2">
       <input v-model="typed" class="input min-w-0 flex-1" maxlength="12" placeholder="新增成員的名字" @keyup.enter="add" />

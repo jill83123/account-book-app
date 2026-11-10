@@ -461,7 +461,7 @@ const barTone = (spent: number, budget: number) =>
         </template>
         <div v-else class="space-y-1 py-3 text-sm text-muted">
           <p>還沒有設定總預算。</p>
-          <p>到<b>帳本</b>頁設定每月預算，或到<b>分類</b>頁替各分類設定。</p>
+          <p>到「帳本」頁設定每月預算，或到「分類」頁替各分類設定。</p>
         </div>
       </section>
 

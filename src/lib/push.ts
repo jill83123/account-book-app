@@ -14,7 +14,7 @@ export interface PushSlot {
 export const pushSupported = () =>
   'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
 
-const NO_URL = '請先到更多 → Google 試算表同步頁填入同步服務網址'
+const NO_URL = '請先到「更多 → Google 試算表同步」頁填入同步服務網址'
 
 async function call<T>(
   workerUrl: string,

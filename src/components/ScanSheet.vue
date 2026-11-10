@@ -55,7 +55,7 @@ async function copyPrompt() {
     await navigator.clipboard.writeText(buildPrompt(data.categories, s.scanMode))
     ui.toast('已複製提詞，貼到 AI 對話並附上發票照片', 'success')
   } catch {
-    ui.toast('無法複製，請到 AI 發票頁面手動複製', 'error')
+    ui.toast('無法複製，請到「AI 發票」頁面手動複製', 'error')
   }
 }
 
@@ -95,7 +95,7 @@ function goSetup() {
       <ol v-else class="list-decimal space-y-1 pl-5 text-sm leading-relaxed text-muted">
         <li>複製提詞（內含你目前的分類清單）。</li>
         <li>到 Gemini、ChatGPT 或任何 AI 對話，貼上提詞並附上發票照片。</li>
-        <li>把 AI 回覆的內容貼在下面，按<b>讀取</b>鈕。</li>
+        <li>把 AI 回覆的內容貼在下面，按「讀取」鈕。</li>
       </ol>
 
       <!-- a choice, not a page: two cards, the picked one outlined in the theme colour -->

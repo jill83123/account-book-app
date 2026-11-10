@@ -52,7 +52,7 @@ export const useSync = defineStore('sync', () => {
     const fresh = await refreshAccessToken()
     if (fresh) return fresh
     signedIn.value = false
-    throw new SheetsAuthError('尚未登入 Google，請到同步頁登入')
+    throw new SheetsAuthError('尚未登入 Google，請到「同步」頁登入')
   }
 
   /** Must be called straight from a click: it opens Google's popup. */

@@ -411,7 +411,7 @@ onBeforeUnmount(() => {
           <label class="label">預設每月預算（選填）</label>
           <input v-model="budget" class="input" inputmode="numeric" placeholder="0" />
           <p class="mt-1.5 px-1 text-xs text-muted">
-            若想調整某個月，可到<b>統計 → 預算</b>修改。
+            若想調整某個月，可到「統計 → 預算」修改。
           </p>
         </div>
         <div>
