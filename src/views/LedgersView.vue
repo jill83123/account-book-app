@@ -3,7 +3,7 @@ import { defaultBudget } from '@/lib/budget'
 import { today, ym } from '@/lib/date'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { currencyOf } from '@/lib/calc'
-import { Plus } from '@/lib/uiIcons'
+import { Plus, X } from '@/lib/uiIcons'
 import { remove, save, saveMany } from '@/db'
 import type { Ledger } from '@/db/types'
 import { baseCurrency } from '@/lib/currency'
@@ -13,7 +13,6 @@ import { uid } from '@/lib/id'
 import { fmt } from '@/lib/money'
 import { useData } from '@/stores/data'
 import { useUi } from '@/stores/ui'
-import BottomSheet from '@/components/BottomSheet.vue'
 import CatIcon from '@/components/CatIcon.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import SelectField from '@/components/SelectField.vue'
@@ -246,44 +245,63 @@ onBeforeUnmount(() => {
       </TransitionGroup>
     </div>
 
-    <BottomSheet v-model="open" :title="editing ? '編輯帳本' : '新增帳本'">
-      <div class="space-y-4">
-        <div>
-          <label class="label">名稱</label>
-          <input v-model="name" class="input" maxlength="20" placeholder="例如：旅行" />
-        </div>
-        <div>
-          <label class="label">幣別</label>
-          <SelectField v-model="currency" title="選擇幣別" :items="currencyItems" inline />
-          <p v-if="foreign" class="mt-1.5 px-1 text-xs text-muted">金額不會換算，只會影響同幣別的帳戶。</p>
-        </div>
-        <div>
-          <label class="label">預設帳戶（選填）</label>
-          <SelectField v-model="accountId" title="選擇預設帳戶" :items="accountItems" inline />
-        </div>
-        <div>
-          <label class="label">預設每月預算（選填）</label>
-          <input v-model="budget" class="input" inputmode="numeric" placeholder="0" />
-        </div>
-        <div>
-          <label class="label">顏色</label>
-          <div class="flex flex-wrap gap-2.5">
-            <button
-              v-for="c in COLORS"
-              :key="c"
-              class="size-9 rounded-full ring-offset-2 ring-offset-bg"
-              :class="color === c && 'ring-[3px] ring-primary'"
-              :style="{ background: c }"
-              :aria-label="c"
-              @click="color = c"
-            />
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="open"
+          class="fixed inset-0 z-[40] flex items-center justify-center bg-black/30 p-4"
+          @click.self="open = false"
+          @keydown.esc="open = false"
+        >
+          <div class="card flex max-h-[calc(100dvh-2rem)] w-full max-w-[21rem] flex-col gap-5 p-5 shadow-xl">
+            <div class="flex shrink-0 items-center justify-between gap-2">
+            <h2 class="min-w-0 text-lg leading-snug font-bold">{{ editing ? '編輯帳本' : '新增帳本' }}</h2>
+            <button type="button" class="icon-btn -my-2 -mr-2 size-9 border-0 bg-transparent text-muted" aria-label="關閉" @click="open = false">
+              <X :size="18" />
+            </button>
+          </div>
+            <div class="-m-2 min-h-0 flex-1 space-y-4 overflow-y-auto p-2">
+              <div>
+                <label class="label">名稱</label>
+                <input v-model="name" class="input" maxlength="20" placeholder="例如：旅行" />
+              </div>
+              <div>
+                <label class="label">幣別</label>
+                <SelectField v-model="currency" title="選擇幣別" :items="currencyItems" inline />
+                <p v-if="foreign" class="mt-1.5 px-1 text-xs text-muted">金額不會換算，只會影響同幣別的帳戶。</p>
+              </div>
+              <div>
+                <label class="label">預設帳戶（選填）</label>
+                <SelectField v-model="accountId" title="選擇預設帳戶" :items="accountItems" inline />
+              </div>
+              <div>
+                <label class="label">預設每月預算（選填）</label>
+                <input v-model="budget" class="input" inputmode="numeric" placeholder="0" />
+              </div>
+              <div>
+                <label class="label">顏色</label>
+                <div class="flex flex-wrap gap-2.5">
+                  <button
+                    type="button"
+                    v-for="c in COLORS"
+                    :key="c"
+                    class="size-9 rounded-full ring-offset-2 ring-offset-bg"
+                    :class="color === c && 'ring-[3px] ring-primary'"
+                    :style="{ background: c }"
+                    :aria-label="c"
+                    @click="color = c"
+                  />
+                </div>
+              </div>
+            </div>
+            <div class="flex shrink-0 gap-2">
+              <button v-if="editing" type="button" class="btn btn-delete" @click="destroy">刪除</button>
+              <button v-else type="button" class="btn btn-soft flex-1" @click="open = false">取消</button>
+              <button type="button" class="btn btn-primary flex-1" @click="submit">儲存</button>
+            </div>
           </div>
         </div>
-        <div class="flex gap-2">
-          <button v-if="editing" class="btn btn-ghost text-danger" @click="destroy">刪除</button>
-          <button class="btn btn-primary flex-1" @click="submit">儲存</button>
-        </div>
-      </div>
-    </BottomSheet>
+      </Transition>
+    </Teleport>
   </div>
 </template>

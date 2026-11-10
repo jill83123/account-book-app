@@ -2,7 +2,7 @@
 import MoneyText from '@/components/MoneyText.vue'
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Pencil, Scale } from '@/lib/uiIcons'
+import { Pencil, Scale, X } from '@/lib/uiIcons'
 import { cardCycles, isForeignAccount, nextDayOfMonth, spendOn } from '@/lib/calc'
 import { currencyName } from '@/lib/customCurrency'
 import { save } from '@/db'
@@ -12,7 +12,6 @@ import { evalExpr, fmt } from '@/lib/money'
 import { useData } from '@/stores/data'
 import { useUi } from '@/stores/ui'
 import AccountFormSheet from '@/components/AccountFormSheet.vue'
-import BottomSheet from '@/components/BottomSheet.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import RecordCard from '@/components/RecordCard.vue'
 import MoneyInput from '@/components/MoneyInput.vue'
@@ -138,27 +137,47 @@ const card = computed(() => {
     </div>
     <p v-else class="card py-10 text-center text-sm text-muted">這個帳戶還沒有記錄</p>
 
-    <BottomSheet v-model="adjustOpen" title="調整餘額">
-      <div class="space-y-4">
-        <p class="text-sm text-muted">
-          帳面和實際對不起來時（例如不知道錢花去哪），輸入實際的數字，會補一筆差額，不算收入也不算支出，不會影響統計。
-        </p>
-        <div class="card flex items-center justify-between">
-          <span class="text-sm text-muted">帳面{{ isCard ? '欠款' : '餘額' }}</span>
-          <span class="font-semibold"><MoneyText :n="shown" /></span>
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="adjustOpen"
+          class="fixed inset-0 z-[40] flex items-center justify-center bg-black/30 p-4"
+          @click.self="adjustOpen = false"
+          @keydown.esc="adjustOpen = false"
+        >
+          <form class="card w-full max-w-[21rem] space-y-5 p-5 shadow-xl" @submit.prevent="adjust">
+            <div class="flex items-center justify-between gap-2">
+            <h2 class="min-w-0 text-lg leading-snug font-bold">調整餘額</h2>
+            <button type="button" class="icon-btn -my-2 -mr-2 size-9 border-0 bg-transparent text-muted" aria-label="關閉" @click="adjustOpen = false">
+              <X :size="18" />
+            </button>
+          </div>
+            <div class="space-y-3">
+              <p class="text-sm text-muted">
+                帳面和實際對不起來時（例如不知道錢花去哪），輸入實際的數字，會補一筆差額，不算收入也不算支出，不會影響統計。
+              </p>
+              <div class="flex items-center justify-between rounded-2xl bg-surface-2 px-4 py-3">
+                <span class="text-sm text-muted">帳面{{ isCard ? '欠款' : '餘額' }}</span>
+                <span class="font-semibold"><MoneyText :n="shown" /></span>
+              </div>
+              <div>
+                <label class="label" for="actual">實際{{ isCard ? '欠款' : '餘額' }}</label>
+                <MoneyInput id="actual" v-model="actualText" class="input" inputmode="decimal" placeholder="0" />
+              </div>
+              <p v-if="actual != null && diff" class="text-sm">
+                差額
+                <b :class="diff > 0 ? 'text-income' : 'text-expense'">{{ diff > 0 ? '+' : '-' }}<MoneyText :n="Math.abs(diff)" /></b>
+                <span class="text-muted">，{{ isCard ? (diff > 0 ? '欠款變少' : '欠款變多') : diff > 0 ? '帳面補上' : '帳面扣掉' }}這筆</span>
+              </p>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <button type="button" class="btn btn-soft" @click="adjustOpen = false">取消</button>
+              <button type="submit" class="btn btn-primary" :disabled="actual == null || !diff">確定調整</button>
+            </div>
+          </form>
         </div>
-        <div>
-          <label class="label" for="actual">實際{{ isCard ? '欠款' : '餘額' }}</label>
-          <MoneyInput id="actual" v-model="actualText" class="input" inputmode="decimal" placeholder="0" @keyup.enter="adjust" />
-        </div>
-        <p v-if="actual != null && diff" class="text-sm">
-          差額
-          <b :class="diff > 0 ? 'text-income' : 'text-expense'">{{ diff > 0 ? '+' : '-' }}<MoneyText :n="Math.abs(diff)" /></b>
-          <span class="text-muted">，{{ isCard ? (diff > 0 ? '欠款變少' : '欠款變多') : diff > 0 ? '帳面補上' : '帳面扣掉' }}這筆</span>
-        </p>
-        <button class="btn btn-primary w-full" :disabled="actual == null || !diff" @click="adjust">確定調整</button>
-      </div>
-    </BottomSheet>
+      </Transition>
+    </Teleport>
 
     <AccountFormSheet v-model="editOpen" :account="account" @removed="router.replace('/accounts')" />
   </div>

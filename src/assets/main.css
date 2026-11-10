@@ -118,6 +118,9 @@ button:disabled {
   .btn-ghost {
     @apply border-line bg-surface text-ink hover:bg-surface-2;
   }
+  .btn-delete {
+    @apply border-danger bg-transparent text-danger hover:bg-danger/10;
+  }
   .btn-danger {
     @apply bg-danger text-white;
   }

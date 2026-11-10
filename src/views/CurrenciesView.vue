@@ -12,7 +12,7 @@ import {
   type CurrencyEntry,
 } from '@/lib/customCurrency'
 import { uid } from '@/lib/id'
-import { Eye, EyeOff, Pencil, Plus, Trash2 } from '@/lib/uiIcons'
+import { Eye, EyeOff, Pencil, Plus, Trash2, X } from '@/lib/uiIcons'
 import { useData } from '@/stores/data'
 import { useUi } from '@/stores/ui'
 import PageHeader from '@/components/PageHeader.vue'
@@ -360,7 +360,12 @@ onBeforeUnmount(() => {
           @keydown.esc="open = false"
         >
           <form class="card w-full max-w-[21rem] space-y-5 p-5 shadow-xl" @submit.prevent="submit">
-            <h2 class="text-lg leading-snug font-bold">{{ editing ? '編輯幣別' : '新增幣別' }}</h2>
+            <div class="flex items-center justify-between gap-2">
+            <h2 class="min-w-0 text-lg leading-snug font-bold">{{ editing ? '編輯幣別' : '新增幣別' }}</h2>
+            <button type="button" class="icon-btn -my-2 -mr-2 size-9 border-0 bg-transparent text-muted" aria-label="關閉" @click="open = false">
+              <X :size="18" />
+            </button>
+          </div>
             <div class="space-y-3">
               <input
                 v-model="code"

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import { Plus } from '@/lib/uiIcons'
+import { Plus, X } from '@/lib/uiIcons'
 import { useMembers } from '@/stores/members'
 import { useUi } from '@/stores/ui'
 import BottomSheet from './BottomSheet.vue'
@@ -84,7 +84,12 @@ async function done() {
         @keydown.esc="adding = false"
       >
         <form class="card w-full max-w-[21rem] space-y-5 p-5 shadow-xl" @submit.prevent="add">
-          <h2 class="text-lg leading-snug font-bold">新增成員</h2>
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="min-w-0 text-lg leading-snug font-bold">新增成員</h2>
+            <button type="button" class="icon-btn -my-2 -mr-2 size-9 border-0 bg-transparent text-muted" aria-label="關閉" @click="adding = false">
+              <X :size="18" />
+            </button>
+          </div>
           <input ref="inputEl" v-model="typed" class="input" maxlength="12" placeholder="成員的名字" />
           <div class="grid grid-cols-2 gap-2">
             <button type="button" class="btn btn-soft" @click="adding = false">取消</button>

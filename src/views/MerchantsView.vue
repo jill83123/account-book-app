@@ -461,7 +461,7 @@ async function destroy() {
             <div class="flex gap-2">
               <button
                 type="button"
-                class="btn btn-ghost border-danger text-danger"
+                class="btn btn-delete"
                 :class="inUse && 'cursor-not-allowed opacity-40'"
                 @click="inUse ? ui.toast('已有記錄使用這個商家，不能刪除', 'error') : destroy()"
               >

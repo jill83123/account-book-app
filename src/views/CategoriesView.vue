@@ -438,7 +438,7 @@ onBeforeUnmount(() => {
       </div>
       <template #footer>
         <div class="flex gap-2">
-          <button v-if="editing" class="btn btn-ghost text-danger" @click="destroy(editing)">
+          <button v-if="editing" class="btn btn-delete" @click="destroy(editing)">
             刪除
           </button>
           <button class="btn btn-primary flex-1" @click="submit">儲存</button>

@@ -1674,7 +1674,7 @@ function cancel() {
       </template>
     </dl>
 
-    <button v-if="editingId" class="btn btn-ghost w-full text-danger" @click="destroy">
+    <button v-if="editingId" class="btn btn-delete w-full" @click="destroy">
       <Trash2 :size="16" />刪除這筆記錄
     </button>
 
@@ -1709,7 +1709,12 @@ function cancel() {
           @keydown.esc="partEdit = null"
         >
           <form class="card w-full max-w-[21rem] space-y-5 p-5 shadow-xl" @submit.prevent="savePart">
-            <h2 class="text-lg leading-snug font-bold">{{ partEdit.isNew ? '新增細項' : '編輯細項' }}</h2>
+            <div class="flex items-center justify-between gap-2">
+            <h2 class="min-w-0 text-lg leading-snug font-bold">{{ partEdit.isNew ? '新增細項' : '編輯細項' }}</h2>
+            <button type="button" class="icon-btn -my-2 -mr-2 size-9 border-0 bg-transparent text-muted" aria-label="關閉" @click="partEdit = null">
+              <X :size="18" />
+            </button>
+          </div>
             <div class="space-y-3">
               <input ref="partNameEl" v-model="partEdit.name" class="input" placeholder="名稱，例如 漢堡" />
               <div class="grid grid-cols-2 gap-3">

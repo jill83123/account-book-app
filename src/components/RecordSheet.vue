@@ -2,7 +2,7 @@
 import MoneyText from '@/components/MoneyText.vue'
 import { computed, ref, watch, type Component } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowLeftRight, BookMarked, Clock, Copy, Pencil, Repeat, Scale, Store, Trash2, Users, Wallet } from '@/lib/uiIcons'
+import { ArrowLeftRight, BookMarked, Clock, Copy, Pencil, Repeat, Scale, Store, Users, Wallet, X } from '@/lib/uiIcons'
 import { P } from '@/lib/colors'
 import { remove, save } from '@/db'
 import { forgetPhotos, loadPhotos, releasePhotos, type Photo } from '@/lib/images'
@@ -165,13 +165,10 @@ async function destroy() {
 
 <template>
   <BottomSheet v-model="open" :title="typeLabel">
-    <template v-if="rec" #actions>
-      <button class="icon-btn border-0 bg-transparent text-danger" :aria-label="rec.adjust ? '刪除調整' : '刪除'" @click="destroy"><Trash2 :size="18" /></button>
-    </template>
     <div v-if="rec" class="space-y-3">
       <!-- what and how much -->
       <div class="flex items-center gap-3 pb-1">
-        <span v-if="rec.type === 'transfer' || rec.adjust" class="grid size-11 shrink-0 place-items-center rounded-[13px] bg-surface-2 text-muted">
+        <span v-if="rec.type === 'transfer' || rec.adjust" class="grid size-11 shrink-0 place-items-center rounded-[13px] bg-[color-mix(in_oklab,var(--surface-2),var(--line))] text-muted">
           <Scale v-if="rec.adjust" :size="21" />
           <ArrowLeftRight v-else :size="21" />
         </span>
@@ -285,30 +282,52 @@ async function destroy() {
       </div>
 
       <!-- an adjustment has no items to edit or copy; deleting it brings the old balance back -->
-      <div v-if="rec.adjust" class="pt-2">
-        <button class="btn btn-primary w-full" @click="editAdjust"><Pencil :size="17" />編輯</button>
+      <div v-if="rec.adjust" class="flex gap-2 pt-2">
+        <button class="btn btn-delete" @click="destroy">刪除</button>
+        <button class="btn btn-primary flex-1" @click="editAdjust"><Pencil :size="17" />編輯</button>
       </div>
-      <div v-else class="grid grid-cols-[auto_1fr] gap-2 pt-2">
-        <button class="btn btn-ghost" @click="copy"><Copy :size="17" />複製</button>
-        <button class="btn btn-primary" @click="edit"><Pencil :size="17" />編輯</button>
+      <div v-else class="flex gap-2 pt-2">
+        <button class="btn btn-delete w-24 shrink-0" @click="destroy">刪除</button>
+        <button class="btn btn-ghost w-24 shrink-0" @click="copy"><Copy :size="17" />複製</button>
+        <button class="btn btn-primary flex-1" @click="edit"><Pencil :size="17" />編輯</button>
       </div>
     </div>
   </BottomSheet>
 
-  <BottomSheet v-model="adjOpen" title="編輯餘額調整">
-    <div class="space-y-4">
-      <div>
-        <label class="label" for="adj-amount">調整金額</label>
-        <MoneyInput id="adj-amount" v-model="adjText" class="input" inputmode="decimal" placeholder="正數增加餘額，負數減少" @keyup.enter="saveAdjust" />
-        <p class="mt-1.5 px-1 text-xs text-muted">正數會讓帳戶餘額增加，負數會減少。這筆不算收入或支出。</p>
+  <Teleport to="body">
+    <Transition name="fade">
+      <div
+        v-if="adjOpen"
+        class="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-4"
+        @click.self="adjOpen = false"
+        @keydown.esc="adjOpen = false"
+      >
+        <div class="card w-full max-w-[21rem] space-y-5 p-5 shadow-xl">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="min-w-0 text-lg leading-snug font-bold">編輯餘額調整</h2>
+            <button type="button" class="icon-btn -my-2 -mr-2 size-9 border-0 bg-transparent text-muted" aria-label="關閉" @click="adjOpen = false">
+              <X :size="18" />
+            </button>
+          </div>
+          <div class="space-y-3">
+            <div>
+              <label class="label" for="adj-amount">調整金額</label>
+              <MoneyInput id="adj-amount" v-model="adjText" class="input" inputmode="decimal" placeholder="正數增加餘額，負數減少" @keyup.enter="saveAdjust" />
+              <p class="mt-1.5 px-1 text-xs text-muted">正數會讓帳戶餘額增加，負數會減少。這筆不算收入或支出。</p>
+            </div>
+            <div>
+              <label class="label">日期</label>
+              <DateField v-model="adjDate" title="日期" />
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" class="btn btn-soft" @click="adjOpen = false">取消</button>
+            <button type="button" class="btn btn-primary" @click="saveAdjust">儲存</button>
+          </div>
+        </div>
       </div>
-      <div>
-        <label class="label">日期</label>
-        <DateField v-model="adjDate" title="日期" />
-      </div>
-      <button class="btn btn-primary w-full" @click="saveAdjust">儲存</button>
-    </div>
-  </BottomSheet>
+    </Transition>
+  </Teleport>
 
   <ImageViewer :src="big" @close="big = ''" />
 </template>

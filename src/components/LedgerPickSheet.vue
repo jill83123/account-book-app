@@ -5,7 +5,7 @@ import { baseCurrency } from '@/lib/currency'
 import { useCurrencyItems, currencyName } from '@/lib/customCurrency'
 import { COLORS } from '@/lib/icons'
 import { uid } from '@/lib/id'
-import { Check, ChevronDown, Plus } from '@/lib/uiIcons'
+import { Check, ChevronDown, Plus, X } from '@/lib/uiIcons'
 import { useData } from '@/stores/data'
 import { useUi } from '@/stores/ui'
 import PickSheet from './PickSheet.vue'
@@ -76,7 +76,12 @@ async function create() {
         @keydown.esc="adding = false"
       >
         <form class="card w-full max-w-[21rem] space-y-5 p-5 shadow-xl" @submit.prevent="create">
-          <h2 class="text-lg leading-snug font-bold">新增帳本</h2>
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="min-w-0 text-lg leading-snug font-bold">新增帳本</h2>
+            <button type="button" class="icon-btn -my-2 -mr-2 size-9 border-0 bg-transparent text-muted" aria-label="關閉" @click="adding = false">
+              <X :size="18" />
+            </button>
+          </div>
           <div class="space-y-3">
             <input v-model="name" class="input" maxlength="20" placeholder="帳本名稱，例如：旅行" />
             <button type="button" class="input flex w-full items-center justify-between gap-2 text-left" aria-label="選擇幣別" @click="showCurrencies = true">

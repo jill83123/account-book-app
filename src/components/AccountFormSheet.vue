@@ -224,7 +224,7 @@ async function destroy() {
     </div>
     <template #footer>
       <div class="flex gap-2">
-        <button v-if="account" class="btn btn-ghost text-danger" @click="destroy">刪除</button>
+        <button v-if="account" class="btn btn-delete" @click="destroy">刪除</button>
         <button class="btn btn-primary flex-1" @click="submit">儲存</button>
       </div>
     </template>

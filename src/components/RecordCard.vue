@@ -89,7 +89,7 @@ const tone = computed(() =>
     <component :is="checked ? CircleCheck : Circle" v-if="selecting" :size="24" class="shrink-0" :class="checked ? 'text-primary' : 'text-muted/60'" />
     <span
       v-if="rec.type === 'transfer' || rec.adjust"
-      class="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-surface-2 text-muted"
+      class="inline-flex size-11 shrink-0 items-center justify-center rounded-[13px] bg-[color-mix(in_oklab,var(--surface-2),var(--line))] text-muted"
     >
       <Scale v-if="rec.adjust" :size="21" />
       <ArrowLeftRight v-else :size="21" />

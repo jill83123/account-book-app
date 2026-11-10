@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue'
 import { nowTime } from '@/lib/date'
-import { Trash2 } from '@/lib/uiIcons'
 import BottomSheet from './BottomSheet.vue'
 
 defineProps<{ title?: string; clearable?: boolean }>()
@@ -64,12 +63,6 @@ function choose(key: 'h' | 'm', value: string) {
   scrollBoth(true)
 }
 
-function useNow() {
-  const [h = '00', m = '00'] = nowTime().split(':')
-  hour.value = h
-  minute.value = m
-  scrollBoth(true)
-}
 function clear() {
   model.value = ''
   open.value = false
@@ -82,11 +75,6 @@ function done() {
 
 <template>
   <BottomSheet v-model="open" :title="title ?? '選擇時間'">
-    <template v-if="clearable && model" #actions>
-      <button class="icon-btn border-0 bg-transparent text-danger" aria-label="不記時間" title="不記時間" @click="clear">
-        <Trash2 :size="18" />
-      </button>
-    </template>
     <div class="relative flex items-center justify-center gap-2">
       <!-- the highlight behind the selected row -->
       <div class="pointer-events-none absolute inset-x-0 top-1/2 h-12 -translate-y-1/2 rounded-2xl bg-primary-soft" />
@@ -126,7 +114,7 @@ function done() {
     </div>
 
     <div class="mt-4 flex gap-2">
-      <button class="btn btn-ghost" @click="useNow">現在</button>
+      <button v-if="clearable && model" class="btn btn-ghost" @click="clear">清空</button>
       <button class="btn btn-primary flex-1" @click="done">完成</button>
     </div>
   </BottomSheet>

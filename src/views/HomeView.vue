@@ -266,18 +266,18 @@ onMounted(() => {
           <button
             v-for="c in cells"
             :key="c.date"
-            class="flex h-[60px] flex-col items-center rounded-xl pt-1.5 transition-colors"
+            class="flex h-[66px] flex-col items-center rounded-xl pt-1.5 transition-colors"
             :class="selected === c.date && 'bg-primary-soft'"
             :aria-label="c.date"
             @click="pickDay(c.date, c.inMonth)"
           >
             <span
-              class="grid size-[22px] place-items-center rounded-full text-[13px] font-medium"
+              class="grid size-[26px] place-items-center rounded-full text-xs font-medium"
               :class="[c.inMonth ? weekTone(c.date) : 'text-muted/40', c.date === today() && 'bg-primary font-semibold !text-white']"
             >
               {{ dayLabel(c.date) }}
             </span>
-            <span v-if="c.inMonth" class="mt-0.5 flex w-full flex-col items-end px-1 text-[10px] leading-[12px] font-medium tabular-nums">
+            <span v-if="c.inMonth" class="mt-1 flex w-full flex-col items-end px-1 text-[10px] leading-[12px] font-medium tabular-nums">
               <span v-if="c.income" class="text-income">{{ short(c.income) }}</span>
               <span v-if="c.expense" class="text-expense">{{ short(c.expense) }}</span>
             </span>
