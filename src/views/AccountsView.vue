@@ -9,6 +9,7 @@ import { save, saveMany } from '@/db'
 import { accountIcon } from '@/lib/banks'
 import { today } from '@/lib/date'
 import { currencyName } from '@/lib/customCurrency'
+import { P } from '@/lib/colors'
 import { fmt } from '@/lib/money'
 import { useData } from '@/stores/data'
 import AccountFormSheet from '@/components/AccountFormSheet.vue'
@@ -227,7 +228,7 @@ onBeforeUnmount(() => {
       <div class="mb-2 flex items-end justify-between px-1">
         <h2 class="text-sm font-semibold text-muted">{{ g.label }}</h2>
         <div v-if="g.title === 'card'" class="flex gap-3 pr-10 text-xs text-muted">
-          <span class="w-16 text-right">上期帳單</span><span class="w-16 text-right">本期累計</span>
+          <span class="w-20 text-right">上期帳單</span><span class="w-20 text-right">本期累計</span>
         </div>
         <span v-else class="text-sm font-semibold" :class="tone(groupSum(g.list))"><MoneyText :n="groupSum(g.list)" /></span>
       </div>
@@ -266,8 +267,8 @@ onBeforeUnmount(() => {
               <span v-if="isForeignAccount(a)" class="block text-xs text-muted">{{ currencyName(a.currency!) }}</span>
             </span>
             <template v-if="a.kind === 'card'">
-              <span class="w-16 text-right text-sm font-semibold"><MoneyText :n="cardInfo(a).prev" /></span>
-              <span class="w-16 text-right text-sm font-semibold"><MoneyText :n="cardInfo(a).cur" /></span>
+              <span class="w-20 text-right text-sm font-semibold"><MoneyText :n="cardInfo(a).prev" /></span>
+              <span class="w-20 text-right text-sm font-semibold"><MoneyText :n="cardInfo(a).cur" /></span>
             </template>
             <span v-else class="font-semibold" :class="tone(bal(a))"><MoneyText :n="bal(a)" /></span>
             <ChevronRight :size="16" class="text-muted" />
@@ -281,15 +282,15 @@ onBeforeUnmount(() => {
       <div class="mb-2 flex items-end justify-between px-1">
         <h2 class="text-sm font-semibold text-muted">借款</h2>
         <div class="flex gap-3 pr-10 text-xs text-muted">
-          <span class="w-16 text-right">應付</span><span class="w-16 text-right">應收</span>
+          <span class="w-20 text-right">應付</span><span class="w-20 text-right">應收</span>
         </div>
       </div>
       <div class="card p-0">
         <button class="flex w-full items-center gap-3 px-4 py-3.5 text-left" @click="router.push('/more/loans')">
-          <CatIcon icon="handcoins" color="#f59e0b" :size="40" />
+          <CatIcon icon="handcoins" :color="P.blue" :size="40" />
           <span class="min-w-0 flex-1 truncate font-medium">借款</span>
-          <span class="w-16 text-right text-sm font-semibold text-expense"><MoneyText :n="payable" /></span>
-          <span class="w-16 text-right text-sm font-semibold text-income"><MoneyText :n="receivable" /></span>
+          <span class="w-20 text-right text-sm font-semibold"><MoneyText :n="payable" /></span>
+          <span class="w-20 text-right text-sm font-semibold"><MoneyText :n="receivable" /></span>
           <ChevronRight :size="16" class="text-muted" />
         </button>
       </div>

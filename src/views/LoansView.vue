@@ -201,11 +201,11 @@ const accountItems = computed(() => [
     <section class="card mb-4 grid grid-cols-2 text-center">
       <div>
         <p class="text-xs text-muted">應付（我欠別人）</p>
-        <p class="text-xl font-semibold text-expense"><MoneyText :n="payable" /></p>
+        <p class="text-xl font-semibold"><MoneyText :n="payable" /></p>
       </div>
       <div>
         <p class="text-xs text-muted">應收（別人欠我）</p>
-        <p class="text-xl font-semibold text-income"><MoneyText :n="receivable" /></p>
+        <p class="text-xl font-semibold"><MoneyText :n="receivable" /></p>
       </div>
     </section>
 
