@@ -42,7 +42,7 @@ function add() {
     class="mx-auto min-h-dvh w-full max-w-xl px-4 pt-[max(0.75rem,env(safe-area-inset-top))]"
     :class="
       showNav
-        ? 'pb-[calc(4.5rem+env(safe-area-inset-bottom))]'
+        ? 'pb-[calc(5rem+env(safe-area-inset-bottom))]'
         : 'pb-[calc(2.5rem+env(safe-area-inset-bottom))]'
     "
   >

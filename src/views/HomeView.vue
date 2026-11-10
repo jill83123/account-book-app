@@ -146,7 +146,6 @@ const monthDays = computed(() =>
 
 // the calendar shows the picked day's records right below it
 const selectedRecords = computed(() => data.ledgerRecords.filter((r) => r.date === selected.value))
-const daySum = computed(() => totals(selectedRecords.value))
 const selectedTitle = computed(() => {
   const p = parse(selected.value)
   return `${p.getMonth() + 1}/${p.getDate()}（週${WEEKDAYS[p.getDay()]}）`
@@ -206,7 +205,7 @@ onMounted(() => {
         </button>
       </div>
       <!-- the title is the ledger being looked at; tap to switch -->
-      <button class="relative justify-self-center text-base font-semibold tracking-tight" aria-label="切換帳本" @click="ledgerSheet = true">
+      <button class="relative justify-self-center text-xl font-bold" aria-label="切換帳本" @click="ledgerSheet = true">
         <span class="block max-w-40 truncate">{{ ledgerName }}</span>
         <ChevronDown :size="16" class="absolute top-1/2 left-full ml-1.5 -translate-y-1/2 text-muted" />
       </button>
@@ -227,7 +226,7 @@ onMounted(() => {
       <button class="circle-btn size-8 shrink-0 text-muted" aria-label="關閉" @click="s.remindHintDismissed = true"><X :size="18" /></button>
     </div>
 
-    <MonthNav v-model="period" :year="tab === 'year'" />
+    <MonthNav v-model="period" :year="tab === 'year'" class="-mt-2.5" />
 
     <PillTabs
       v-model="tab"
@@ -291,8 +290,6 @@ onMounted(() => {
     <section class="mt-4">
       <div class="mb-2 flex items-center gap-3 px-1">
         <h2 class="font-semibold">{{ selectedTitle }}</h2>
-        <span v-if="daySum.income" class="text-sm text-muted">收入 <b class="text-income">${{ fmt(daySum.income) }}</b></span>
-        <span v-if="daySum.expense" class="text-sm text-muted">支出 <b class="text-expense">${{ fmt(daySum.expense) }}</b></span>
         <button class="ml-auto inline-flex items-center gap-1 text-xs font-medium text-primary" @click="router.push({ path: '/record/new', query: { date: selected } })">
           <Plus :size="14" />新增
         </button>
@@ -325,7 +322,7 @@ onMounted(() => {
         <span class="grid size-6 shrink-0 place-items-center rounded-full bg-primary text-white"><Plus :size="14" :stroke-width="2.6" /></span>
         <span>開始記帳</span>
       </div>
-      <div v-for="day in monthDays" :key="day.date" class="mb-4">
+      <div v-for="day in monthDays" :key="day.date" class="mb-4 last:mb-0">
         <div class="mb-2 flex items-center gap-2 px-4">
           <!-- today is marked in the theme colour -->
           <span class="text-2xl leading-none font-bold tabular-nums" :class="day.date === today() && 'text-primary'">{{ dayLabel(day.date) }}</span>
