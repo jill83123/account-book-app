@@ -68,7 +68,7 @@ function cardInfo(a: Account) {
 }
 
 const groupSum = (list: Account[]) => list.reduce((s, a) => s + (isForeignAccount(a) ? 0 : bal(a)), 0)
-const tone = (n: number) => (n < 0 ? 'text-expense' : 'text-primary')
+const tone = (n: number) => (n < 0 ? 'text-expense' : 'text-income')
 
 // ---- sorting: hold a row, then drag it up or down inside its group (the same gesture as on the home page) ----
 const carry = ref<{ id: string; group: string; dy: number } | null>(null)
@@ -211,7 +211,7 @@ onBeforeUnmount(() => {
     <section class="card mb-5 grid grid-cols-3 text-center">
       <div>
         <p class="text-xs text-muted">資產</p>
-        <p class="text-lg font-semibold text-primary">{{ fmt(totals.assets) }}</p>
+        <p class="text-lg font-semibold text-income">{{ fmt(totals.assets) }}</p>
       </div>
       <div>
         <p class="text-xs text-muted">負債</p>
@@ -289,7 +289,7 @@ onBeforeUnmount(() => {
           <CatIcon icon="handcoins" color="#f59e0b" :size="40" />
           <span class="min-w-0 flex-1 truncate font-medium">借款</span>
           <span class="w-16 text-right text-sm font-semibold text-expense"><MoneyText :n="payable" /></span>
-          <span class="w-16 text-right text-sm font-semibold text-primary"><MoneyText :n="receivable" /></span>
+          <span class="w-16 text-right text-sm font-semibold text-income"><MoneyText :n="receivable" /></span>
           <ChevronRight :size="16" class="text-muted" />
         </button>
       </div>

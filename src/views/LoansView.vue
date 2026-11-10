@@ -205,7 +205,7 @@ const accountItems = computed(() => [
       </div>
       <div>
         <p class="text-xs text-muted">應收（別人欠我）</p>
-        <p class="text-xl font-semibold text-primary"><MoneyText :n="receivable" /></p>
+        <p class="text-xl font-semibold text-income"><MoneyText :n="receivable" /></p>
       </div>
     </section>
 
@@ -213,7 +213,7 @@ const accountItems = computed(() => [
       <section v-for="g in groups" :key="g.key" class="mb-6">
         <div class="mb-2 flex items-baseline justify-between px-2">
           <h2 class="text-sm font-semibold text-ink/70">{{ g.title }}</h2>
-          <span v-if="g.sum" class="text-sm font-semibold" :class="g.key === 'lend' ? 'text-primary' : 'text-expense'"><MoneyText :n="g.sum" /></span>
+          <span v-if="g.sum" class="text-sm font-semibold" :class="g.key === 'lend' ? 'text-income' : 'text-expense'"><MoneyText :n="g.sum" /></span>
         </div>
         <div class="card divide-y divide-line p-0">
           <button v-for="l in shownRows(g)" :key="l.id" class="flex w-full items-center gap-3 px-4 py-3.5 text-left" @click="openDetail(l)">
@@ -225,7 +225,7 @@ const accountItems = computed(() => [
               </span>
             </span>
             <span class="text-right">
-              <span class="block font-semibold" :class="g.key === 'done' ? 'text-muted' : l.direction === 'lend' ? 'text-primary' : 'text-expense'">
+              <span class="block font-semibold" :class="g.key === 'done' ? 'text-muted' : l.direction === 'lend' ? 'text-income' : 'text-expense'">
                 <template v-if="g.key === 'done'">已結清</template><MoneyText v-else :n="loanOutstanding(l)" />
               </span>
               <span v-if="g.key !== 'done' && l.dueDate && l.dueDate < today()" class="block text-xs text-danger">已逾期</span>

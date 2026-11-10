@@ -97,7 +97,7 @@ const card = computed(() => {
 
     <section class="card mb-4 text-center">
       <p class="text-xs text-muted">{{ account.kind === 'card' ? '目前欠款' : '目前餘額' }}</p>
-      <p class="text-3xl font-bold" :class="balance < 0 ? 'text-expense' : 'text-primary'"><MoneyText :n="balance" /></p>
+      <p class="text-3xl font-bold" :class="balance < 0 ? 'text-expense' : 'text-income'"><MoneyText :n="balance" /></p>
       <button class="btn btn-soft btn-sm mt-3" @click="openAdjust"><Scale :size="16" />調整餘額</button>
     </section>
 
