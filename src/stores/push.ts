@@ -1,10 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import { markLocalChange } from '@/db'
+import { today } from '@/lib/date'
 import { pushSlots } from '@/lib/pushSlots'
 import {
   currentSubscription,
   pushSupported,
+  reportRecorded,
   sendTestPush,
   subscribePush,
   unsubscribePush,
@@ -52,7 +54,7 @@ export const usePush = defineStore('push', () => {
     const signature = JSON.stringify(planned)
     if (!force && signature === lastSignature && Date.now() - lastUpload < REFRESH_MS) return
     try {
-      await uploadSlots(s.workerUrl, sub, planned, keepalive)
+      await uploadSlots(s.workerUrl, sub, planned, s.spreadsheetId, keepalive)
       lastSignature = signature
       lastUpload = Date.now()
       error.value = ''
@@ -65,6 +67,21 @@ export const usePush = defineStore('push', () => {
   function later() {
     clearTimeout(timer)
     timer = setTimeout(() => void upload().catch(() => {}), UPLOAD_DELAY_MS)
+  }
+
+  let reportTimer: ReturnType<typeof setTimeout> | undefined
+  let reportedDay = ''
+  /** Tell the Worker that today has a record, whether or not this device has the reminder on. */
+  function reportSoon() {
+    clearTimeout(reportTimer)
+    reportTimer = setTimeout(() => {
+      const day = today()
+      if (!data.ready || !navigator.onLine || !s.workerUrl.trim() || !s.spreadsheetId) return
+      if (reportedDay === day || !data.records.some((r) => r.date === day && !r.deleted)) return
+      reportRecorded(s.workerUrl, s.spreadsheetId, day)
+        .then(() => (reportedDay = day))
+        .catch(() => {})
+    }, 3000)
   }
 
   async function enable() {
@@ -117,6 +134,8 @@ export const usePush = defineStore('push', () => {
   function init() {
     if (started || !supported) return
     started = true
+    watch(() => data.records, reportSoon)
+    reportSoon()
     // the plan follows the records, loans, cards and rules, so any change replans it
     watch(
       [

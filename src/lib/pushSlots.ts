@@ -8,6 +8,7 @@ import { nextDue, pendingOccurrences } from './recurrence'
 export const DAYS_AHEAD = 14
 /** A slot this long past its time is still sent along: the Worker may not have run its check yet. */
 const LATE_MS = 10 * 60 * 1000
+const DAILY_TEXT = '今天還沒有記帳'
 
 /** Epoch ms of a local date and HH:mm. */
 function at(day: string, time: string): number {
@@ -35,9 +36,15 @@ export function pushSlots(input: {
   const parts = new Map<string, string[]>(days.map((d) => [d, []]))
   const add = (day: string, text: string) => parts.get(day)?.push(text)
 
+  const dailyDays = new Set<string>()
   if (input.daily) {
     const recorded = input.records.some((r) => r.date === first && !r.deleted)
-    for (const d of days) if (d !== first || !recorded) add(d, '今天還沒有記帳')
+    for (const d of days) {
+      if (d !== first || !recorded) {
+        add(d, DAILY_TEXT)
+        dailyDays.add(d)
+      }
+    }
   }
 
   // recurring entries waiting for a yes, and the ones that fall due in the next days
@@ -69,7 +76,13 @@ export function pushSlots(input: {
     const list = [...new Set(parts.get(d))]
     const t = at(d, input.time)
     if (!list.length || t < input.now - LATE_MS) continue
-    out.push({ t, title: '記帳本', body: list.join('、') })
+    const slot: PushSlot = { t, title: '記帳本', body: list.join('、') }
+    // the Worker drops the daily wording when another device has recorded that day by then
+    if (dailyDays.has(d)) {
+      slot.day = d
+      slot.rest = list.filter((x) => x !== DAILY_TEXT).join('、')
+    }
+    out.push(slot)
   }
   return out
 }

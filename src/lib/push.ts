@@ -5,6 +5,10 @@ export interface PushSlot {
   t: number
   title: string
   body: string
+  /** set when the body holds the daily wording: the day it is for (YYYY-MM-DD) */
+  day?: string
+  /** the body without the daily wording, sent when the day has been recorded on another device */
+  rest?: string
 }
 
 export const pushSupported = () =>
@@ -78,9 +82,15 @@ export async function uploadSlots(
   workerUrl: string,
   sub: PushSubscription,
   slots: PushSlot[],
+  group: string,
   keepalive = false,
 ) {
-  await call(workerUrl, '/push/sync', { subscription: sub.toJSON(), slots }, keepalive)
+  await call(workerUrl, '/push/sync', { subscription: sub.toJSON(), slots, group }, keepalive)
+}
+
+/** Tell the Worker a day has been recorded, so the other devices of the same sheet skip the daily reminder. */
+export async function reportRecorded(workerUrl: string, group: string, day: string) {
+  await call(workerUrl, '/push/recorded', { group, day })
 }
 
 export async function sendTestPush(workerUrl: string, sub: PushSubscription) {

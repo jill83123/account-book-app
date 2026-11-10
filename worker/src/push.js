@@ -6,11 +6,13 @@
  * Only subscriptions and those short texts are stored, never amounts or records.
  *
  *   GET  /push/key                              -> { publicKey }
- *   POST /push/sync   { subscription, slots }   -> {}
+ *   POST /push/sync   { subscription, slots, group } -> {}
+ *   POST /push/recorded { group, day }           -> {}  (a day has a record: the sheet's other devices skip the daily wording)
  *   POST /push/unsubscribe { endpoint }         -> {}
  *   POST /push/test   { endpoint }              -> {}
  *
- * slot = { t: epoch ms, title: string, body: string }
+ * slot = { t: epoch ms, title: string, body: string, day?: 'YYYY-MM-DD', rest?: string }
+ * day and rest are set when the body holds the daily wording; rest is the body without it.
  */
 
 /** a slot this long past its time is dropped instead of sent (the phone was unreachable) */
@@ -129,7 +131,7 @@ async function send(env, sub, payload) {
 }
 
 export function messageOf(slot) {
-  return slot.title ? { title: slot.title, body: slot.body, url: './' } : null
+  return slot.title && slot.body ? { title: slot.title, body: slot.body, url: './' } : null
 }
 
 function pushHost(endpoint) {
@@ -154,8 +156,16 @@ const validSub = (s) =>
   typeof s.keys?.auth === 'string' &&
   s.keys.auth.length <= 100
 
-const dueSlot = (slots, sent, now) =>
+/** the object name of a group: a hash of the sheet id, so the id itself is not kept */
+const groupName = (group) => sha256Hex('group:' + group)
+
+const dueSlot =(slots, sent, now) =>
   slots.filter((s) => s.t <= now && s.t > sent && now - s.t < SLOT_GRACE_MS).at(-1)
+
+const DAY = /^\d{4}-\d{2}-\d{2}$/
+const validGroup = (g) => typeof g === 'string' && g.length > 0 && g.length <= 200
+/** how many recorded days a group keeps */
+const KEEP_DAYS = 5
 
 const validSlot = (s) =>
   s &&
@@ -163,9 +173,18 @@ const validSlot = (s) =>
   typeof s.title === 'string' &&
   s.title.length <= 60 &&
   typeof s.body === 'string' &&
-  s.body.length <= 200
+  s.body.length <= 200 &&
+  (s.day === undefined || (DAY.test(s.day) && typeof s.rest === 'string' && s.rest.length <= 200))
 
-const cleanSlot = (s) => ({ t: s.t, title: s.title, body: s.body })
+const cleanSlot = (s) =>
+  s.day === undefined
+    ? { t: s.t, title: s.title, body: s.body }
+    : { t: s.t, title: s.title, body: s.body, day: s.day, rest: s.rest }
+
+/** The slot as it should go out now: without the daily wording when the day was recorded elsewhere. */
+export function shownSlot(slot, recorded) {
+  return slot.day !== undefined && recorded ? { ...slot, body: slot.rest } : slot
+}
 
 /**
  * One Durable Object per device. It keeps that device's subscription and slots and wakes itself
@@ -189,10 +208,23 @@ export class PushDevice {
     const reply = (b, status) => Response.json(b, { status })
     const rec = await this.state.storage.get('rec')
 
+    // these two run on the object of a group (devices sharing one sheet), not of a device
+    if (body.op === 'recorded') {
+      const days = (await this.state.storage.get('days')) ?? []
+      if (!days.includes(body.day)) {
+        await this.state.storage.put('days', [...days, body.day].sort().slice(-KEEP_DAYS))
+      }
+      return reply({}, 200)
+    }
+    if (body.op === 'isRecorded') {
+      const days = (await this.state.storage.get('days')) ?? []
+      return reply({ recorded: days.includes(body.day) }, 200)
+    }
+
     if (body.op === 'sync') {
       const sent = rec?.sent ?? 0
       const slots = body.slots.filter((x) => x.t > sent)
-      const next = { sub: body.sub, slots, sent }
+      const next = { sub: body.sub, slots, sent, group: body.group }
       // an upload that changes nothing costs no write
       if (!rec || JSON.stringify(rec) !== JSON.stringify(next)) await this.state.storage.put('rec', next)
       await this.plan(next)
@@ -222,6 +254,21 @@ export class PushDevice {
     return reply({ error: 'bad_request' }, 400)
   }
 
+  /** Has any device of this sheet recorded the day of a daily slot? A failed lookup counts as no. */
+  async recordedElsewhere(rec, slot) {
+    if (slot.day === undefined || !rec.group) return false
+    try {
+      const group = this.env.PUSH_DEVICE.get(this.env.PUSH_DEVICE.idFromName(await groupName(rec.group)))
+      const res = await group.fetch('https://device/', {
+        method: 'POST',
+        body: JSON.stringify({ op: 'isRecorded', day: slot.day }),
+      })
+      return Boolean((await res.json()).recorded)
+    } catch {
+      return false
+    }
+  }
+
   /** Send the slot whose time has come, then set the alarm for the next one. */
   async alarm() {
     const rec = await this.state.storage.get('rec')
@@ -229,7 +276,7 @@ export class PushDevice {
     const now = Date.now()
     const slot = dueSlot(rec.slots, rec.sent, now)
     if (slot) {
-      const message = messageOf(slot)
+      const message = messageOf(shownSlot(slot, await this.recordedElsewhere(rec, slot)))
       try {
         const ok = message ? await send(this.env, rec.sub, message) : true
         if (!ok) return await this.state.storage.deleteAll()
@@ -270,7 +317,19 @@ export async function handlePush(request, env, path, body, reply) {
     const slots = body.slots.filter(validSlot).slice(0, MAX_SLOTS).map(cleanSlot)
     const { endpoint, keys } = body.subscription
     const sub = { endpoint, keys: { p256dh: keys.p256dh, auth: keys.auth } }
-    return call(endpoint, { op: 'sync', sub, slots })
+    const group = validGroup(body.group) ? body.group : ''
+    return call(endpoint, { op: 'sync', sub, slots, group })
+  }
+
+  if (path === '/push/recorded') {
+    if (!validGroup(body.group) || typeof body.day !== 'string' || !DAY.test(body.day))
+      return reply({ error: 'bad_request' }, 400)
+    const device = env.PUSH_DEVICE.get(env.PUSH_DEVICE.idFromName(await groupName(body.group)))
+    const res = await device.fetch('https://device/', {
+      method: 'POST',
+      body: JSON.stringify({ op: 'recorded', day: body.day }),
+    })
+    return reply(await res.json(), res.status)
   }
 
   if (path === '/push/unsubscribe' || path === '/push/test') {
