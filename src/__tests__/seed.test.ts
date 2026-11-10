@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db, stamp } from '@/db'
+import { P } from '@/lib/colors'
 import { defaultCategories, groupStarterIncome, refreshStarterCategories, splitInterestIncome } from '@/lib/seed'
 import { line, rec } from './helpers'
 
@@ -15,8 +16,17 @@ async function oldStarter() {
   get('房租').icon = 'building'
   get('車輛保養').name = '車輛維護'
   get('車輛維護').icon = 'oilcan'
-  get('運動').parentId = get('休閒').id
-  get('運動').color = get('休閒').color
+  const leisure = get('娛樂')
+  leisure.name = '休閒'
+  leisure.color = P.violet
+  for (const c of all) if (c.parentId === leisure.id) c.color = P.violet
+  get('人情').color = P.red
+  get('居家').color = P.green
+  for (const c of all) if (c.parentId === get('居家').id) c.color = P.green
+  get('育兒').color = P.pink
+  for (const c of all) if (c.parentId === get('育兒').id) c.color = P.pink
+  get('運動').parentId = leisure.id
+  get('運動').color = leisure.color
   all.push({ id: 'tooth', name: '牙科', kind: 'expense', parentId: get('健康').id, icon: 'tooth', color: get('健康').color, order: 99, updatedAt: stamp() })
   await db.categories.bulkAdd(all)
   return get
@@ -32,6 +42,14 @@ describe('refreshStarterCategories', () => {
     const sport = (await now('運動'))!
     expect(sport.parentId).toBe(get('健康').id)
     expect(sport.color).toBe(get('健康').color)
+    expect((await now('娛樂'))!.id).toBe(get('休閒').id)
+    expect((await now('娛樂'))!.color).toBe(P.violet)
+    expect((await now('遊戲'))!.color).toBe(P.violet)
+    expect((await now('人情'))!.color).toBe(P.crimson)
+    expect((await now('居家'))!.color).toBe(P.brown)
+    expect((await now('房租'))!.color).toBe(P.brown)
+    expect((await now('育兒'))!.color).toBe(P.blush)
+    expect((await now('玩具'))!.color).toBe(P.blush)
     expect(await now('牙科')).toBeUndefined()
     expect(await now('車輛維護')).toBeUndefined()
     expect((await now('車輛保養'))!.icon).toBe('wrench')

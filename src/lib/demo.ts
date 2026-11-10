@@ -71,7 +71,7 @@ const ENTRIES: Entry[] = [
   },
   { ago: 13, time: '12:00', account: '錢包', shop: '八方雲集', lines: [['', '午餐', 120, undefined, [['鍋貼', 90], ['酸辣湯', 30]]]] },
   { ago: 16, time: '19:30', account: '信用卡', shop: '老井燒肉', with: ['阿傑', '小美', '大雄'], split: 'even', repaid: { 阿傑: 370, 小美: 200 }, lines: [['同事聚餐', '請客', 1480]] },
-  { ago: 3, time: '20:30', account: '錢包', shop: '威秀影城', with: ['小美'], split: 'other', payer: '小美', lines: [['電影票', '休閒', 280]] },
+  { ago: 3, time: '20:30', account: '錢包', shop: '威秀影城', with: ['小美'], split: 'other', payer: '小美', lines: [['電影票', '娛樂', 280]] },
   { ago: 6, time: '15:20', account: '信用卡', shop: '蝦皮購物', with: ['阿傑'], split: 'advance', lines: [['代買保健食品', '健康', 850]] },
   { ago: 18, time: '10:00', account: '信用卡', shop: '好市多', lines: [['雞胸肉', '食材', 420], ['氣泡水', '飲料', 199], ['巧克力', '零食', 250]] },
   { ago: 25, time: '08:20', account: '錢包', shop: '早餐店', lines: [['', '早餐', 55, undefined, [['三明治', 35], ['紅茶', 20]]]] },
@@ -207,7 +207,7 @@ function extraEntries(): Entry[] {
       out.push({ ago, time: weekend ? '10:30' : '18:30', account: '信用卡', shop: pick(['全聯', '好市多', '家樂福']), lines: picked.map(([n, c, [lo, hi]]) => [n, c, money(lo, hi)] as L) })
     }
     if (maybe(weekend ? 0.08 : 0.02)) out.push({ ago, time: '15:00', account: '信用卡', shop: pick(['UNIQLO', '蝦皮購物', 'IKEA']), lines: [['購物', pick(['服飾', '3C', '家具家電']), money(300, 2500, 10)]] })
-    if (maybe(weekend ? 0.12 : 0.02)) out.push({ ago, time: '14:00', account: '錢包', shop: pick(['威秀影城', 'KTV', '桌遊店']), lines: [['娛樂', '休閒', money(250, 800, 10)]] })
+    if (maybe(weekend ? 0.12 : 0.02)) out.push({ ago, time: '14:00', account: '錢包', shop: pick(['威秀影城', 'KTV', '桌遊店']), lines: [['娛樂', '娛樂', money(250, 800, 10)]] })
   }
 
   // what comes once a month, on its own day of the month
@@ -281,7 +281,7 @@ export async function loadDemo(): Promise<number> {
   }
 
   // a few budgets so the budget tab has bars
-  const budgets: [string, number][] = [['飲食', 8000], ['購物', 5000], ['休閒', 3000]]
+  const budgets: [string, number][] = [['飲食', 8000], ['購物', 5000], ['娛樂', 3000]]
   const withBudget: Category[] = []
   for (const [name, budget] of budgets) {
     const c = find(name, 'expense')

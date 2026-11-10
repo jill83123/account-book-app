@@ -41,7 +41,7 @@ const EXPENSE: Group[] = [
   {
     name: '居家',
     icon: 'house',
-    color: P.green,
+    color: P.brown,
     kids: [
       ['房租', 'house'],
       ['水電瓦斯', 'zap'],
@@ -64,7 +64,7 @@ const EXPENSE: Group[] = [
     ],
   },
   {
-    name: '休閒',
+    name: '娛樂',
     icon: 'game',
     color: P.violet,
     kids: [
@@ -97,7 +97,7 @@ const EXPENSE: Group[] = [
   {
     name: '人情',
     icon: 'handshake',
-    color: P.red,
+    color: P.crimson,
     kids: [
       ['紅包禮金', 'gift'],
       ['請客', 'users'],
@@ -108,7 +108,7 @@ const EXPENSE: Group[] = [
   {
     name: '寵物',
     icon: 'paw',
-    color: P.orange,
+    color: P.lime,
     kids: [
       ['飼料零食', 'soup'],
       ['寵物醫療', 'stethoscope'],
@@ -118,7 +118,7 @@ const EXPENSE: Group[] = [
   {
     name: '育兒',
     icon: 'baby',
-    color: P.pink,
+    color: P.blush,
     kids: [
       ['奶粉尿布', 'baby'],
       ['托育教育', 'children'],
@@ -128,7 +128,7 @@ const EXPENSE: Group[] = [
   {
     name: '金融',
     icon: 'landmark',
-    color: P.indigo,
+    color: P.navy,
     kids: [
       ['保險', 'shield'],
       ['手續費', 'receipt'],
@@ -140,7 +140,7 @@ const EXPENSE: Group[] = [
   {
     name: '投資',
     icon: 'trending',
-    color: P.magenta,
+    color: P.forest,
     kids: [
       ['股票', 'trending'],
       ['基金', 'coins'],
@@ -153,7 +153,7 @@ const INCOME: Group[] = [
   {
     name: '工作收入',
     icon: 'briefcase',
-    color: P.green,
+    color: P.blue,
     kids: [
       ['薪資', 'banknote'],
       ['獎金', 'coins'],
@@ -163,7 +163,7 @@ const INCOME: Group[] = [
   {
     name: '投資收益',
     icon: 'trending',
-    color: P.violet,
+    color: P.forest,
     kids: [
       ['股利配息', 'coins'],
       ['租金收入', 'house'],
@@ -173,7 +173,7 @@ const INCOME: Group[] = [
   {
     name: '利息收入',
     icon: 'piggy',
-    color: P.teal,
+    color: P.yellow,
     kids: [
       ['活存利息', 'piggy'],
       ['定存利息', 'landmark'],
@@ -182,7 +182,7 @@ const INCOME: Group[] = [
   {
     name: '退款與補貼',
     icon: 'recycle',
-    color: P.indigo,
+    color: P.violet,
     kids: [
       ['退款', 'recycle'],
       ['退稅', 'receipt'],
@@ -285,7 +285,7 @@ export async function splitInterestIncome(): Promise<void> {
 }
 
 /** Bumped whenever refreshStarterCategories has something new to do; each device runs it once per version. */
-export const STARTER_VERSION = 5
+export const STARTER_VERSION = 13
 
 /** Names the starter set changed, as [the old name, the new one]; only a sub-category under 交通 is renamed. */
 const RENAMES: [string, string][] = [
@@ -323,12 +323,32 @@ const ICON_CHANGES: [string, string, string][] = [
 ]
 
 /**
+ * Starter groups whose colour changed so each one reads as what it is, as [name, every colour the starter set has
+ * used for it, the colour it has now]. A group still wearing one of the old colours gets the new one, and so do its
+ * sub-categories that share it. A colour the person picked themselves is left alone.
+ */
+const RECOLORS: [string, string[], string][] = [
+  ['居家', [P.green, '#aa7a4e', '#9c6f46', '#b38761', '#cba989'], P.brown],
+  ['購物', [P.pink, P.magenta, '#be79b4'], P.pink],
+  ['人情', [P.red, '#d9524e', '#d27674'], P.crimson],
+  ['寵物', [P.orange, '#aa7a4e', '#9c6f46'], P.lime],
+  ['育兒', [P.pink, P.lime], P.blush],
+  ['金融', [P.indigo, '#4275d7', '#6a91d9'], P.navy],
+  ['投資', [P.magenta, '#ba5ab8', '#be79b4', '#58a56a'], P.forest],
+  ['工作收入', [P.green], P.blue],
+  ['投資收益', [P.violet, '#9369dd', '#58a56a'], P.forest],
+  ['利息收入', [P.teal], P.yellow],
+  ['退款與補貼', [P.indigo, P.blue], P.violet],
+]
+
+/**
  * Bring data made from an earlier starter set in line with the current one, once: a starter icon that is still the old
- * one becomes the new one, 牙科 goes unless a record uses it, and 運動 moves from 休閒 to 健康. Anything the person
+ * one becomes the new one, 牙科 goes unless a record uses it, and 運動 moves from 娛樂 (once 休閒) to 健康. Anything the person
  * changed themselves (another icon, another parent) is left as it is.
  */
 export async function refreshStarterCategories(): Promise<void> {
-  const cats = await db.categories.filter((c) => !c.deleted && c.kind === 'expense').toArray()
+  const allCats = await db.categories.filter((c) => !c.deleted).toArray()
+  const cats = allCats.filter((c) => c.kind === 'expense')
   // one record per category, so two changes to the same one (a new icon and a new name) both land
   const edits = new Map<string, Category>()
   const t = stamp()
@@ -343,7 +363,17 @@ export async function refreshStarterCategories(): Promise<void> {
     // not when the person already has one by the new name
     if (c && !cats.some((x) => x.name === to && x.parentId === c.parentId)) patch(c, { name: to })
   }
-  const leisure = byName('休閒')
+  // 休閒 is called 娛樂 now, unless the person already has one by that name
+  const oldLeisure = byName('休閒')
+  if (oldLeisure && !byName('娛樂')) patch(oldLeisure, { name: '娛樂' })
+  // read before any edit, so a colour that moves on does not match the next group down the list
+  for (const [name, olds, to] of RECOLORS) {
+    const top = allCats.find((c) => c.parentId === null && c.name === name)
+    if (!top || top.color === to || !olds.includes(top.color)) continue
+    patch(top, { color: to })
+    for (const c of allCats) if (c.parentId === top.id && olds.includes(c.color)) patch(c, { color: to })
+  }
+  const leisure = oldLeisure ?? byName('娛樂')
   const health = byName('健康')
   const sport = cats.find((c) => c.name === '運動' && leisure && c.parentId === leisure.id)
   if (sport && leisure && health) {

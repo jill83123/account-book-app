@@ -57,51 +57,58 @@ function oklchToHex(lch: Oklch): string {
 const base = hexToOklch(DEFAULT_THEME.color)
 const at = (h: number, c = base.c) => oklchToHex({ l: base.l, c, h })
 
+/** A colour of another lightness or strength, for the extra choices in the picker. */
+const shade = (h: number, dl: number, c = base.c) => oklchToHex({ l: base.l + dl, c, h })
+
 /** Named colours, so data and screens say what they mean instead of repeating hex codes. */
 export const P = {
   blue: at(base.h),
-  orange: at(55),
+  // Lightness, strength and hue of the next few were nudged together a little, so no two neighbours sit too close
+  orange: oklchToHex({ l: 0.78, c: 0.122, h: 55.5 }),
   // brighter and warmer than the others: at the shared lightness hue 90 turns into mustard
-  yellow: oklchToHex({ l: base.l + 0.1, c: 0.155, h: 82 }),
+  yellow: oklchToHex({ l: 0.818, c: 0.159, h: 86.7 }),
   green: at(148),
-  teal: at(190),
+  teal: oklchToHex({ l: 0.73, c: 0.121, h: 184.6 }),
   indigo: at(268),
-  violet: at(297),
+  violet: oklchToHex({ l: 0.729, c: 0.12, h: 294.3 }),
   magenta: at(328),
-  pink: at(358),
+  pink: oklchToHex({ l: 0.7315, c: 0.1207, h: 354.2 }),
   red: at(25),
   gray: at(base.h, 0.02),
+  // deeper or fresher neighbours, so categories that sit next to each other on the wheel still tell apart
+  brown: shade(65, 0.0, 0.065),
+  lime: oklchToHex({ l: 0.728, c: 0.122, h: 129.1 }),
+  // the same hues again, deeper or softer by a clear step, for two groups that would otherwise want one colour
+  forest: shade(150, -0.11, base.c * 0.85),
+  blush: oklchToHex({ l: base.l + 0.09, c: base.c * 0.7, h: 358 }),
+  navy: oklchToHex({ l: 0.627, c: 0.1205, h: 262.3 }),
+  crimson: oklchToHex({ l: 0.671, c: 0.1194, h: 22.7 }),
 }
 
 export type ColorRole = keyof typeof P
-
-/** A colour of another lightness or strength, for the extra choices in the picker. */
-const shade = (h: number, dl: number, c = base.c) => oklchToHex({ l: base.l + dl, c, h })
 
 /**
  * Colours offered when picking one for a category, account or ledger, ordered around the colour wheel so
  * similar colours sit next to each other.
  */
 export const COLORS = [
-  // warm to cool around the colour wheel, then the neutrals
-  P.pink,
-  shade(8, -0.02), // rose
-  P.red,
-  shade(40, 0.02), // coral
+  // around the colour wheel from red: warm to cool, then the purples and pinks, then the neutrals
+  P.crimson,
   P.orange,
-  shade(62, -0.14, 0.08), // brown
   P.yellow,
-  shade(125, 0.02), // lime
+  P.lime,
   P.green,
-  shade(150, -0.13, 0.12), // forest
-  shade(168, 0.04), // mint
+  P.forest,
   P.teal,
-  shade(235, 0.04), // sky
   P.blue,
-  shade(262, -0.14, 0.16), // navy
+  P.navy,
   P.indigo,
   P.violet,
-  shade(298, -0.1, 0.17), // deep purple
+  P.magenta,
+  P.pink,
+  P.blush,
+  // neutrals
+  P.brown,
   shade(250, -0.1, 0.03), // slate
   P.gray,
 ]

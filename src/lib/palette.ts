@@ -17,6 +17,16 @@ const ROLE_OF: Record<string, ColorRole> = {
   '#5b8def': 'magenta',
   // the third set's mustard yellow, replaced by a brighter gold
   '#c0a044': 'yellow',
+  // the fourth set, tuned together
+  '#dc8f59': 'orange',
+  '#ed9f68': 'orange',
+  '#27bbb4': 'teal',
+  '#ab94e4': 'violet',
+  '#de84a3': 'pink',
+  '#f5b832': 'yellow',
+  '#99b762': 'lime',
+  '#6a91d9': 'navy',
+  '#d27674': 'crimson',
   // second set (bright)
   '#3aa0ff': 'blue',
   '#ff8c42': 'orange',
@@ -32,7 +42,7 @@ const ROLE_OF: Record<string, ColorRole> = {
 }
 
 /** Bump this when the colours change again, so saved data is updated once. */
-export const PALETTE_VERSION = 3
+export const PALETTE_VERSION = 5
 
 const newColor = (hex: string): string | undefined => {
   const role = ROLE_OF[hex.toLowerCase()]
