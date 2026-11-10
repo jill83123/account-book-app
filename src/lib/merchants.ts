@@ -64,7 +64,7 @@ export async function learn(
   if (rec.type !== 'transfer') {
     for (const l of rec.lines) {
       const itemName = l.name.trim()
-      if (!itemName || l.amount <= 0 || !l.categoryId) continue
+      if (!itemName || !l.categoryId) continue
       if (items && !items.keep.has(itemName)) continue
       const at = m.items.findIndex((i) => i.name === itemName)
       const prev = at >= 0 ? m.items[at]! : undefined

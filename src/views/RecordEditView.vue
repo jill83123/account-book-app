@@ -1044,7 +1044,8 @@ async function submit() {
       return ui.toast(`請輸入轉入的${toCur.value}金額`, 'error')
     sum = total.value
   } else {
-    const used = lines.value.filter((l) => l.name.trim() || amountOf(l) !== 0)
+    // 金額填了 0 也算有填，記錄的合計可以是 0
+    const used = lines.value.filter((l) => l.name.trim() || l.amountText.trim() || amountOf(l) !== 0)
     if (!used.length) return ui.toast('請輸入金額', 'error')
     for (const l of used) {
       if (!l.categoryId) return ui.toast('請選擇分類', 'error')
@@ -1063,7 +1064,6 @@ async function submit() {
       ...(recType === 'expense' && l.amortMonths > 1 ? { amortMonths: l.amortMonths } : {}),
     }))
     sum = recLines.reduce((n, l) => n + l.amount, 0)
-    if (sum === 0) return ui.toast('金額合計不能是 0', 'error')
   }
   if (!accountId.value && !foreign.value) return ui.toast('請選擇帳戶', 'error')
 
