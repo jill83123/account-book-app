@@ -44,8 +44,9 @@ const ROLE_OF: Record<string, ColorRole> = {
 /** Bump this when the colours change again, so saved data is updated once. */
 export const PALETTE_VERSION = 5
 
-const newColor = (hex: string): string | undefined => {
-  const role = ROLE_OF[hex.toLowerCase()]
+// a row can come without a colour (older data, or from another device), so it is skipped instead of failing
+const newColor = (hex: string | undefined): string | undefined => {
+  const role = typeof hex === 'string' ? ROLE_OF[hex.toLowerCase()] : undefined
   return role ? P[role] : undefined
 }
 
