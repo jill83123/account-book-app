@@ -81,10 +81,13 @@ function edit(c?: Category, parent: string | null = null) {
   open.value = true
 }
 
-/** when a big category gets a new color: leave its sub-categories alone, or give them the same color */
+/** a big category whose sub-categories are not all in its color: offer to give them the same color */
 const kidColor = ref(false)
-const colorChanged = computed(
-  () => !!editing.value && !editing.value.parentId && color.value !== editing.value.color,
+const kidsDiffer = computed(
+  () =>
+    !!editing.value &&
+    !editing.value.parentId &&
+    data.childrenOf(editing.value.id, kind.value, true).some((k) => k.color !== color.value),
 )
 
 const iconBox = ref<HTMLElement>()
@@ -139,7 +142,7 @@ async function submit() {
       ym(today()),
     ),
   })
-  if (colorChanged.value && hasKids.value && kidColor.value) {
+  if (kidsDiffer.value && kidColor.value) {
     const kids = data.childrenOf(editing.value!.id, kind.value, true)
     await saveMany(
       'categories',
@@ -425,8 +428,8 @@ onBeforeUnmount(() => {
             />
           </div>
           <div
-            v-if="colorChanged && hasKids"
-            class="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface px-4 py-3"
+            v-if="kidsDiffer"
+            class="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-line/50 px-4 py-3"
           >
             <span class="text-sm">套用顏色到子分類</span>
             <ToggleSwitch v-model="kidColor" label="套用顏色到子分類" />
