@@ -210,6 +210,21 @@ export interface RemoteImage {
   fileId: string
   recordId: string
   createdAt: number
+  parents: string[]
+}
+
+/** The folder for photos inside the app folder; made when it is missing. */
+export async function ensureImageFolder(token: string, parent: string): Promise<string> {
+  const q = `appProperties has { key='accountBookImageFolder' and value='1' } and trashed=false and mimeType='${FOLDER_MIME}'`
+  const res = await call(token, `${DRIVE}/files?q=${enc(q)}&fields=files(id)&orderBy=createdTime&pageSize=5`)
+  const found = ((await res.json()) as { files?: { id: string }[] }).files?.[0]?.id
+  if (found) return found
+  const made = await call(
+    token,
+    `${DRIVE}/files?fields=id`,
+    json({ name: '圖片', mimeType: FOLDER_MIME, parents: [parent], appProperties: { accountBookImageFolder: '1' } }),
+  )
+  return ((await made.json()) as { id: string }).id
 }
 
 /** Every photo this app has put in Drive, by photo id. Throws when the list cannot be read completely. */
@@ -220,15 +235,22 @@ export async function listImageFiles(token: string): Promise<Map<string, RemoteI
   do {
     const res = await call(
       token,
-      `${DRIVE}/files?q=${enc(q)}&fields=nextPageToken,files(id,appProperties)&pageSize=1000${page ? `&pageToken=${enc(page)}` : ''}`,
+      `${DRIVE}/files?q=${enc(q)}&fields=nextPageToken,files(id,parents,appProperties)&pageSize=1000${page ? `&pageToken=${enc(page)}` : ''}`,
     )
     const data = (await res.json()) as {
       nextPageToken?: string
-      files?: { id: string; appProperties?: Record<string, string> }[]
+      files?: { id: string; parents?: string[]; appProperties?: Record<string, string> }[]
     }
     for (const f of data.files ?? []) {
       const p = f.appProperties ?? {}
-      if (p.imageId) out.set(p.imageId, { fileId: f.id, recordId: p.recordId ?? '', createdAt: Number(p.createdAt) || Date.now() })
+      if (p.imageId) {
+        out.set(p.imageId, {
+          fileId: f.id,
+          recordId: p.recordId ?? '',
+          createdAt: Number(p.createdAt) || Date.now(),
+          parents: f.parents ?? [],
+        })
+      }
     }
     page = data.nextPageToken ?? ''
   } while (page)

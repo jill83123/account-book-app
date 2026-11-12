@@ -152,9 +152,16 @@ async function ensureFolder(token: string, sheetId: string, created: boolean, kn
   try {
     // the top of My Drive may be off limits with the drive.file scope; then every place counts as "not yet tidied"
     const [parents, root] = await Promise.all([getParents(token, sheetId), getRootId(token).catch(() => '')])
+    const placed = Boolean(root && parents.length && !parents.includes(root))
+    const tagged = await findFolder(token)
+    // the app folder is still there (maybe moved): keep using it, and leave a sheet the user put elsewhere where it is
+    if (tagged) {
+      if (!placed) await moveToFolder(token, sheetId, tagged, parents)
+      return tagged
+    }
     // already put somewhere by the user: leave it there
-    if (root && parents.length && !parents.includes(root)) return NO_FOLDER
-    const folder = (await findFolder(token)) ?? (await createFolder(token, '記帳本'))
+    if (placed) return NO_FOLDER
+    const folder = await createFolder(token, '記帳本')
     await moveToFolder(token, sheetId, folder, parents)
     return folder
   } catch (e) {

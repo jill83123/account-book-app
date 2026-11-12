@@ -1,5 +1,5 @@
 /*
- * Photos travel through Google Drive, next to the spreadsheet: one JPEG per photo, tagged with the photo's id and its
+ * Photos travel through Google Drive, in a folder inside the app folder: one JPEG per photo, tagged with the photo's id and its
  * record. The sheet only holds the text data; this keeps the two sets of photos (this device's and Drive's) alike.
  *
  *   - a photo added here and not yet in Drive is uploaded;
@@ -11,7 +11,15 @@
  * "not uploaded yet" rather than "everything was deleted".
  */
 import { db } from '@/db'
-import { deleteFile, downloadFile, listImageFiles, uploadImage } from './sheets'
+import {
+  deleteFile,
+  downloadFile,
+  ensureImageFolder,
+  listImageFiles,
+  moveToFolder,
+  SheetsAuthError,
+  uploadImage,
+} from './sheets'
 
 const PARALLEL = 3
 
@@ -28,8 +36,27 @@ async function inBatches<T>(items: T[], run: (item: T) => Promise<void>) {
   }
 }
 
-async function run(token: string, folderId: string) {
+async function run(token: string, appFolder: string) {
   const remote = await listImageFiles(token)
+
+  // photos get their own folder inside the app folder; failing to make it only means they stay where they are
+  let folderId = appFolder
+  if (appFolder && appFolder !== 'none') {
+    try {
+      folderId = await ensureImageFolder(token, appFolder)
+    } catch (e) {
+      if (e instanceof SheetsAuthError) throw e
+      console.warn('圖片資料夾建立失敗，下次同步會再試：', e)
+    }
+  }
+  // photos uploaded before the folder existed sit next to the spreadsheet: tidy them in
+  if (folderId !== appFolder) {
+    const loose = [...remote.values()].filter((r) => r.parents.includes(appFolder))
+    await inBatches(loose, async (r) => {
+      await moveToFolder(token, r.fileId, folderId, r.parents)
+      r.parents = [folderId]
+    })
+  }
 
   // removed here: take the Drive copy away too
   const trash = await db.imageTrash.toArray()
