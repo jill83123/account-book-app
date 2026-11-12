@@ -20,9 +20,10 @@ export interface LocalSettings {
   incomeInterest: boolean
   /** Cloudflare Worker that holds the Google client secret */
   workerUrl: string
+  /** the file in the Drive app data folder that holds the synced data; also names the group of devices for push reminders */
+  syncFileId: string
+  /** the spreadsheet an older version synced to, until its data has been carried over */
   spreadsheetId: string
-  /** the Drive folder the spreadsheet was put in ('none' when it was already somewhere else) */
-  folderId: string
   lastSyncAt: number
   geminiKey: string
   geminiModel: string
@@ -34,7 +35,7 @@ export interface LocalSettings {
   remindTime: string
   /** when remindTime was last changed on any device (the newest change wins when devices sync) */
   remindTimeAt: number
-  /** tells this device apart from the others that share the spreadsheet */
+  /** tells this device apart from the others that share the data */
   deviceId: string
   /** another device has the daily reminder on (learned at the last sync) */
   remindOnElsewhere: boolean
@@ -78,8 +79,8 @@ const defaults: LocalSettings = {
   incomeGroups: false,
   incomeInterest: false,
   workerUrl: '',
+  syncFileId: '',
   spreadsheetId: '',
-  folderId: '',
   lastSyncAt: 0,
   geminiKey: '',
   geminiModel: DEFAULT_GEMINI_MODEL,

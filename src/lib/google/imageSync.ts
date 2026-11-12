@@ -1,6 +1,6 @@
 /*
- * Photos travel through Google Drive, in a folder inside the app folder: one JPEG per photo, tagged with the photo's id and its
- * record. The sheet only holds the text data; this keeps the two sets of photos (this device's and Drive's) alike.
+ * Photos travel through Google Drive too, in the same hidden app data folder as the data: one JPEG per photo, tagged
+ * with the photo's id and its record. This keeps the two sets of photos (this device's and Drive's) alike.
  *
  *   - a photo added here and not yet in Drive is uploaded;
  *   - a photo in Drive that this device lacks is downloaded;
@@ -11,19 +11,11 @@
  * "not uploaded yet" rather than "everything was deleted".
  */
 import { db } from '@/db'
-import {
-  deleteFile,
-  downloadFile,
-  ensureImageFolder,
-  listImageFiles,
-  moveToFolder,
-  SheetsAuthError,
-  uploadImage,
-} from './sheets'
+import { deleteFile, downloadFile, listImageFiles, uploadImage } from './drive'
 
 const PARALLEL = 3
 
-async function inBatches<T>(items: T[], run: (item: T) => Promise<void>) {
+export async function inBatches<T>(items: T[], run: (item: T) => Promise<void>) {
   for (let i = 0; i < items.length; i += PARALLEL) {
     await Promise.all(
       items.slice(i, i + PARALLEL).map((item) =>
@@ -36,26 +28,17 @@ async function inBatches<T>(items: T[], run: (item: T) => Promise<void>) {
   }
 }
 
-async function run(token: string, appFolder: string) {
+async function run(token: string) {
   const remote = await listImageFiles(token)
 
-  // photos get their own folder inside the app folder; failing to make it only means they stay where they are
-  let folderId = appFolder
-  if (appFolder && appFolder !== 'none') {
-    try {
-      folderId = await ensureImageFolder(token, appFolder)
-    } catch (e) {
-      if (e instanceof SheetsAuthError) throw e
-      console.warn('圖片資料夾建立失敗，下次同步會再試：', e)
+  // the record was deleted (here, by another device, or by a path that does not clean up): its photos go too
+  const goneRecords = new Set((await db.records.filter((r) => Boolean(r.deleted)).primaryKeys()) as string[])
+  if (goneRecords.size) {
+    const orphans = (await db.images.toArray()).filter((i) => goneRecords.has(i.recordId)).map((i) => ({ id: i.id }))
+    if (orphans.length) {
+      await db.images.bulkDelete(orphans.map((o) => o.id))
+      await db.imageTrash.bulkPut(orphans)
     }
-  }
-  // photos uploaded before the folder existed sit next to the spreadsheet: tidy them in
-  if (folderId !== appFolder) {
-    const loose = [...remote.values()].filter((r) => r.parents.includes(appFolder))
-    await inBatches(loose, async (r) => {
-      await moveToFolder(token, r.fileId, folderId, r.parents)
-      r.parents = [folderId]
-    })
   }
 
   // removed here: take the Drive copy away too
@@ -83,7 +66,7 @@ async function run(token: string, appFolder: string) {
     }
   }
   await inBatches(toUpload, async (l) => {
-    await uploadImage(token, l, folderId)
+    await uploadImage(token, l)
     await db.images.update(l.id, { synced: true })
   })
 
@@ -99,8 +82,8 @@ async function run(token: string, appFolder: string) {
 let running: Promise<void> | null = null
 
 /** One run at a time; photos can be many, so the caller does not wait for this. */
-export function syncImages(token: string, folderId: string): Promise<void> {
-  running ??= run(token, folderId)
+export function syncImages(token: string): Promise<void> {
+  running ??= run(token)
     .catch((e) => console.warn('圖片同步中斷，下次同步會再試：', e))
     .finally(() => (running = null))
   return running

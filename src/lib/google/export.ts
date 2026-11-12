@@ -1,7 +1,4 @@
-/*
- * Turns the app's data into the readable tabs of the spreadsheet. The tabs are a generated view:
- * every sync rewrites them, and the app keeps its own copy in the hidden `_data` tab.
- */
+/* Turns the app's data into readable tables, for the CSV export. */
 import type { Account, Category, Ledger, Loan, Member, Merchant, Rec, Recurring } from '@/db/types'
 import { baseCurrency } from '../currency'
 import { compareRecords } from '../order'
@@ -18,7 +15,7 @@ function splitText(r: Rec, who: (id: string) => string): string {
 import { accountBalances, amortSchedule, cardCycles, countedRecords, isForeignAccount, loanOutstanding, spendOn, toEntries } from '../calc'
 import { WEEKDAYS, parse, today, ym } from '../date'
 import { FREQ_LABEL, nextDue, repeatLabel, lineName } from '../recurrence'
-import type { Cell } from './sheets'
+export type Cell = string | number | null
 
 export interface Snapshot {
   accounts: Account[]
@@ -54,7 +51,6 @@ export interface TableSpec {
 }
 
 /** Bump when the layout changes: the tabs are then rebuilt from scratch. */
-export const LAYOUT_VERSION = 3
 
 const text = (s: string) => (s ? `'${s}` : '')
 const TYPE_LABEL = { expense: '支出', income: '收入', transfer: '轉帳' } as const
@@ -92,7 +88,7 @@ export function buildTables(s: Snapshot, amortize: boolean): TableSpec[] {
 
 function guide(): TableSpec {
   const lines = [
-    '這份試算表由記帳本 App 自動產生，請在 App 內新增、修改記帳資料。',
+    '這份表格由記帳本 App 自動產生，請在 App 內新增、修改記帳資料。',
     '下面各分頁每次同步都會被重新寫入，直接在分頁上修改的內容會在下次同步時被覆蓋。',
     '想自己做分析：複製分頁或新增自己的分頁，用公式引用明細分頁即可，不會被覆蓋。',
     '',

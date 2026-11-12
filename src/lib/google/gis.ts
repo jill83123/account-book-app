@@ -1,5 +1,5 @@
 /*
- * Google sign-in for Sheets sync (drive.file scope only).
+ * Google sign-in for Drive sync (drive.appdata scope; drive.file only to carry over data an older version kept in a spreadsheet).
  *
  * Authorization code flow: Google's popup returns a one-time code, a small Cloudflare Worker
  * (see worker/) exchanges it for an access token plus a long-lived refresh token, because the
@@ -7,7 +7,9 @@
  * to the Worker, so no window opens.
  */
 
-const SCOPE = 'https://www.googleapis.com/auth/drive.file'
+const SCOPE = 'https://www.googleapis.com/auth/drive.appdata'
+const LEGACY_SCOPE = 'https://www.googleapis.com/auth/drive.file'
+const SCOPE_KEY = 'ab.google.scope'
 const TOKEN_KEY = 'ab.google.token'
 const REFRESH_KEY = 'ab.google.refresh'
 
@@ -123,6 +125,11 @@ export function cachedToken(): string | null {
   }
 }
 
+/** The sign-in also lets the app read the spreadsheet an older version made. */
+export function hasLegacyAccess(): boolean {
+  return (localStorage.getItem(SCOPE_KEY) ?? '').split(' ').includes(LEGACY_SCOPE)
+}
+
 export function hasRefreshToken(): boolean {
   return Boolean(localStorage.getItem(REFRESH_KEY))
 }
@@ -170,7 +177,7 @@ async function exchangeCode(code: string): Promise<string> {
   if (!r.data.access_token) throw new Error(r.data.error_description || r.data.error || '授權失敗')
   if (!r.data.scope?.split(' ').includes(SCOPE)) {
     throw new Error(
-      '沒有取得雲端硬碟檔案權限，請重新連線，並在 Google 授權畫面勾選對應的權限',
+      '沒有取得雲端硬碟的資料儲存權限，請重新連線，並在 Google 授權畫面勾選對應的權限',
     )
   }
   if (!r.data.refresh_token) {
@@ -181,12 +188,13 @@ async function exchangeCode(code: string): Promise<string> {
   }
   localStorage.setItem(REFRESH_KEY, r.data.refresh_token)
   storeAccessToken(r.data)
+  localStorage.setItem(SCOPE_KEY, r.data.scope ?? '')
   return r.data.access_token
 }
 
 let pending: { resolve: (t: string) => void; reject: (e: Error) => void } | null = null
 
-function openPopup(selectAccount: boolean) {
+function openPopup(selectAccount: boolean, legacy: boolean) {
   return new Promise<string>((resolve, reject) => {
     pending?.reject(new Error('已取消登入'))
     pending = { resolve, reject }
@@ -198,7 +206,7 @@ function openPopup(selectAccount: boolean) {
     window
       .google!.accounts.oauth2.initCodeClient({
         client_id: clientId,
-        scope: SCOPE,
+        scope: legacy ? `${SCOPE} ${LEGACY_SCOPE}` : SCOPE,
         ux_mode: 'popup',
         select_account: selectAccount,
         callback: (r) => {
@@ -242,7 +250,14 @@ export function refreshAccessToken(): Promise<string | null> {
     try {
       const r = await callWorker('/refresh', { refresh_token: refresh })
       if (r.data.access_token) {
+        // a sign-in from an older version only covers the spreadsheet: sign in again for the new permission
+        if (r.data.scope && !r.data.scope.split(' ').includes(SCOPE)) {
+          localStorage.removeItem(REFRESH_KEY)
+          clearToken()
+          return null
+        }
         storeAccessToken(r.data)
+        if (r.data.scope) localStorage.setItem(SCOPE_KEY, r.data.scope)
         return r.data.access_token
       }
       if (r.status === 400 || r.status === 401) {
@@ -264,18 +279,19 @@ export function refreshAccessToken(): Promise<string | null> {
  * block popups opened after an await. When the script is already loaded (see preloadGis)
  * the popup opens without any await.
  */
-export function requestToken(selectAccount = false): Promise<string> {
+export function requestToken(selectAccount = false, legacy = false): Promise<string> {
   if (!workerUrl) return Promise.reject(new Error('請先在設定填入同步服務網址'))
   if (window.google?.accounts?.oauth2 && clientId && clientIdFor === workerUrl) {
-    return openPopup(selectAccount)
+    return openPopup(selectAccount, legacy)
   }
-  return Promise.all([loadGis(), loadConfig()]).then(() => openPopup(selectAccount))
+  return Promise.all([loadGis(), loadConfig()]).then(() => openPopup(selectAccount, legacy))
 }
 
 export async function revokeToken() {
   const refresh = localStorage.getItem(REFRESH_KEY)
   const access = cachedToken()
   localStorage.removeItem(REFRESH_KEY)
+  localStorage.removeItem(SCOPE_KEY)
   clearToken()
   // revoking either token ends the whole grant; failures here don't matter
   const token = refresh ?? access

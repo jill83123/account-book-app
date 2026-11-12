@@ -20,7 +20,7 @@ const permissionDenied = ref('Notification' in window && Notification.permission
 async function toggle(on: boolean) {
   if (on && !s.workerUrl.trim()) {
     const go = await ui.confirm('尚未設定同步服務網址', {
-      message: '每日提醒由同步服務（Cloudflare Worker）送出，請先到 Google 試算表同步頁填入網址。',
+      message: '每日提醒由同步服務（Cloudflare Worker）送出，請先到 同步與備份頁填入網址。',
       confirmText: '前往設定',
     })
     if (go) router.push('/more/data')

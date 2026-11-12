@@ -51,10 +51,10 @@ export const usePush = defineStore('push', () => {
     const sub = await currentSubscription()
     if (!sub) return
     const planned = plan()
-    const signature = JSON.stringify(planned)
+    const signature = `${s.syncFileId}|${JSON.stringify(planned)}`
     if (!force && signature === lastSignature && Date.now() - lastUpload < REFRESH_MS) return
     try {
-      await uploadSlots(s.workerUrl, sub, planned, s.spreadsheetId, keepalive)
+      await uploadSlots(s.workerUrl, sub, planned, s.syncFileId, keepalive)
       lastSignature = signature
       lastUpload = Date.now()
       error.value = ''
@@ -76,9 +76,9 @@ export const usePush = defineStore('push', () => {
     clearTimeout(reportTimer)
     reportTimer = setTimeout(() => {
       const day = today()
-      if (!data.ready || !navigator.onLine || !s.workerUrl.trim() || !s.spreadsheetId) return
+      if (!data.ready || !navigator.onLine || !s.workerUrl.trim() || !s.syncFileId) return
       if (reportedDay === day || !data.records.some((r) => r.date === day && !r.deleted)) return
-      reportRecorded(s.workerUrl, s.spreadsheetId, day)
+      reportRecorded(s.workerUrl, s.syncFileId, day)
         .then(() => (reportedDay = day))
         .catch(() => {})
     }, 3000)

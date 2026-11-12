@@ -1,54 +1,37 @@
 /*
- * Two-way sync with the spreadsheet.
+ * Two-way sync through one file in Google Drive's hidden app data folder.
  *
- * The hidden `_data` tab holds one row per entity (table, id, updatedAt, deleted, JSON); that is what
- * the devices merge with, newest `updatedAt` winning. The readable tabs are regenerated from the
- * merged data whenever anything changed.
+ * The file holds one entry per entity (table, id, updatedAt, deleted, content); the devices merge with it, newest
+ * `updatedAt` winning. Photos are separate files in the same folder, see imageSync.ts.
+ *
+ * An older version kept the same data in a spreadsheet. The first sync that finds no file yet reads that spreadsheet
+ * once (when the sign-in still allows it) and carries its data over.
  */
 import { db, table } from '@/db'
 import { TABLES, type Base, type TableName } from '@/db/types'
-import { buildTables, LAYOUT_VERSION, type Snapshot } from './export'
-import { sizeRequests, styleRequests } from './format'
-import { syncImages } from './imageSync'
-import {
-  batchUpdate,
-  clearValues,
-  createFolder,
-  createSpreadsheet,
-  findFolder,
-  findSpreadsheet,
-  getInfo,
-  getParents,
-  getRootId,
-  moveToFolder,
-  readValues,
-  SheetsAuthError,
-  SheetsNotFoundError,
-  writeRange,
-  writeValues,
-  type Cell,
-  type SpreadsheetInfo,
-} from './sheets'
+import { DriveAuthError, downloadFile, findSyncFile, readJson, writeSyncFile } from './drive'
+import { inBatches, syncImages } from './imageSync'
+import { findSpreadsheet, listLegacyImages, readValues, usableSpreadsheet } from './legacy'
 
-const DATA_TITLE = '_data'
-const DATA_SHEET_ID = 100
-const HEADER: Cell[] = ['表', 'ID', '更新時間', '已刪除', '內容']
+const FILE_VERSION = 1
+/** another device may write while this one merges: merge its copy too, this many times at most */
+const MAX_TRIES = 3
 
 export interface SyncOptions {
   getToken: () => Promise<string>
-  spreadsheetId: string
-  /** the folder the sheet was put in on an earlier sync ('' when it has not been yet) */
-  folderId?: string
-  amortize: boolean
-  /** rebuild the readable tabs even if nothing changed */
-  forceViews?: boolean
-  /** the local data is only the starter data: let the sheet's data replace it */
+  /** the sync file this device used before ('' when it has not synced yet) */
+  fileId: string
+  /** the spreadsheet an older version used, still to be carried over ('' when none) */
+  legacySheetId: string
+  /** the sign-in may still read the spreadsheet */
+  legacyAccess: boolean
+  /** the local data is only the starter data: let the cloud's data replace it */
   dropSeed?: boolean
-  /** this device's daily-reminder settings, shared through the sheet */
+  /** this device's daily-reminder settings, shared through the file */
   reminder?: { deviceId: string; time: string; timeAt: number; on: boolean }
 }
 
-/** What the devices share about reminders, kept in one cell of the data tab. */
+/** What the devices share about reminders. */
 interface ReminderShare {
   time?: string
   timeAt?: number
@@ -63,9 +46,7 @@ export interface ReminderResult {
 }
 
 export interface SyncResult {
-  spreadsheetId: string
-  folderId: string
-  url: string
+  fileId: string
   pulled: number
   pushed: boolean
   reminder?: ReminderResult
@@ -79,23 +60,40 @@ interface Row {
   entity: Base
 }
 
-function parseRows(values: unknown[][]): Row[] {
+interface FileRow {
+  t: TableName
+  id: string
+  at: number
+  /** 1 for a tombstone */
+  d?: 1
+  e?: Base
+}
+
+interface SyncFileBody {
+  app: 'account-book'
+  version: number
+  reminder?: ReminderShare
+  rows: FileRow[]
+}
+
+function fromFile(body: SyncFileBody): Row[] {
   const out: Row[] = []
-  for (const v of values) {
-    const t = String(v[0] ?? '') as TableName
-    const id = String(v[1] ?? '').replace(/^'/, '')
-    if (!TABLES.includes(t) || !id) continue
-    const updatedAt = Number(v[2])
-    const deleted = Number(v[3]) === 1
-    let entity: Base
-    try {
-      entity = deleted ? { id, updatedAt, deleted: true } : (JSON.parse(String(v[4])) as Base)
-    } catch {
-      continue
-    }
-    out.push({ t, id, updatedAt, deleted, entity: { ...entity, id, updatedAt } })
+  for (const r of body.rows ?? []) {
+    if (!TABLES.includes(r.t) || !r.id) continue
+    const deleted = r.d === 1
+    const entity: Base = deleted || !r.e ? { id: r.id, updatedAt: r.at, deleted: true } : { ...r.e, id: r.id, updatedAt: r.at }
+    out.push({ t: r.t, id: r.id, updatedAt: r.at, deleted: deleted || !r.e, entity })
   }
   return out
+}
+
+function toFile(rows: Row[], reminder: ReminderShare): SyncFileBody {
+  return {
+    app: 'account-book',
+    version: FILE_VERSION,
+    reminder,
+    rows: rows.map((r) => (r.deleted ? { t: r.t, id: r.id, at: r.updatedAt, d: 1 as const } : { t: r.t, id: r.id, at: r.updatedAt, e: r.entity })),
+  }
 }
 
 async function localRows(): Promise<Row[]> {
@@ -108,177 +106,140 @@ async function localRows(): Promise<Row[]> {
   return out
 }
 
-async function snapshot(): Promise<Snapshot> {
-  const alive = <T extends Base>(rows: T[]) => rows.filter((r) => !r.deleted)
-  return {
-    accounts: alive(await db.accounts.toArray()),
-    categories: alive(await db.categories.toArray()),
-    ledgers: alive(await db.ledgers.toArray()),
-    records: alive(await db.records.toArray()),
-    merchants: alive(await db.merchants.toArray()),
-    recurrings: alive(await db.recurrings.toArray()),
-    loans: alive(await db.loans.toArray()),
-    members: alive(await db.members.toArray()),
-  }
-}
-
-async function openSpreadsheet(
-  token: string,
-  wanted: string,
-): Promise<{ id: string; info: SpreadsheetInfo; created: boolean; lost: boolean }> {
+/** What an older version left in its spreadsheet's hidden data tab. */
+async function readLegacy(token: string, wanted: string): Promise<{ rows: Row[]; reminder: ReminderShare } | null> {
   let id = wanted
-  if (id) {
+  if (!id || !(await usableSpreadsheet(token, id).catch(() => false))) id = (await findSpreadsheet(token)) ?? ''
+  if (!id) return null
+  const rows: Row[] = []
+  for (const v of await readValues(token, id, `'_data'!A2:E`)) {
+    const t = String(v[0] ?? '') as TableName
+    const rowId = String(v[1] ?? '').replace(/^'/, '')
+    if (!TABLES.includes(t) || !rowId) continue
+    const updatedAt = Number(v[2])
+    const deleted = Number(v[3]) === 1
     try {
-      const info = await getInfo(token, id)
-      if (!info.trashed) return { id, info, created: false, lost: false }
-    } catch (e) {
-      if (!(e instanceof SheetsNotFoundError)) throw e
+      const entity = deleted ? { id: rowId, updatedAt, deleted: true } : (JSON.parse(String(v[4])) as Base)
+      rows.push({ t, id: rowId, updatedAt, deleted, entity: { ...entity, id: rowId, updatedAt } })
+    } catch {
+      continue
     }
-    id = ''
   }
-  // the sheet this device used is gone (the cloud was cleared from somewhere): `lost` tells the sync not to feed old data back
-  const lost = Boolean(wanted)
-  const found = await findSpreadsheet(token)
-  if (found) return { id: found, info: await getInfo(token, found), created: false, lost }
-  id = await createSpreadsheet(token, '記帳本', { sheetId: DATA_SHEET_ID, title: DATA_TITLE })
-  return { id, info: await getInfo(token, id), created: true, lost }
+  let reminder: ReminderShare = {}
+  try {
+    const cell = String((await readValues(token, id, `'_data'!G2`))[0]?.[0] ?? '')
+    reminder = cell ? (JSON.parse(cell) as ReminderShare) : {}
+  } catch {
+    reminder = {}
+  }
+  return { rows, reminder }
 }
 
-/** A folder is only a place to keep things tidy, so a failure here never stops a sync. */
-const NO_FOLDER = 'none'
-async function ensureFolder(token: string, sheetId: string, created: boolean, known: string): Promise<string> {
-  // done once: after that the folder and the sheet are the user's to move around
-  if (known && !created) return known
-  try {
-    // the top of My Drive may be off limits with the drive.file scope; then every place counts as "not yet tidied"
-    const [parents, root] = await Promise.all([getParents(token, sheetId), getRootId(token).catch(() => '')])
-    const placed = Boolean(root && parents.length && !parents.includes(root))
-    const tagged = await findFolder(token)
-    // the app folder is still there (maybe moved): keep using it, and leave a sheet the user put elsewhere where it is
-    if (tagged) {
-      if (!placed) await moveToFolder(token, sheetId, tagged, parents)
-      return tagged
-    }
-    // already put somewhere by the user: leave it there
-    if (placed) return NO_FOLDER
-    const folder = await createFolder(token, '記帳本')
-    await moveToFolder(token, sheetId, folder, parents)
-    return folder
-  } catch (e) {
-    if (e instanceof SheetsAuthError) throw e
-    console.warn('記帳本資料夾建立失敗，下次同步會再試：', e)
-    return known
-  }
+/** Photos an older version put in Drive come down to this device, where the normal photo sync uploads them. */
+async function pullLegacyImages(token: string) {
+  const remote = await listLegacyImages(token)
+  const have = new Set((await db.images.toCollection().primaryKeys()) as string[])
+  await inBatches(
+    [...remote].filter(([id]) => !have.has(id)),
+    async ([id, r]) => {
+      const blob = await downloadFile(token, r.fileId)
+      await db.images.put({ id, recordId: r.recordId, blob, createdAt: r.createdAt, synced: false })
+    },
+  )
 }
 
 export async function runSync(opts: SyncOptions): Promise<SyncResult> {
   const token = await opts.getToken()
-  const { id, info, created, lost } = await openSpreadsheet(token, opts.spreadsheetId)
-  const folderId = await ensureFolder(token, id, created, opts.folderId ?? '')
 
-  if (!info.sheets.some((s) => s.title === DATA_TITLE)) {
-    await batchUpdate(token, id, [
-      { addSheet: { properties: { sheetId: DATA_SHEET_ID, title: DATA_TITLE } } },
-    ])
-    info.sheets.push({ title: DATA_TITLE, sheetId: DATA_SHEET_ID, hidden: false })
+  let file = await findSyncFile(token)
+  // the file this device used is gone or was replaced (the cloud was cleared from somewhere): what is there now wins,
+  // or old data would be fed back
+  const lost = Boolean(opts.fileId) && Boolean(file) && file!.id !== opts.fileId
+
+  // first run in the app data folder: carry the older spreadsheet's data over
+  let legacy: { rows: Row[]; reminder: ReminderShare } | null = null
+  if (!file && !opts.fileId && opts.legacyAccess) {
+    try {
+      legacy = await readLegacy(token, opts.legacySheetId)
+    } catch (e) {
+      if (e instanceof DriveAuthError) throw e
+      console.warn('讀取舊的試算表失敗，這次先略過：', e)
+    }
   }
-  const dataSheet = info.sheets.find((s) => s.title === DATA_TITLE)!
-
-  const remote = parseRows(await readValues(token, id, `'${DATA_TITLE}'!A2:E`))
-  const cells = await readValues(token, id, `'${DATA_TITLE}'!G1:G2`)
-  const marker = String(cells[0]?.[0] ?? '')
-  const reminder = opts.reminder ? await shareReminder(token, id, String(cells[1]?.[0] ?? ''), opts.reminder) : undefined
-
-  // starter data, or a copy of a cloud that was cleared since: the sheet that is there now wins, or every starter item would appear twice
-  if ((opts.dropSeed || lost) && remote.length) {
-    await db.transaction('rw', db.tables, async () => {
-      for (const t of TABLES) await table(t).clear()
-    })
-  }
-
-  const local = await localRows()
-  const localMap = new Map(local.map((r) => [`${r.t}:${r.id}`, r]))
-  const remoteMap = new Map(remote.map((r) => [`${r.t}:${r.id}`, r]))
-
-  const toLocal: Row[] = []
-  let localNewer = false
-  for (const r of remote) {
-    const mine = localMap.get(`${r.t}:${r.id}`)
-    if (!mine || mine.updatedAt < r.updatedAt) toLocal.push(r)
-    else if (mine.updatedAt > r.updatedAt) localNewer = true
-  }
-  for (const r of local) if (!remoteMap.has(`${r.t}:${r.id}`)) localNewer = true
-
-  if (toLocal.length) {
-    await db.transaction('rw', db.tables, async () => {
-      for (const t of TABLES) {
-        const rows = toLocal.filter((r) => r.t === t).map((r) => r.entity)
-        if (rows.length) await table(t).bulkPut(rows as never[])
-      }
-    })
+  if (opts.legacySheetId || legacy) {
+    // photos that were synced the old way are not in the app data folder yet
+    await db.images.toCollection().modify({ synced: false })
+    if (opts.legacyAccess) await pullLegacyImages(token).catch((e) => console.warn('舊的圖片讀取失敗：', e))
   }
 
-  const rows = toLocal.length ? await localRows() : local
-  const newest = rows.reduce((m, r) => Math.max(m, r.updatedAt), 0)
-  const wantMarker = `${LAYOUT_VERSION}:${newest}`
-  const [haveVersion] = marker.split(':')
-  const layoutChanged = haveVersion !== String(LAYOUT_VERSION)
-  const viewsStale = marker !== wantMarker
-
+  let pulled = 0
   let pushed = false
-  // the data tab is rewritten whole whenever this device has something the sheet lacks
-  const needData = localNewer || !remote.length
-  const needViews = needData || viewsStale || layoutChanged || Boolean(opts.forceViews)
+  let reminder: ReminderResult | undefined
+  let fileId = file?.id ?? ''
 
-  if (needData) {
-    await batchUpdate(token, id, [
-      {
-        updateSheetProperties: {
-          properties: {
-            sheetId: dataSheet.sheetId,
-            gridProperties: { rowCount: Math.max(rows.length + 50, 200), columnCount: 7 },
-          },
-          fields: 'gridProperties(rowCount,columnCount)',
-        },
-      },
-    ])
-    await clearValues(token, id, [`'${DATA_TITLE}'!A:E`])
-    const dataRows: Cell[][] = rows.map((r) => [
-      r.t,
-      `'${r.id}`,
-      r.updatedAt,
-      r.deleted ? 1 : 0,
-      r.deleted ? '' : JSON.stringify(r.entity),
-    ])
-    await writeValues(token, id, DATA_TITLE, [HEADER, ...dataRows], 'RAW')
-    pushed = true
-  }
+  for (let attempt = 1; ; attempt++) {
+    const body = file ? await readJson<SyncFileBody>(token, file.id) : null
+    const remote = body ? fromFile(body) : (legacy?.rows ?? [])
+    const share = body?.reminder ?? legacy?.reminder ?? {}
 
-  if (needViews) {
-    await writeViews(token, id, info, dataSheet, await snapshot(), opts.amortize, layoutChanged)
-    await writeRange(token, id, `'${DATA_TITLE}'!G1`, [[wantMarker]])
+    // starter data, or a copy of a cloud that was cleared since: the cloud that is there now wins, or every starter item would appear twice
+    if (attempt === 1 && (opts.dropSeed || lost) && remote.length) {
+      await db.transaction('rw', db.tables, async () => {
+        for (const t of TABLES) await table(t).clear()
+      })
+    }
+
+    const local = await localRows()
+    const localMap = new Map(local.map((r) => [`${r.t}:${r.id}`, r]))
+    const remoteMap = new Map(remote.map((r) => [`${r.t}:${r.id}`, r]))
+
+    const toLocal: Row[] = []
+    let localNewer = false
+    for (const r of remote) {
+      const mine = localMap.get(`${r.t}:${r.id}`)
+      if (!mine || mine.updatedAt < r.updatedAt) toLocal.push(r)
+      else if (mine.updatedAt > r.updatedAt) localNewer = true
+    }
+    for (const r of local) if (!remoteMap.has(`${r.t}:${r.id}`)) localNewer = true
+
+    if (toLocal.length) {
+      await db.transaction('rw', db.tables, async () => {
+        for (const t of TABLES) {
+          const rows = toLocal.filter((r) => r.t === t).map((r) => r.entity)
+          if (rows.length) await table(t).bulkPut(rows as never[])
+        }
+      })
+      pulled += toLocal.length
+    }
+
+    const merged = opts.reminder ? mergeReminder(share, opts.reminder) : undefined
+    reminder = merged?.result
+    const needPush = localNewer || !file || Boolean(merged?.changed)
+    if (!needPush) break
+
+    // another device may have written while this one merged: merge its copy too instead of overwriting it
+    const latest = await findSyncFile(token)
+    if (latest?.id !== file?.id || latest?.modifiedTime !== file?.modifiedTime) {
+      if (attempt >= MAX_TRIES) throw new Error('雲端資料一直在變動，請稍後再同步一次')
+      file = latest
+      continue
+    }
+    fileId = await writeSyncFile(token, file?.id ?? null, toFile(toLocal.length ? await localRows() : local, merged?.share ?? share))
     pushed = true
+    break
   }
 
   // photos go through Drive in the background; they can be many and must not hold up the sync itself
-  void syncImages(token, folderId)
+  void syncImages(token)
 
-  return { spreadsheetId: id, folderId, url: info.url, pulled: toLocal.length, pushed, reminder }
+  return { fileId, pulled, pushed, reminder }
 }
 
 /** The reminder time is shared (the newest change wins); each device only ever writes its own on/off. */
-export async function shareReminder(
-  token: string,
-  id: string,
-  raw: string,
+export function mergeReminder(
+  remote: ReminderShare,
   mine: NonNullable<SyncOptions['reminder']>,
-): Promise<ReminderResult> {
-  let remote: ReminderShare = {}
-  try {
-    remote = raw ? (JSON.parse(raw) as ReminderShare) : {}
-  } catch {
-    remote = {}
-  }
+): { result: ReminderResult; share: ReminderShare; changed: boolean } {
   const devices = { ...(remote.devices ?? {}) }
   let changed = false
 
@@ -294,83 +255,14 @@ export async function shareReminder(
     devices[mine.deviceId] = { on: mine.on }
     changed = true
   }
-  if (changed) await writeRange(token, id, `'${DATA_TITLE}'!G2`, [[JSON.stringify({ time, timeAt, devices })]])
 
   return {
-    time,
-    timeAt,
-    onElsewhere: Object.entries(devices).some(([device, d]) => device !== mine.deviceId && d.on),
-  }
-}
-
-async function writeViews(
-  token: string,
-  id: string,
-  info: SpreadsheetInfo,
-  dataSheet: { sheetId: number; hidden: boolean },
-  snap: Snapshot,
-  amortize: boolean,
-  rebuild: boolean,
-) {
-  const specs = buildTables(snap, amortize)
-  const existing = new Map(info.sheets.filter((s) => s.title !== DATA_TITLE).map((s) => [s.title, s]))
-  const requests: object[] = []
-
-  if (rebuild) {
-    for (const s of existing.values()) requests.push({ deleteSheet: { sheetId: s.sheetId } })
-    existing.clear()
-  }
-
-  const fresh: typeof specs = []
-  specs.forEach((spec, index) => {
-    const have = existing.get(spec.title)
-    if (have) spec.sheetId = have.sheetId
-    else {
-      requests.push({
-        addSheet: { properties: { sheetId: spec.sheetId, title: spec.title, index } },
-      })
-      fresh.push(spec)
-    }
-  })
-  for (const spec of specs) requests.push(...sizeRequests(spec))
-  for (const spec of fresh) requests.push(...styleRequests(spec))
-  // These tabs are rebuilt from the hidden data tab, so a hand edit is lost on the next sync: editing one
-  // asks for confirmation first (a warning, not a lock, so the app's own writes are never refused).
-  const protect = specs
-    .filter((spec) => !existing.get(spec.title)?.protectedWhole)
-    .map((spec) => ({
-      addProtectedRange: {
-        protectedRange: {
-          range: { sheetId: spec.sheetId },
-          description: '由記帳本自動產生，在這裡修改會在下次同步時被覆蓋，請回到 App 修改',
-          warningOnly: true,
-        },
-      },
-    }))
-  if (!dataSheet.hidden) {
-    requests.push({
-      updateSheetProperties: {
-        properties: { sheetId: dataSheet.sheetId, hidden: true },
-        fields: 'hidden',
-      },
-    })
-  }
-  await batchUpdate(token, id, requests)
-  // only a courtesy: if Google refuses it, the sync itself must still go through
-  await batchUpdate(token, id, protect).catch(() => {})
-
-  await clearValues(
-    token,
-    id,
-    specs.map((s) => `'${s.title}'`),
-  )
-  for (const spec of specs) {
-    await writeValues(
-      token,
-      id,
-      spec.title,
-      [spec.cols.map((c) => c.title), ...spec.rows],
-      'USER_ENTERED',
-    )
+    result: {
+      time,
+      timeAt,
+      onElsewhere: Object.entries(devices).some(([device, d]) => device !== mine.deviceId && d.on),
+    },
+    share: { time, timeAt, devices },
+    changed,
   }
 }

@@ -97,7 +97,7 @@ async function apply(n: number) {
     </PageHeader>
 
     <p class="mb-3 px-1 text-sm text-muted">
-      把一筆大額支出（例如年繳的保險、年繳的串流訂閱、買家電）平均分到之後每個月的報表。現金還是在付款那天扣，只有統計和試算表的月報會分月計算。
+      把一筆大額支出（例如年繳的保險、年繳的串流訂閱、買家電）平均分到之後每個月的報表。現金還是在付款那天扣，只有統計會分月計算。
     </p>
     <div class="card mb-4 flex items-center justify-between gap-3 px-4 py-3.5">
       <span class="font-semibold">報表分月計算</span>

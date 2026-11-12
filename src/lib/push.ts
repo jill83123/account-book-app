@@ -14,7 +14,7 @@ export interface PushSlot {
 export const pushSupported = () =>
   'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
 
-const NO_URL = '請先到「更多 → Google 試算表同步」頁填入同步服務網址'
+const NO_URL = '請先到「更多 → 同步與備份」頁填入同步服務網址'
 
 async function call<T>(
   workerUrl: string,
@@ -88,7 +88,7 @@ export async function uploadSlots(
   await call(workerUrl, '/push/sync', { subscription: sub.toJSON(), slots, group }, keepalive)
 }
 
-/** Tell the Worker a day has been recorded, so the other devices of the same sheet skip the daily reminder. */
+/** Tell the Worker a day has been recorded, so the other devices of the same account skip the daily reminder. */
 export async function reportRecorded(workerUrl: string, group: string, day: string) {
   await call(workerUrl, '/push/recorded', { group, day })
 }

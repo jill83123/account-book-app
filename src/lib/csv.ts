@@ -1,7 +1,6 @@
 import { db } from '@/db'
 import type { Base } from '@/db/types'
-import { buildTables, type Snapshot, type TableSpec } from './google/export'
-import type { Cell } from './google/sheets'
+import { buildTables, type Cell, type Snapshot, type TableSpec } from './google/export'
 
 /** One cell, quoted when it has a comma, quote or line break; text that a spreadsheet would run as a formula is kept as text. */
 function cell(v: string | number | boolean | null | undefined, plain: boolean): string {

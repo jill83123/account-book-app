@@ -4,6 +4,7 @@ import { CHANGE_EVENT, lastLocalChange } from '@/db'
 import {
   cachedToken,
   clearToken,
+  hasLegacyAccess,
   hasRefreshToken,
   preloadGis,
   refreshAccessToken,
@@ -11,7 +12,8 @@ import {
   revokeToken,
   setWorkerUrl,
 } from '@/lib/google/gis'
-import { findFolder, listImageFiles, listSpreadsheets, SheetsAuthError, trashFile } from '@/lib/google/sheets'
+import { deleteAllAppFiles, DriveAuthError } from '@/lib/google/drive'
+import { listLegacyFiles, trashFile } from '@/lib/google/legacy'
 import { runSync } from '@/lib/google/syncEngine'
 import { autoPostDue } from '@/lib/recurrence'
 import { useSettings } from './settings'
@@ -37,7 +39,6 @@ export const useSync = defineStore('sync', () => {
   const catchingUp = ref(false)
   const error = ref('')
   const signedIn = ref(hasRefreshToken() || Boolean(cachedToken()))
-  const url = ref('')
   const tick = ref(0)
 
   /** changes made on this device that the sheet has not seen yet */
@@ -52,13 +53,14 @@ export const useSync = defineStore('sync', () => {
     const fresh = await refreshAccessToken()
     if (fresh) return fresh
     signedIn.value = false
-    throw new SheetsAuthError('尚未登入 Google，請到「同步」頁登入')
+    throw new DriveAuthError('尚未登入 Google，請到「同步」頁登入')
   }
 
   /** Must be called straight from a click: it opens Google's popup. */
   async function connect(selectAccount = false) {
     setWorkerUrl(settings.s.workerUrl)
-    await requestToken(selectAccount)
+    // an older version's spreadsheet can only be read with its permission, so ask for it while there is still one to carry over
+    await requestToken(selectAccount, Boolean(settings.s.spreadsheetId))
     signedIn.value = true
     error.value = ''
   }
@@ -66,28 +68,24 @@ export const useSync = defineStore('sync', () => {
   async function disconnect() {
     await revokeToken()
     signedIn.value = false
-    settings.s.spreadsheetId = ''
-    settings.s.folderId = ''
+    settings.s.syncFileId = ''
     settings.s.lastSyncAt = 0
-    url.value = ''
   }
 
-  /** Move this app's spreadsheets, photos and folder in Google Drive to the trash. */
+  /** Delete the data and photos this app keeps in Google Drive; an older version's spreadsheet goes to the trash. */
   async function wipeCloud() {
     const token = await accessToken()
-    const ids = new Set(await listSpreadsheets(token))
-    if (settings.s.spreadsheetId) ids.add(settings.s.spreadsheetId)
-    for (const id of (await listImageFiles(token)).values()) ids.add(id.fileId)
-    const folder = settings.s.folderId && settings.s.folderId !== 'none' ? settings.s.folderId : await findFolder(token)
-    if (folder) ids.add(folder)
-    for (const id of ids) await trashFile(token, id)
+    await deleteAllAppFiles(token)
+    if (hasLegacyAccess()) for (const id of await listLegacyFiles(token)) await trashFile(token, id)
+    settings.s.syncFileId = ''
+    settings.s.spreadsheetId = ''
   }
 
   let running: Promise<boolean> | null = null
   let timer: ReturnType<typeof setTimeout> | undefined
 
   /** Sync now. Resolves true on success; errors land in `error` (and a toast when `loud`). */
-  function sync(opts: { loud?: boolean; forceViews?: boolean } = {}): Promise<boolean> {
+  function sync(opts: { loud?: boolean } = {}): Promise<boolean> {
     running ??= (async () => {
       syncing.value = true
       error.value = ''
@@ -97,10 +95,9 @@ export const useSync = defineStore('sync', () => {
         const attempt = () =>
           runSync({
             getToken: accessToken,
-            spreadsheetId: settings.s.spreadsheetId,
-            folderId: settings.s.folderId,
-            amortize: settings.s.amortize,
-            forceViews: opts.forceViews,
+            fileId: settings.s.syncFileId,
+            legacySheetId: settings.s.spreadsheetId,
+            legacyAccess: hasLegacyAccess(),
             dropSeed: settings.s.seeded,
             reminder: {
               deviceId: settings.s.deviceId,
@@ -113,26 +110,26 @@ export const useSync = defineStore('sync', () => {
         try {
           res = await attempt()
         } catch (e) {
-          if (!(e instanceof SheetsAuthError) || !hasRefreshToken()) throw e
+          if (!(e instanceof DriveAuthError) || !hasRefreshToken()) throw e
           clearToken()
           res = await attempt()
         }
-        settings.s.spreadsheetId = res.spreadsheetId
-        settings.s.folderId = res.folderId
+        settings.s.syncFileId = res.fileId
+        // carried over (or there was nothing to carry): the old spreadsheet is not looked at again
+        settings.s.spreadsheetId = ''
         settings.s.seeded = false
         if (res.reminder) {
           settings.s.remindTime = res.reminder.time
           settings.s.remindTimeAt = res.reminder.timeAt
           settings.s.remindOnElsewhere = res.reminder.onElsewhere
         }
-        url.value = res.url
         settings.s.lastSyncAt = Math.max(started, lastLocalChange())
         // pulled data may carry recurring rules that came due
         await autoPostDue()
         if (opts.loud) ui.toast(res.pulled ? `已同步，取得 ${res.pulled} 筆更新` : '已同步', 'success')
         return true
       } catch (e) {
-        if (e instanceof SheetsAuthError) signedIn.value = hasRefreshToken()
+        if (e instanceof DriveAuthError) signedIn.value = hasRefreshToken()
         error.value = e instanceof Error ? e.message : String(e)
         if (opts.loud) ui.toast(error.value, 'error')
         return false
@@ -207,5 +204,5 @@ export const useSync = defineStore('sync', () => {
     void catchUp()
   }
 
-  return { syncing, catchingUp, error, signedIn, unsynced, url, connect, disconnect, wipeCloud, sync, refresh, init }
+  return { syncing, catchingUp, error, signedIn, unsynced, connect, disconnect, wipeCloud, sync, refresh, init }
 })

@@ -47,7 +47,7 @@ async function copy() {
     <section class="card mb-4 space-y-3">
       <h2 class="font-semibold">Gemini 自動辨識</h2>
       <p class="text-sm text-muted">
-        拍發票照片，Gemini 會讀出商家、日期和每個品項，並依你的分類自動歸類。金鑰只存在這台裝置，不會寫進試算表，辨識時照片會直接傳給 Google。
+        拍發票照片，Gemini 會讀出商家、日期和每個品項，並依你的分類自動歸類。金鑰只存在這台裝置，不會同步到雲端，辨識時照片會直接傳給 Google。
       </p>
       <ol class="list-decimal space-y-1 pl-5 text-sm text-muted">
         <li>

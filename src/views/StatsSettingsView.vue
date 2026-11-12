@@ -15,7 +15,7 @@ const { s } = useSettings()
       <ToggleSwitch v-model="s.amortize" label="報表分月計算" />
     </div>
     <p class="mt-3 px-1 text-sm text-muted">
-      開啟後，設定了攤提的支出會平均分到之後每個月，統計和試算表的月報都會這樣算。現金還是在付款那天扣。
+      開啟後，設定了攤提的支出會平均分到之後每個月，統計都會這樣算。現金還是在付款那天扣。
     </p>
   </div>
 </template>

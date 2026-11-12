@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Download, ExternalLink, LoaderCircle, LogIn, LogOut, RefreshCw, Sparkles, TableProperties, Trash2, Upload } from '@/lib/uiIcons'
+import { Download, LoaderCircle, LogIn, LogOut, RefreshCw, Sparkles, TableProperties, Trash2, Upload } from '@/lib/uiIcons'
 import { db } from '@/db'
 import { TABLES } from '@/db/types'
 import { download, exportBackup, importBackup } from '@/lib/backup'
@@ -17,7 +17,6 @@ const ui = useUi()
 const settings = useSettings()
 const sync = useSync()
 
-const sheetUrl = computed(() => sync.url || (settings.s.spreadsheetId ? `https://docs.google.com/spreadsheets/d/${settings.s.spreadsheetId}/edit` : ''))
 const lastSync = computed(() => (settings.s.lastSyncAt ? new Date(settings.s.lastSyncAt).toLocaleString('zh-TW', { hour12: false }) : '尚未同步'))
 
 const syncHint = computed(() => {
@@ -38,7 +37,7 @@ async function connect() {
 }
 
 async function disconnect() {
-  if (!(await ui.confirm('中斷 Google 連線？', { message: '這台裝置會登出並忘記試算表。試算表本身和裡面的資料不會被刪除，之後重新登入會自動找回。', confirmText: '中斷連線' }))) return
+  if (!(await ui.confirm('中斷 Google 連線？', { message: '這台裝置會登出 Google。雲端的資料不會被刪除，之後重新登入會自動找回。', confirmText: '中斷連線' }))) return
   await sync.disconnect()
 }
 
@@ -90,7 +89,7 @@ const wiping = ref(false)
 
 async function wipe(withCloud = false) {
   if (withCloud) {
-    if (!(await ui.confirm('連同 Google 雲端一起重置？', { message: '會把這台裝置的資料，以及 Google 雲端硬碟裡這個 App 建立的試算表和照片移到垃圾桶，其他裝置同步後也會變空。\n垃圾桶可保留 30 天，期間可以從 Google 雲端硬碟救回。', danger: true, confirmText: '全部重置' }))) return
+    if (!(await ui.confirm('連同 Google 雲端一起重置？', { message: '會把這台裝置的資料，以及存在 Google 雲端的資料和照片刪除，其他裝置同步後也會變空。\n刪除後無法救回，重置前可以先匯出備份。', danger: true, confirmText: '全部重置' }))) return
     wiping.value = true
     try {
       await sync.wipeCloud()
@@ -99,7 +98,7 @@ async function wipe(withCloud = false) {
       wiping.value = false
       return
     }
-  } else if (!(await ui.confirm('重置這台裝置的所有資料與設定？', { message: '資料與設定全部清掉，回到初始狀態。\n已同步的 Google 試算表不會被刪除，重新登入後可以取回。', danger: true, confirmText: '重置' }))) return
+  } else if (!(await ui.confirm('重置這台裝置的所有資料與設定？', { message: '資料與設定全部清掉，回到初始狀態。\n已同步的雲端資料不會被刪除，重新登入後可以取回。', danger: true, confirmText: '重置' }))) return
   await db.transaction('rw', db.tables, async () => {
     for (const t of TABLES) await db[t].clear()
     await db.images.clear()
@@ -127,9 +126,9 @@ async function wipe(withCloud = false) {
   <div>
     <PageHeader title="同步與備份" />
 
-    <h2 class="section-title">Google 試算表同步</h2>
+    <h2 class="section-title">Google 雲端同步</h2>
     <section class="card mb-5 space-y-3">
-      <!-- who is connected and when it last synced; the sheet itself opens from the corner -->
+      <!-- who is connected and when it last synced -->
       <div class="flex items-center gap-3">
         <div class="min-w-0 flex-1">
           <p class="flex items-center gap-2.5 font-semibold">
@@ -140,18 +139,7 @@ async function wipe(withCloud = false) {
             {{ syncHint }}
           </p>
         </div>
-        <a
-          v-if="sync.signedIn && settings.s.workerUrl && sheetUrl"
-          :href="sheetUrl"
-          target="_blank"
-          rel="noopener"
-          class="circle-btn text-muted"
-          aria-label="開啟試算表"
-          title="開啟試算表"
-        >
-          <ExternalLink :size="20" />
-        </a>
-        <button v-else-if="!(sync.signedIn && settings.s.workerUrl)" class="btn btn-primary shrink-0 whitespace-nowrap px-4 py-2" :disabled="!settings.s.workerUrl.trim()" @click="connect"><LogIn :size="16" />登入 Google</button>
+        <button v-if="!(sync.signedIn && settings.s.workerUrl)" class="btn btn-primary shrink-0 whitespace-nowrap px-4 py-2" :disabled="!settings.s.workerUrl.trim()" @click="connect"><LogIn :size="16" />登入 Google</button>
       </div>
       <p v-if="sync.error" class="rounded-2xl bg-danger/10 p-3 text-sm text-danger">{{ sync.error }}</p>
 
@@ -164,6 +152,7 @@ async function wipe(withCloud = false) {
           <LoaderCircle v-if="sync.syncing" :size="16" class="animate-spin" /><RefreshCw v-else :size="16" />立即同步
         </button>
       </div>
+
     </section>
 
     <h2 class="section-title">備份</h2>
@@ -200,15 +189,10 @@ async function wipe(withCloud = false) {
 
     <h2 class="section-title">重置</h2>
     <div class="card divide-y divide-line p-0">
-      <div v-if="sync.signedIn && settings.s.workerUrl" class="flex items-center gap-3 px-4 py-3.5">
-        <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-white"><RefreshCw :size="20" :stroke-width="2.3" /></span>
-        <span class="min-w-0 flex-1"><span class="block font-medium">重建試算表分頁</span><span class="block text-xs text-muted">把雲端試算表的分頁重新整理</span></span>
-        <button class="btn btn-soft shrink-0 whitespace-nowrap px-4 py-2" :disabled="sync.syncing" @click="sync.sync({ loud: true, forceViews: true })">重建</button>
-      </div>
       <div class="flex items-center gap-3 px-4 py-3.5">
         <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-danger text-white"><Trash2 :size="20" :stroke-width="2.3" /></span>
         <template v-if="sync.signedIn && settings.s.workerUrl">
-          <span class="min-w-0 flex-1"><span class="block font-medium">重置所有資料與設定</span><span class="block text-xs text-muted">含 Google 雲端，雲端資料先移到垃圾桶</span></span>
+          <span class="min-w-0 flex-1"><span class="block font-medium">重置所有資料與設定</span><span class="block text-xs text-muted">含 Google 雲端的資料</span></span>
           <button class="btn btn-ghost shrink-0 whitespace-nowrap px-4 py-2 text-danger" :disabled="wiping" @click="wipe(true)">
             <LoaderCircle v-if="wiping" :size="16" class="animate-spin" />{{ wiping ? '重置中…' : '重置' }}
           </button>
