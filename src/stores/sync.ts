@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { CHANGE_EVENT, lastLocalChange } from '@/db'
+import { CHANGE_EVENT, db, lastLocalChange } from '@/db'
 import {
   cachedToken,
   clearToken,
@@ -12,7 +12,9 @@ import {
   revokeToken,
   setWorkerUrl,
 } from '@/lib/google/gis'
-import { deleteAllAppFiles, DriveAuthError } from '@/lib/google/drive'
+import { exportBackup, importBackup } from '@/lib/backup'
+import { today } from '@/lib/date'
+import { createBackupFile, deleteAllAppFiles, deleteFile, DriveAuthError, listBackupFiles, readText, type BackupFile } from '@/lib/google/drive'
 import { listLegacyFiles, trashFile } from '@/lib/google/legacy'
 import { runSync } from '@/lib/google/syncEngine'
 import { autoPostDue } from '@/lib/recurrence'
@@ -30,6 +32,23 @@ const IDLE_MS = 180_000
 /** the longest the screen is held while catching up */
 const CATCH_UP_WAIT_MS = 10_000
 
+/** how many backups of each kind stay in the cloud */
+const KEEP_BACKUPS = 3
+
+export interface BackupEntry {
+  id: string
+  kind: 'auto' | 'manual'
+  time: number
+  records: number
+}
+
+function parseBackup(f: BackupFile): BackupEntry | null {
+  const m = /^backup-(auto|manual)-(\d+)\.json$/.exec(f.name)
+  return m ? { id: f.id, kind: m[1] as BackupEntry['kind'], time: Number(m[2]), records: f.records } : null
+}
+
+const liveRecords = () => db.records.filter((r) => !r.deleted).count()
+
 export const useSync = defineStore('sync', () => {
   const settings = useSettings()
   const ui = useUi()
@@ -40,6 +59,8 @@ export const useSync = defineStore('sync', () => {
   const error = ref('')
   const signedIn = ref(hasRefreshToken() || Boolean(cachedToken()))
   const tick = ref(0)
+  const backups = ref<BackupEntry[]>([])
+  const backingUp = ref(false)
 
   /** changes made on this device that the sheet has not seen yet */
   const unsynced = computed(() => {
@@ -75,10 +96,62 @@ export const useSync = defineStore('sync', () => {
   /** Delete the data and photos this app keeps in Google Drive; an older version's spreadsheet goes to the trash. */
   async function wipeCloud() {
     const token = await accessToken()
+    // the backups stay, so a reset can be undone
+    if (await liveRecords()) await writeBackup(token, 'manual')
     await deleteAllAppFiles(token)
     if (hasLegacyAccess()) for (const id of await listLegacyFiles(token)) await trashFile(token, id)
     settings.s.syncFileId = ''
     settings.s.spreadsheetId = ''
+  }
+
+  async function listBackups(token: string) {
+    return (await listBackupFiles(token)).map(parseBackup).filter((b): b is BackupEntry => Boolean(b))
+  }
+
+  async function writeBackup(token: string, kind: BackupEntry['kind']) {
+    await createBackupFile(token, `backup-${kind}-${Date.now()}.json`, await exportBackup(), await liveRecords())
+    const mine = (await listBackups(token)).filter((b) => b.kind === kind).sort((a, b) => b.time - a.time)
+    for (const old of mine.slice(KEEP_BACKUPS)) await deleteFile(token, old.id)
+  }
+
+  /** Once a day, after a sync that went through. Never with an empty book, which would push out good backups. */
+  async function autoBackup() {
+    const day = today()
+    if (settings.s.lastAutoBackup === day || !(await liveRecords())) return
+    try {
+      await writeBackup(await accessToken(), 'auto')
+      settings.s.lastAutoBackup = day
+    } catch (e) {
+      console.warn('自動備份失敗，下次同步會再試：', e)
+    }
+  }
+
+  async function refreshBackups() {
+    backups.value = (await listBackups(await accessToken())).sort((a, b) => b.time - a.time)
+  }
+
+  async function backupNow() {
+    backingUp.value = true
+    try {
+      await writeBackup(await accessToken(), 'manual')
+      await refreshBackups()
+    } finally {
+      backingUp.value = false
+    }
+  }
+
+  /** Put a backup back as the current data (the one before is kept as a manual backup), then sync it everywhere. */
+  async function restoreBackup(id: string) {
+    backingUp.value = true
+    try {
+      const token = await accessToken()
+      if (await liveRecords()) await writeBackup(token, 'manual')
+      await importBackup(await readText(token, id))
+      await refreshBackups()
+    } finally {
+      backingUp.value = false
+    }
+    await sync({ loud: false })
   }
 
   let running: Promise<boolean> | null = null
@@ -126,6 +199,7 @@ export const useSync = defineStore('sync', () => {
         settings.s.lastSyncAt = Math.max(started, lastLocalChange())
         // pulled data may carry recurring rules that came due
         await autoPostDue()
+        await autoBackup()
         if (opts.loud) ui.toast(res.pulled ? `已同步，取得 ${res.pulled} 筆更新` : '已同步', 'success')
         return true
       } catch (e) {
@@ -204,5 +278,5 @@ export const useSync = defineStore('sync', () => {
     void catchUp()
   }
 
-  return { syncing, catchingUp, error, signedIn, unsynced, connect, disconnect, wipeCloud, sync, refresh, init }
+  return { syncing, catchingUp, error, signedIn, unsynced, backups, backingUp, refreshBackups, backupNow, restoreBackup, connect, disconnect, wipeCloud, sync, refresh, init }
 })

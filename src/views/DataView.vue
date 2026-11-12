@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { Download, LoaderCircle, LogIn, LogOut, RefreshCw, Sparkles, TableProperties, Trash2, Upload } from '@/lib/uiIcons'
+import { computed, onMounted, ref, watch } from 'vue'
+import { ChevronDown, Download, LoaderCircle, RotateCcw, LogIn, LogOut, RefreshCw, Sparkles, TableProperties, Trash2, Upload } from '@/lib/uiIcons'
 import { db } from '@/db'
 import { TABLES } from '@/db/types'
 import { download, exportBackup, importBackup } from '@/lib/backup'
@@ -39,6 +39,40 @@ async function connect() {
 async function disconnect() {
   if (!(await ui.confirm('中斷 Google 連線？', { message: '這台裝置會登出 Google。雲端的資料不會被刪除，之後重新登入會自動找回。', confirmText: '中斷連線' }))) return
   await sync.disconnect()
+}
+
+const backupsOpen = ref(false)
+const backupGroups = computed(() =>
+  (['auto', 'manual'] as const)
+    .map((kind) => ({ kind, label: kind === 'auto' ? '自動備份' : '手動備份', rows: sync.backups.filter((b) => b.kind === kind) }))
+    .filter((g) => g.rows.length),
+)
+const backupsOn = computed(() => sync.signedIn && Boolean(settings.s.workerUrl))
+const when = (t: number) => new Date(t).toLocaleString('zh-TW', { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+
+function loadBackups() {
+  if (backupsOn.value) sync.refreshBackups().catch((e) => ui.toast(e instanceof Error ? e.message : String(e), 'error'))
+}
+onMounted(loadBackups)
+watch(backupsOn, loadBackups)
+
+async function backupNow() {
+  try {
+    await sync.backupNow()
+    ui.toast('已備份', 'success')
+  } catch (e) {
+    ui.toast(e instanceof Error ? e.message : String(e), 'error')
+  }
+}
+
+async function restore(id: string) {
+  if (!(await ui.confirm('還原這份備份？', { message: '目前的資料會被備份的內容取代，還原前會先自動備份目前的資料。', danger: true, confirmText: '還原' }))) return
+  try {
+    await sync.restoreBackup(id)
+    ui.toast('已還原', 'success')
+  } catch (e) {
+    ui.toast(e instanceof Error ? e.message : String(e), 'error')
+  }
 }
 
 async function exportData() {
@@ -89,7 +123,7 @@ const wiping = ref(false)
 
 async function wipe(withCloud = false) {
   if (withCloud) {
-    if (!(await ui.confirm('連同 Google 雲端一起重置？', { message: '會把這台裝置的資料，以及存在 Google 雲端的資料和照片刪除，其他裝置同步後也會變空。\n刪除後無法救回，重置前可以先匯出備份。', danger: true, confirmText: '全部重置' }))) return
+    if (!(await ui.confirm('連同 Google 雲端一起重置？', { message: '會把這台裝置的資料，以及存在 Google 雲端的資料和照片刪除，其他裝置同步後也會變空。\n雲端備份會保留，重置後登入就能從備份還原。', danger: true, confirmText: '全部重置' }))) return
     wiping.value = true
     try {
       await sync.wipeCloud()
@@ -153,6 +187,24 @@ async function wipe(withCloud = false) {
         </button>
       </div>
 
+      <div v-if="backupsOn" class="mt-4 border-t border-line pt-3" :class="!backupsOpen && 'pb-[3px]'">
+        <button class="flex w-full items-center gap-2 text-left" :aria-expanded="backupsOpen" @click="backupsOpen = !backupsOpen">
+          <span class="min-w-0 flex-1"><span class="block font-medium">歷史備份</span><span class="block text-xs text-muted">每天自動備份，各留最近 3 份</span></span>
+          <ChevronDown :size="18" class="shrink-0 text-muted transition-transform" :class="backupsOpen && 'rotate-180'" />
+        </button>
+        <div v-if="backupsOpen" class="mt-3 -mb-[5px] space-y-1">
+          <button class="btn btn-soft w-full" :disabled="sync.backingUp" @click="backupNow">立即備份</button>
+          <template v-for="g in backupGroups" :key="g.kind">
+            <p class="-mb-1! pt-3 text-xs font-medium text-muted">{{ g.label }}</p>
+            <div class="divide-y divide-line">
+              <div v-for="b in g.rows" :key="b.id" class="flex items-center gap-2 py-2">
+                <span class="min-w-0 flex-1"><span class="block text-sm font-medium">{{ when(b.time) }}</span><span class="block text-xs text-muted">{{ b.records }} 筆記錄</span></span>
+                <button class="icon-btn size-9 border-0 bg-transparent text-muted" :disabled="sync.backingUp" aria-label="還原" title="還原" @click="restore(b.id)"><RotateCcw :size="18" /></button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
     </section>
 
     <h2 class="section-title">備份</h2>
@@ -192,7 +244,7 @@ async function wipe(withCloud = false) {
       <div class="flex items-center gap-3 px-4 py-3.5">
         <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-danger text-white"><Trash2 :size="20" :stroke-width="2.3" /></span>
         <template v-if="sync.signedIn && settings.s.workerUrl">
-          <span class="min-w-0 flex-1"><span class="block font-medium">重置所有資料與設定</span><span class="block text-xs text-muted">含 Google 雲端的資料</span></span>
+          <span class="min-w-0 flex-1"><span class="block font-medium">重置所有資料與設定</span><span class="block text-xs text-muted">含 Google 雲端的資料，雲端備份會保留</span></span>
           <button class="btn btn-ghost shrink-0 whitespace-nowrap px-4 py-2 text-danger" :disabled="wiping" @click="wipe(true)">
             <LoaderCircle v-if="wiping" :size="16" class="animate-spin" />{{ wiping ? '重置中…' : '重置' }}
           </button>

@@ -25,6 +25,8 @@ export interface LocalSettings {
   /** the spreadsheet an older version synced to, until its data has been carried over */
   spreadsheetId: string
   lastSyncAt: number
+  /** the day (YYYY-MM-DD) this device last made its automatic cloud backup */
+  lastAutoBackup: string
   geminiKey: string
   geminiModel: string
   /** how a scanned receipt is written down */
@@ -82,6 +84,7 @@ const defaults: LocalSettings = {
   syncFileId: '',
   spreadsheetId: '',
   lastSyncAt: 0,
+  lastAutoBackup: '',
   geminiKey: '',
   geminiModel: DEFAULT_GEMINI_MODEL,
   scanMode: 'split',

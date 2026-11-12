@@ -125,12 +125,51 @@ export async function deleteFile(token: string, fileId: string) {
   }
 }
 
-/** Everything this app keeps in the app data folder. */
+// ---- backups -----------------------------------------------------------------
+
+export interface BackupFile {
+  id: string
+  name: string
+  size: number
+  records: number
+}
+
+const BACKUP_PREFIX = 'backup-'
+
+export async function listBackupFiles(token: string): Promise<BackupFile[]> {
+  const res = await driveCall(
+    token,
+    `${API}/files?spaces=${SPACE}&q=${enc(`name contains '${BACKUP_PREFIX}' and trashed=false`)}&fields=files(id,name,size,appProperties)&pageSize=100`,
+  )
+  const files = ((await res.json()) as { files?: { id: string; name: string; size?: string; appProperties?: Record<string, string> }[] }).files ?? []
+  return files
+    .filter((f) => f.name.startsWith(BACKUP_PREFIX))
+    .map((f) => ({ id: f.id, name: f.name, size: Number(f.size ?? 0), records: Number(f.appProperties?.records ?? 0) }))
+}
+
+export async function createBackupFile(token: string, name: string, text: string, records: number) {
+  const form = new FormData()
+  form.append(
+    'metadata',
+    new Blob([JSON.stringify({ name, parents: [SPACE], appProperties: { records: String(records) } })], { type: 'application/json' }),
+  )
+  form.append('file', new Blob([text], { type: 'application/json' }))
+  await driveCall(token, `${UPLOAD}/files?uploadType=multipart&fields=id`, { method: 'POST', body: form })
+}
+
+export async function readText(token: string, id: string): Promise<string> {
+  return await (await driveCall(token, `${API}/files/${id}?alt=media`)).text()
+}
+
+/** Everything this app keeps in the app data folder, except the backups. */
 export async function deleteAllAppFiles(token: string) {
-  for (;;) {
-    const res = await driveCall(token, `${API}/files?spaces=${SPACE}&fields=files(id)&pageSize=200`)
-    const files = ((await res.json()) as { files?: { id: string }[] }).files ?? []
-    if (!files.length) return
-    for (const f of files) await deleteFile(token, f.id)
-  }
+  let page = ''
+  const ids: string[] = []
+  do {
+    const res = await driveCall(token, `${API}/files?spaces=${SPACE}&fields=nextPageToken,files(id,name)&pageSize=200${page ? `&pageToken=${enc(page)}` : ''}`)
+    const data = (await res.json()) as { nextPageToken?: string; files?: { id: string; name: string }[] }
+    for (const f of data.files ?? []) if (!f.name.startsWith(BACKUP_PREFIX)) ids.push(f.id)
+    page = data.nextPageToken ?? ''
+  } while (page)
+  for (const id of ids) await deleteFile(token, id)
 }
