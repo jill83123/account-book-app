@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { ChevronDown, Download, LoaderCircle, RotateCcw, LogIn, LogOut, RefreshCw, Sparkles, TableProperties, Trash2, Upload } from '@/lib/uiIcons'
+import { ChevronDown, CircleCheck, Download, LoaderCircle, RotateCcw, LogIn, LogOut, Sparkles, TableProperties, Trash2, Upload } from '@/lib/uiIcons'
 import { db } from '@/db'
 import { TABLES } from '@/db/types'
 import { download, exportBackup, importBackup } from '@/lib/backup'
@@ -17,7 +17,7 @@ const ui = useUi()
 const settings = useSettings()
 const sync = useSync()
 
-const lastSync = computed(() => (settings.s.lastSyncAt ? new Date(settings.s.lastSyncAt).toLocaleString('zh-TW', { hour12: false }) : '尚未同步'))
+const lastSync = computed(() => (settings.s.lastSyncAt ? new Date(settings.s.lastSyncAt).toLocaleString('zh-TW', { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '尚未同步'))
 
 const syncHint = computed(() => {
   if (!settings.s.workerUrl.trim()) return '設定方式請參考 README'
@@ -45,7 +45,6 @@ const backupsOpen = ref(false)
 const backupGroups = computed(() =>
   (['auto', 'manual'] as const)
     .map((kind) => ({ kind, label: kind === 'auto' ? '自動備份' : '手動備份', rows: sync.backups.filter((b) => b.kind === kind) }))
-    .filter((g) => g.rows.length),
 )
 const backupsOn = computed(() => sync.signedIn && Boolean(settings.s.workerUrl))
 const when = (t: number) => new Date(t).toLocaleString('zh-TW', { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
@@ -163,46 +162,46 @@ async function wipe(withCloud = false) {
     <h2 class="section-title">Google 雲端同步</h2>
     <section class="card mb-5 space-y-3">
       <!-- who is connected and when it last synced -->
-      <div class="flex items-center gap-3">
+      <div class="-mt-1 flex items-center gap-3">
         <div class="min-w-0 flex-1">
-          <p class="flex items-center gap-2.5 font-semibold">
-            <span class="size-2 rounded-full" :class="sync.signedIn && settings.s.workerUrl ? 'bg-success' : 'bg-muted/50'" />
-            {{ sync.signedIn && settings.s.workerUrl ? '已連線' : '尚未連線' }}
-          </p>
-          <p class="pl-[1.125rem] text-xs text-muted">
+          <p v-if="sync.signedIn && settings.s.workerUrl" class="flex items-center gap-1.5 font-semibold leading-5">已連線<CircleCheck :size="16" class="text-income" /></p>
+          <p v-else class="font-semibold leading-5 text-muted">尚未連線</p>
+          <p class="mt-1 text-xs text-muted">
             {{ syncHint }}
           </p>
         </div>
         <button v-if="!(sync.signedIn && settings.s.workerUrl)" class="btn btn-primary shrink-0 whitespace-nowrap px-4 py-2" :disabled="!settings.s.workerUrl.trim()" @click="connect"><LogIn :size="16" />登入 Google</button>
+        <div v-else class="flex shrink-0 items-center gap-2">
+          <button class="icon-btn size-9 rounded-xl border-0 bg-transparent text-muted" aria-label="中斷連線" title="中斷連線" @click="disconnect"><LogOut :size="18" /></button>
+          <button class="btn btn-primary whitespace-nowrap px-4 py-2" :disabled="sync.syncing" @click="sync.sync({ loud: true })">
+            <LoaderCircle v-if="sync.syncing" :size="16" class="animate-spin" />立即同步
+          </button>
+        </div>
       </div>
       <p v-if="sync.error" class="rounded-2xl bg-danger/10 p-3 text-sm text-danger">{{ sync.error }}</p>
 
       <!-- only needed to connect; disconnecting keeps the address so signing in again is one tap -->
       <input v-if="!(sync.signedIn && settings.s.workerUrl)" v-model="settings.s.workerUrl" class="input" placeholder="https://account-book-auth.xxx.workers.dev" aria-label="同步服務網址（Cloudflare Worker）" inputmode="url" autocapitalize="off" />
 
-      <div v-if="sync.signedIn" class="flex gap-2">
-        <button class="btn btn-ghost shrink-0" @click="disconnect"><LogOut :size="16" />中斷連線</button>
-        <button v-if="settings.s.workerUrl" class="btn btn-primary flex-1" :disabled="sync.syncing" @click="sync.sync({ loud: true })">
-          <LoaderCircle v-if="sync.syncing" :size="16" class="animate-spin" /><RefreshCw v-else :size="16" />立即同步
-        </button>
-      </div>
-
-      <div v-if="backupsOn" class="mt-4 border-t border-line pt-3" :class="!backupsOpen && 'pb-[3px]'">
+      <div v-if="backupsOn" class="border-t border-line pt-3" :class="!backupsOpen && '-mb-0.5'">
         <button class="flex w-full items-center gap-2 text-left" :aria-expanded="backupsOpen" @click="backupsOpen = !backupsOpen">
           <span class="min-w-0 flex-1"><span class="block font-medium">歷史備份</span><span class="block text-xs text-muted">每天自動備份，各留最近 3 份</span></span>
           <ChevronDown :size="18" class="shrink-0 text-muted transition-transform" :class="backupsOpen && 'rotate-180'" />
         </button>
-        <div v-if="backupsOpen" class="mt-3 -mb-[5px] space-y-1">
-          <button class="btn btn-soft w-full" :disabled="sync.backingUp" @click="backupNow">立即備份</button>
-          <template v-for="g in backupGroups" :key="g.kind">
-            <p class="-mb-1! pt-3 text-xs font-medium text-muted">{{ g.label }}</p>
-            <div class="divide-y divide-line">
-              <div v-for="b in g.rows" :key="b.id" class="flex items-center gap-2 py-2">
-                <span class="min-w-0 flex-1"><span class="block text-sm font-medium">{{ when(b.time) }}</span><span class="block text-xs text-muted">{{ b.records }} 筆記錄</span></span>
-                <button class="icon-btn size-9 border-0 bg-transparent text-muted" :disabled="sync.backingUp" aria-label="還原" title="還原" @click="restore(b.id)"><RotateCcw :size="18" /></button>
-              </div>
+        <div v-if="backupsOpen" class="mt-3 -mb-2">
+          <section v-for="g in backupGroups" :key="g.kind">
+            <div class="flex h-8 items-center justify-between pt-1">
+              <p class="text-xs font-medium text-muted">{{ g.label }}</p>
+              <button v-if="g.kind === 'manual'" class="text-xs font-medium text-primary transition-transform active:scale-95 disabled:opacity-50" :disabled="sync.backingUp" @click="backupNow">立即備份</button>
             </div>
-          </template>
+            <div class="divide-y divide-line">
+              <div v-for="b in g.rows" :key="b.id" class="flex items-center gap-2 py-0.5">
+                <span class="min-w-0 flex-1 text-sm font-medium tabular-nums">{{ when(b.time) }}<span class="ml-2 text-xs font-normal text-muted">{{ b.records }} 筆</span></span>
+                <button class="icon-btn -mr-2 size-8 border-0 bg-transparent text-muted" :disabled="sync.backingUp" aria-label="還原" title="還原" @click="restore(b.id)"><RotateCcw :size="16" /></button>
+              </div>
+              <p v-if="!g.rows.length" class="py-2 text-xs text-muted">還沒有備份</p>
+            </div>
+          </section>
         </div>
       </div>
     </section>
