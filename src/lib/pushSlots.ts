@@ -8,7 +8,7 @@ import { nextDue, pendingOccurrences } from './recurrence'
 export const DAYS_AHEAD = 14
 /** A slot this long past its time is still sent along: the Worker may not have run its check yet. */
 const LATE_MS = 10 * 60 * 1000
-const DAILY_TEXT = '今天還沒有記帳'
+const DAILY_TEXT = '今天還沒有記帳，花一分鐘把今天的消費記下來吧'
 
 /** Epoch ms of a local date and HH:mm. */
 function at(day: string, time: string): number {

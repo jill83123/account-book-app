@@ -9,7 +9,6 @@ import { myTotal } from '@/lib/split'
 import { useUi } from '@/stores/ui'
 import { addYm, monthGrid, parse, today, weekday, WEEKDAYS, ym } from '@/lib/date'
 import { fmt } from '@/lib/money'
-import { notify } from '@/lib/reminders'
 import { usePush } from '@/stores/push'
 import { useReminders } from '@/stores/reminders'
 import { useSync } from '@/stores/sync'
@@ -177,25 +176,6 @@ const reminders = computed(() => reminderStore.list)
 
 const ledgerName = computed(() => data.ledgerMap.get(data.ledgerId)?.name ?? '帳本')
 
-// wait for the data: before it loads there are no records, so the daily reminder would look due
-function remindOnOpen() {
-  const d = today()
-  if (s.remindEnabled && s.lastRemindDay !== d && reminders.value.some((r) => r.kind === 'daily')) {
-    s.lastRemindDay = d
-    void notify('今天還沒有記帳', '花一分鐘把今天的消費記下來吧')
-  }
-}
-onMounted(() => {
-  if (data.ready) return remindOnOpen()
-  const stop = watch(
-    () => data.ready,
-    (ready) => {
-      if (!ready) return
-      stop()
-      remindOnOpen()
-    },
-  )
-})
 </script>
 
 <template>

@@ -165,12 +165,3 @@ export function buildReminders(input: {
 
   return out.sort((a, b) => a.rank - b.rank)
 }
-
-/** Show a system notification when the app is open past the reminder time. Needs permission. */
-export async function notify(title: string, body: string) {
-  if (!('Notification' in window) || Notification.permission !== 'granted') return false
-  const reg = await navigator.serviceWorker?.getRegistration()
-  if (reg) await reg.showNotification(title, { body, icon: './icon.svg', tag: 'daily' })
-  else new Notification(title, { body, icon: './icon.svg' })
-  return true
-}

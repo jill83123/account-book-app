@@ -40,7 +40,6 @@ export interface LocalSettings {
   remindOnElsewhere: boolean
   /** the "turn it on here too" card was closed */
   remindHintDismissed: boolean
-  lastRemindDay: string
   /** reports spread amortized expenses over their months */
   amortize: boolean
   ledgerId: string
@@ -91,7 +90,6 @@ const defaults: LocalSettings = {
   deviceId: '',
   remindOnElsewhere: false,
   remindHintDismissed: false,
-  lastRemindDay: '',
   amortize: true,
   ledgerId: '',
   lastAccountId: '',
