@@ -363,13 +363,29 @@ watch(
 /** anything typed or tapped since the form opened */
 let touched = false
 const markTouched = () => (touched = true)
+/** 電腦版：左右鍵切換多分類的品項。在一般輸入框裡左右鍵要移動游標 */
+function onLineKey(e: KeyboardEvent) {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+  if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
+  if (lines.value.length < 2 || type.value === 'transfer' || partEdit.value) return
+  const t = e.target as HTMLElement | null
+  if (t?.closest('[role="dialog"], dialog')) return
+  const editable = t?.matches('input, textarea, select, [contenteditable="true"]')
+  if (editable) return
+  const next = active.value + (e.key === 'ArrowRight' ? 1 : -1)
+  if (next < 0 || next >= lines.value.length) return
+  e.preventDefault()
+  active.value = next
+}
 onMounted(() => {
   window.addEventListener('pointerdown', markTouched, true)
   window.addEventListener('keydown', markTouched, true)
+  window.addEventListener('keydown', onLineKey)
 })
 onBeforeUnmount(() => {
   window.removeEventListener('pointerdown', markTouched, true)
   window.removeEventListener('keydown', markTouched, true)
+  window.removeEventListener('keydown', onLineKey)
 })
 
 /**
