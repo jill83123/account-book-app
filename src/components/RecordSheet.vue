@@ -201,21 +201,21 @@ async function destroy() {
       </div>
 
       <ul v-else-if="rec.type !== 'transfer' && !rec.adjust && rec.lines.length > 1" class="divide-y divide-line rounded-2xl border border-line bg-surface px-4">
-        <li v-for="l in rec.lines" :key="l.id" class="flex items-center gap-3 py-3">
+        <li v-for="l in rec.lines" :key="l.id" class="flex items-start gap-3 py-3">
           <CatIcon :icon="data.catMap.get(l.categoryId)?.icon" :color="data.catMap.get(l.categoryId)?.color" :size="36" />
           <div class="min-w-0 flex-1">
-            <p class="mb-0.5 flex min-w-0 items-center text-xs text-ink/70"><CatPath :id="l.categoryId" /></p>
-            <p class="truncate text-sm font-medium">{{ lineName(l) || data.catName(l.categoryId) }}</p>
-            <p v-if="l.note || (l.amortMonths && l.amortMonths > 1)" class="flex items-center gap-2 truncate text-xs text-muted">
+            <p class="flex min-w-0 items-center text-xs leading-4 text-ink/70"><CatPath :id="l.categoryId" /></p>
+            <p class="truncate text-sm leading-[18px] font-medium">{{ lineName(l) || data.catName(l.categoryId) }}</p>
+            <p v-if="l.details?.length" class="text-xs leading-4 text-ink">
+              {{ l.details.map((d) => `${d.name}${d.qty ? ` ×${d.qty}` : ''}${d.amount ? ` $${fmt(d.amount)}` : ''}`).join('、') }}
+            </p>
+            <p v-if="l.note || (l.amortMonths && l.amortMonths > 1)" class="flex items-center gap-2 truncate text-xs leading-4 text-muted">
               <span v-if="l.note" class="truncate">{{ l.note }}</span>
               <span v-if="l.amortMonths && l.amortMonths > 1" class="shrink-0">分 {{ l.amortMonths }} 個月攤提</span>
             </p>
-            <p v-if="l.details?.length" class="mt-0.5 text-xs text-ink">
-              {{ l.details.map((d) => `${d.name}${d.qty ? ` ×${d.qty}` : ''}${d.amount ? ` $${fmt(d.amount)}` : ''}`).join('、') }}
-            </p>
           </div>
-          <div class="text-right">
-            <p class="text-sm font-semibold"><MoneyText :n="l.amount" /></p>
+          <div class="self-center text-right">
+            <p class="text-sm leading-5 font-semibold"><MoneyText :n="l.amount" /></p>
           </div>
         </li>
       </ul>
