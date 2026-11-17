@@ -86,7 +86,7 @@ function clear() {
       @click="create"
     >
       <Plus :size="20" class="text-primary" />
-      <span>新增商家{{ q.trim() }}</span>
+      <span>新增商家 <b class="font-semibold">{{ q.trim() }}</b></span>
     </button>
     <ul v-if="list.length" class="card divide-y divide-line p-0">
       <li v-for="m in list" :key="m.id" class="flex items-center gap-2 pr-3">
@@ -110,8 +110,5 @@ function clear() {
         </button>
       </li>
     </ul>
-    <p v-else-if="!canCreate" class="py-6 text-center text-sm text-muted">
-      還沒有商家，輸入名稱就能新增，下次會自動記住。
-    </p>
   </BottomSheet>
 </template>
