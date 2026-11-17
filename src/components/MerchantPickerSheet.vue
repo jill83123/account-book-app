@@ -52,7 +52,7 @@ const list = computed(() => {
 })
 const canCreate = computed(() => {
   const s = q.value.trim()
-  return s && !data.merchants.some((m) => m.name === s)
+  return s && s !== newName.value && !data.merchants.some((m) => m.name === s)
 })
 
 function pick(id: string) {
