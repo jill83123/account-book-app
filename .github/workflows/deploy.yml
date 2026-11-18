@@ -3,8 +3,18 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
-    # the Worker in worker/ is deployed separately with wrangler
-    paths-ignore: ['worker/**']
+    # the Worker in worker/ is deployed separately with wrangler; docs, editor and lint settings never change the site
+    paths-ignore:
+      - 'worker/**'
+      - '**/*.md'
+      - 'docs/**'
+      - '.claude/**'
+      - '.vscode/**'
+      - '.editorconfig'
+      - '.prettierrc.json'
+      - '.prettierignore'
+      - '.oxlintrc.json'
+      - 'eslint.config.ts'
   workflow_dispatch:
 
 permissions:
